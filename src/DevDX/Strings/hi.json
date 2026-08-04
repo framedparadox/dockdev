@@ -312,6 +312,8 @@
   "Tool.Discard": "छोड़ दें",
   "Tool.DiscardBody": "यह अस्थायी विंडो सहेजी नहीं गई है। इसे बंद करने पर इसकी सामग्री चली जाएगी।",
   "Tool.DiscardTitle": "बिना सहेजे बदलाव छोड़ दें?",
+  "Tool.FileTooLarge": "यह फ़ाइल खोलने के लिए बहुत बड़ी है — सीमा {0} है।",
+  "Tool.FileUnreadable": "यह फ़ाइल पढ़ी नहीं जा सकी।",
   "Tool.Format": "फ़ॉर्मैट करें",
   "Tool.Formatter.Desc": "JSON, XML या CSV को रंग और इंडेंटेशन के साथ सुंदर बनाएँ",
   "Tool.Formatter.Name": "डेटा फ़ॉर्मैटर",

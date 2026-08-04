@@ -312,6 +312,8 @@
   "Tool.Discard": "Abandonner",
   "Tool.DiscardBody": "Cette fenêtre temporaire n'a pas été enregistrée. La fermer supprimera son contenu.",
   "Tool.DiscardTitle": "Abandonner les modifications non enregistrées ?",
+  "Tool.FileTooLarge": "Ce fichier est trop volumineux pour être ouvert — la limite est de {0}.",
+  "Tool.FileUnreadable": "Ce fichier n’a pas pu être lu.",
   "Tool.Format": "Formater",
   "Tool.Formatter.Desc": "Mettre en forme JSON, XML ou CSV avec couleur et indentation",
   "Tool.Formatter.Name": "Formateur de données",

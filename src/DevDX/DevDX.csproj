@@ -50,12 +50,21 @@
   <PropertyGroup Condition="'$(StorePackage)' == 'true'">
     <WindowsPackageType>MSIX</WindowsPackageType>
     <EnableMsixTooling>true</EnableMsixTooling>
+    <!-- Unsigned on purpose: the Store re-signs every submission with the publisher's own
+         certificate, and a locally signed .msixupload is rejected. Sideload testing signs
+         separately (see scripts/package-store.ps1 -CertificateThumbprint). -->
     <AppxPackageSigningEnabled>false</AppxPackageSigningEnabled>
     <GenerateAppInstallerFile>false</GenerateAppInstallerFile>
     <AppxBundle>Always</AppxBundle>
+    <!-- Which architectures go in the bundle. AppxBundle=Always without this produces a bundle
+         containing only the platform being built, so the two architectures would have to be
+         submitted as two separate packages and Windows-on-ARM users would be served the x64 one
+         under emulation. The pipe-separated form is what the packaging targets expect. -->
+    <AppxBundlePlatforms Condition="'$(AppxBundlePlatforms)' == ''">x64|arm64</AppxBundlePlatforms>
     <AppxAutoIncrementPackageRevision>false</AppxAutoIncrementPackageRevision>
     <UapAppxPackageBuildMode>StoreUpload</UapAppxPackageBuildMode>
     <AppxSymbolPackageEnabled Condition="'$(AppxSymbolPackageEnabled)' == ''">false</AppxSymbolPackageEnabled>
+    <AppxPackageDir Condition="'$(AppxPackageDir)' == ''">$(MSBuildThisFileDirectory)..\..\artifacts\store\</AppxPackageDir>
   </PropertyGroup>
 
   <ItemGroup Condition="'$(StorePackage)' == 'true'">

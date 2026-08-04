@@ -204,6 +204,12 @@ public sealed class CsvFormat : IDataFormat
 
     // ---- Writing --------------------------------------------------------------------------
 
+    /// <summary>
+    /// Writes rows with CRLF terminators — what RFC 4180 specifies and what every Windows
+    /// spreadsheet and text editor expects from a file produced on Windows. The reader accepts
+    /// either, so this changes nothing about what DevDX can open; it changes what a file DevDX
+    /// saves looks like when it is opened in Notepad or imported by Excel.
+    /// </summary>
     private static string WriteRows(IReadOnlyList<IReadOnlyList<string>> rows)
     {
         var sb = new StringBuilder();
@@ -215,20 +221,28 @@ public sealed class CsvFormat : IDataFormat
                     sb.Append(',');
                 sb.Append(WriteField(row[c]));
             }
-            sb.Append('\n');
+            sb.Append("\r\n");
         }
         return sb.ToString();
     }
 
     /// <summary>
+    /// The characters that make a cell a formula to a spreadsheet. Tab and carriage return are on
+    /// the list for the same reason as the four visible ones: Excel and LibreOffice both strip a
+    /// leading tab or CR before evaluating what is left, so <c>"\t=cmd|…"</c> walks straight past a
+    /// guard that checks only <c>=+-@</c>. OWASP names all six.
+    /// </summary>
+    private static readonly char[] FormulaTriggers = ['=', '+', '-', '@', '\t', '\r'];
+
+    /// <summary>
     /// Quotes a field if it needs it, and neutralizes CSV/formula injection (design doc §21): a
-    /// leading <c>=</c>, <c>+</c>, <c>-</c> or <c>@</c> can be executed as a formula by whatever
-    /// spreadsheet opens the exported file later, so it is prefixed with a plain single quote —
-    /// the standard "force text" escape — even though DevDX itself never executes anything.
+    /// leading <see cref="FormulaTriggers">trigger character</see> can be executed as a formula by
+    /// whatever spreadsheet opens the exported file later, so it is prefixed with a plain single
+    /// quote — the standard "force text" escape — even though DevDX itself never executes anything.
     /// </summary>
     private static string WriteField(string field)
     {
-        if (field.Length > 0 && field[0] is '=' or '+' or '-' or '@')
+        if (field.Length > 0 && Array.IndexOf(FormulaTriggers, field[0]) >= 0)
             field = "'" + field;
 
         bool needsQuoting = field.IndexOfAny([',', '"', '\n', '\r']) >= 0;

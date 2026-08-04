@@ -20,7 +20,16 @@ public static class ToolIconProvider
             return null;
         try
         {
-            return await DecodeAsync(await File.ReadAllBytesAsync(item.CustomIconPath));
+            // Bounded before the decoder sees it (§21): this is the one place DevDX hands a
+            // user-supplied file to an image decoder, and the result is drawn at 44 px. A file too
+            // big to be an icon is refused rather than decoded to find out.
+            var read = await InputLimits.ReadBytesAsync(item.CustomIconPath, InputLimits.MaxIconBytes);
+            if (!read.Ok)
+            {
+                Diag.Log($"ToolIconProvider: refused '{item.CustomIconPath}': {read.Error}");
+                return null;
+            }
+            return await DecodeAsync(read.Bytes);
         }
         catch (Exception ex)
         {

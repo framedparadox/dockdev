@@ -688,13 +688,17 @@
                                                      NavigateUri="https://github.com/framedparadox/dev-dx" />
                                     <HyperlinkButton Content="{loc:Localize Key=About.ReportIssue}"
                                                      NavigateUri="https://github.com/framedparadox/dev-dx/issues" />
+                                    <!-- blob/HEAD, not blob/main: HEAD resolves to whatever the
+                                         repository's default branch is, so these keep working if it
+                                         is ever renamed. A shipped build cannot be corrected once
+                                         the link in it 404s. -->
                                     <HyperlinkButton Content="{loc:Localize Key=About.License}"
-                                                     NavigateUri="https://github.com/framedparadox/dev-dx/blob/main/LICENSE" />
+                                                     NavigateUri="https://github.com/framedparadox/dev-dx/blob/HEAD/LICENSE" />
                                     <!-- The same document whose URL the Microsoft Store listing
                                          carries; Store policy 10.5.1 requires a Win32 product to
                                          have one, and having it in-app too costs nothing. -->
                                     <HyperlinkButton Content="{loc:Localize Key=About.PrivacyPolicy}"
-                                                     NavigateUri="https://github.com/framedparadox/dev-dx/blob/main/docs/privacy-policy.md" />
+                                                     NavigateUri="https://github.com/framedparadox/dev-dx/blob/HEAD/docs/privacy-policy.md" />
                                 </StackPanel>
                             </StackPanel>
                         </Border>

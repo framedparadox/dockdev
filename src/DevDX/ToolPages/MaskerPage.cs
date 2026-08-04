@@ -133,7 +133,14 @@ public sealed class MaskerPage : EditorToolPage
 
     public override async Task LoadFileAsync(string path)
     {
-        SetSource(await File.ReadAllTextAsync(path));
+        var read = await InputLimits.ReadTextAsync(path);
+        if (!read.Ok)
+        {
+            StatusBar.SetMessage(read.Error, isError: true);
+            return;
+        }
+
+        SetSource(read.Text);
     }
 
     private MaskProfile CurrentProfile => MaskProfile.BuiltIn[_profile.SelectedIndex];

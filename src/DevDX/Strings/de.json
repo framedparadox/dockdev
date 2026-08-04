@@ -312,6 +312,8 @@
   "Tool.Discard": "Verwerfen",
   "Tool.DiscardBody": "Dieses Notizfenster wurde nicht gespeichert. Beim Schließen geht sein Inhalt verloren.",
   "Tool.DiscardTitle": "Ungespeicherte Änderungen verwerfen?",
+  "Tool.FileTooLarge": "Diese Datei ist zu groß zum Öffnen – das Limit liegt bei {0}.",
+  "Tool.FileUnreadable": "Diese Datei konnte nicht gelesen werden.",
   "Tool.Format": "Formatieren",
   "Tool.Formatter.Desc": "JSON, XML oder CSV mit Farbe und Einrückung aufbereiten",
   "Tool.Formatter.Name": "Datenformatierer",

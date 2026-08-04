@@ -137,6 +137,17 @@ public static class DockStore
     {
         try
         {
+            // Size-checked before it is read (§21): import accepts any path the user picks, and a
+            // configuration file is kilobytes. Without this, pointing the picker at something that
+            // is not a config at all is an allocation the size of that file before the shape check
+            // below ever gets to reject it.
+            var info = new FileInfo(path);
+            if (!info.Exists || !InputLimits.IsWithin(info.Length, InputLimits.MaxConfigBytes))
+            {
+                Diag.Log($"DockStore.ImportFrom('{path}'): missing, or past the {InputLimits.MaxConfigBytes}-byte limit.");
+                return null;
+            }
+
             var config = JsonSerializer.Deserialize<DockConfig>(File.ReadAllText(path), Options);
             if (config is null)
                 return null;

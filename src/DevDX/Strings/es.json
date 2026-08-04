@@ -312,6 +312,8 @@
   "Tool.Discard": "Descartar",
   "Tool.DiscardBody": "Esta ventana temporal no se ha guardado. Al cerrarla se perderá su contenido.",
   "Tool.DiscardTitle": "¿Descartar los cambios sin guardar?",
+  "Tool.FileTooLarge": "Ese archivo es demasiado grande para abrirlo: el límite es {0}.",
+  "Tool.FileUnreadable": "No se pudo leer ese archivo.",
   "Tool.Format": "Formatear",
   "Tool.Formatter.Desc": "Embellece JSON, XML o CSV con color y sangría",
   "Tool.Formatter.Name": "Formateador de datos",

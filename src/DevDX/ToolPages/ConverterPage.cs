@@ -116,19 +116,19 @@ public sealed class ConverterPage : EditorToolPage
 
     public override async Task LoadFileAsync(string path)
     {
-        try
+        var read = await InputLimits.ReadTextAsync(path);
+        if (!read.Ok)
         {
-            _input.Text = await File.ReadAllTextAsync(path);
-            var ext = Path.GetExtension(path);
-            int index = Formats.ToList().FindIndex(f => f.Extensions.Contains(ext, StringComparer.OrdinalIgnoreCase));
-            if (index >= 0)
-                _source.SelectedIndex = index;
-            Convert();
+            StatusBar.SetMessage(read.Error, isError: true);
+            return;
         }
-        catch (Exception ex)
-        {
-            Diag.Log($"ConverterPage.LoadFileAsync('{path}') failed: {ex.Message}");
-        }
+
+        _input.Text = read.Text;
+        var ext = Path.GetExtension(path);
+        int index = Formats.ToList().FindIndex(f => f.Extensions.Contains(ext, StringComparer.OrdinalIgnoreCase));
+        if (index >= 0)
+            _source.SelectedIndex = index;
+        Convert();
     }
 
     private void Convert()

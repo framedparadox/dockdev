@@ -312,6 +312,8 @@
   "Tool.Discard": "放弃",
   "Tool.DiscardBody": "此临时窗口尚未保存，关闭后其内容将丢失。",
   "Tool.DiscardTitle": "放弃未保存的更改？",
+  "Tool.FileTooLarge": "该文件太大，无法打开——上限为 {0}。",
+  "Tool.FileUnreadable": "无法读取该文件。",
   "Tool.Format": "格式化",
   "Tool.Formatter.Desc": "为 JSON、XML 或 CSV 添加颜色和缩进",
   "Tool.Formatter.Name": "数据格式化",

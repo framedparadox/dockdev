@@ -1115,11 +1115,27 @@ that is the attack surface that matters here. These are design rules, not aftert
 - **ReDoS.** Every `Regex` in the app — the Regex Tester's user pattern *and* the masker's rule
   patterns — is constructed with an explicit `MatchTimeout` and evaluated off the UI thread.
   User-supplied patterns get a short timeout and report "pattern timed out" as a normal result.
-- **Parse-bomb and allocation guards.** The §22 size ceilings are checked before reading a file or
-  accepting a paste. Decoded Base64 is size-checked *before* being handed to an image decoder.
-- **CSV injection.** A leading `=`, `+`, `-` or `@` in an exported cell can be executed as a formula
-  by whatever spreadsheet opens it later. The CSV writer neutralises this on export even though
-  DevDX itself never executes anything.
+  **Enforced by test:** `RegexTimeoutTests` reflects over every static `Regex` in the app assembly
+  and over every masker rule pattern, and fails any that reports `Regex.InfiniteMatchTimeout`.
+  "Every regex has a timeout" is precisely the kind of rule that holds for the twenty places
+  someone was thinking about it and lapses in the twenty-first.
+- **Parse-bomb and allocation guards.** The §22 size ceilings live in `Services/InputLimits.cs`,
+  which is the only sanctioned way a tool reads a user-chosen file. The size is taken from the
+  file's metadata *before* a byte is read, and an input past the ceiling comes back as a sentence in
+  the status bar rather than an exception — the ceilings are 50 MB for text, 256 MB for a file read
+  as bytes (hash/Base64: nothing tokenizes it), 16 MB for a custom icon, 8 MB for an imported
+  config. Decoded Base64 is size-checked *before* being handed to an image decoder.
+- **CSV injection.** A leading `=`, `+`, `-`, `@`, tab or carriage return in an exported cell can be
+  executed as a formula by whatever spreadsheet opens it later — tab and CR because Excel and
+  LibreOffice both strip them before evaluating what is left, so a guard checking only the four
+  visible characters is a guard with a documented bypass. The CSV writer neutralises all six on
+  export even though DevDX itself never executes anything.
+- **Nothing from the network becomes something the shell opens.** The update check is the only part
+  of DevDX that reads data it did not produce, and the only value it hands back to the user is a
+  URL that goes on a `HyperlinkButton` — i.e. straight to the shell, protocol handler and all.
+  `UpdateService.SafeReleaseUrl` constrains it to an `https` page on `github.com` with no user-info
+  and no non-default port, and falls back to the compiled-in releases page for anything else. That
+  is the security boundary of the whole feature, and it is where its tests are.
 - **Least-privilege file access.** Open/Save go through WinRT `FileOpenPicker`/`FileSavePicker`
   (broker-mediated, per-file, user-consented) via the shared `FilePickers` helper — never a raw path
   and never `broadFileSystemAccess`.
@@ -1205,6 +1221,10 @@ algorithm in a sixteen-tool app is testable with no desktop.
 | Tools | Base64 round-trips incl. URL-safe and bad padding; hashes against published vectors; UUID v7 **timestamp ordering** across generations (v7 randomises its tail, so strict monotonicity within one millisecond is not guaranteed and must not be asserted); timestamp edge cases (DST boundaries, year 2038, negative epochs before 1970, `DateTimeOffset` min/max); diff on known pairs; number-base signed/unsigned boundaries |
 | Shell | `DockStore` round-trip and import rejection, `StartupService`, `PackagedRuntime`, `ToolCatalogSearch` |
 | Privacy | `NetworkPolicy` refuses every call with consents withheld |
+| Input limits | §22's ceilings decided from file metadata before any read; oversize refused with a message naming the ceiling; a missing/locked file reported rather than thrown |
+| ReDoS | Every static `Regex` and every masker rule pattern carries a `MatchTimeout`; a catastrophic user pattern comes back as "timed out" |
+| Untrusted URLs | `SafeReleaseUrl` against other schemes, look-alike hosts, suffix-match hosts, embedded credentials and odd ports |
+| Packaging | `Package.appxmanifest` versions agree with the csproj and `app.manifest`; the Store's reserved revision component is 0; every logo it names exists; the startup `TaskId` matches `StartupService`; no capability beyond `runFullTrust`; the exe is `asInvoker` and per-monitor-v2 |
 
 **`tests/DevDX.UITests` (FlaUI, opt-in, needs a real desktop):** a **table-driven** smoke test —
 one row per tool: open it from the dock, paste a fixture, invoke the primary action, assert the
@@ -1225,16 +1245,20 @@ throwaway data directory via `DEVDX_DATA_DIR`, and excluded from the main `.slnx
   is what generates the resource index the compiled XAML lives in.
 - **Optional MSIX:** `-p:StorePackage=true`, with `AppxSymbolPackageEnabled` defaulting false to
   avoid the `mspdbcmf.exe`/MSB6011 failure on a plain SDK install.
-- **Scripts:** `package-release.ps1` (publish → zip + SHA-256 + optional Authenticode) and
-  `run-ui-tests.ps1`.
+- **Scripts:** `package-release.ps1` (publish → zip + SHA-256 + optional Authenticode),
+  `package-store.ps1` (verify the manifest → MSIX bundle → `.msixupload`), and `run-ui-tests.ps1`.
 - **CI:** build x64 + ARM64 with `-warnaserror`, run unit tests, plus a **localization key-parity
-  check** (§20).
-- **Distribution:** portable ZIP via GitHub Releases (primary), a winget manifest, and optionally a
-  Store MSIX later.
-- **Package identity:** its own MSIX identity and publisher. `runFullTrust` is currently declared
-  for the DWM/Win32 P/Invoke chrome, but DevDX launches nothing externally, so a **cleaner
-  capability set** may be available. Worth settling at submission time — and worth revisiting only
-  if a feature like "reveal saved file in Explorer" ever reintroduces `ShellExecute`.
+  check** (§20) and the **packaging-manifest checks** (`PackageManifestTests`). The manifest is
+  never compiled by an ordinary build — `StorePackage` is off by default — so without those tests
+  nothing in CI would look at it until a submission was rejected for it.
+- **Distribution:** portable ZIP via GitHub Releases (primary), a winget manifest, and the Store
+  MSIX. See `docs/store-submission.md` for the submission checklist.
+- **Package identity:** its own MSIX identity and publisher, and `runFullTrust` — which is **not**
+  optional, contrary to what §29 risk 9 used to wonder. An `<Application>` with
+  `EntryPoint="Windows.FullTrustApplication"` is a packaged desktop app by definition, and Windows
+  refuses to deploy one that has not declared the capability; it is not a consequence of the
+  DWM/Win32 chrome and dropping the chrome would not remove it. It is also the only capability
+  declared, which is the part that matters at review. `PackageManifestTests` asserts both halves.
 
 ---
 
@@ -1318,7 +1342,7 @@ stable enough to audit.
 | 6 | Sixteen tools dilute the dock | Six visible by default, search as the primary path (§18) |
 | 7 | **Scope is roughly 4× v1.0** | Milestones ship independently; M0–M2 is already useful; the catalog can be cut at any milestone boundary without rework |
 | 8 | The shell is bespoke code, not a framework control | It is small and well-factored, and §24 covers the parts that are pure logic |
-| 9 | Store capability set | Decide at submission; DevDX may not need `runFullTrust` at all |
+| 9 | ~~Store capability set~~ **Settled.** `runFullTrust` is mandatory for a `Windows.FullTrustApplication`, not a consequence of the P/Invoke chrome — there is no cleaner set available, and it is the only capability declared | `PackageManifestTests` asserts `runFullTrust` is present and that nothing broader (`broadFileSystemAccess`, `location`, the library capabilities, …) ever joins it |
 
 ---
 

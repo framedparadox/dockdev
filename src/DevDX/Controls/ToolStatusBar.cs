@@ -73,6 +73,19 @@ public sealed class ToolStatusBar : Grid
         ApplyChipColor();
     }
 
+    /// <summary>
+    /// Puts an arbitrary sentence in the chip — for the things that are neither "valid" nor a
+    /// parse error at a line and column, such as a file refused for being past the §22 size
+    /// ceiling. Goes in the chip rather than a dialog because the chip is already the live region
+    /// Narrator announces, so the refusal is spoken as well as shown (§23).
+    /// </summary>
+    public void SetMessage(string message, bool isError)
+    {
+        _chip.Text = message;
+        _isError = isError;
+        ApplyChipColor();
+    }
+
     public void SetPath(string? path) => _path.Text = path ?? "";
 
     /// <summary>Whether the chip is currently reporting an error, so its colour can be re-derived

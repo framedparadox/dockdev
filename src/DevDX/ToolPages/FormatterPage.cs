@@ -107,15 +107,18 @@ public sealed class FormatterPage : EditorToolPage
 
     public override async Task LoadFileAsync(string path)
     {
-        try
+        // InputLimits, not File.ReadAllTextAsync: §22's ceiling is checked against the file's size
+        // before a byte is read, and the refusal is a sentence in the status bar rather than an
+        // OOM inside a task nobody awaits.
+        var read = await InputLimits.ReadTextAsync(path);
+        if (!read.Ok)
         {
-            _editor.Text = await File.ReadAllTextAsync(path);
-            Format();
+            StatusBar.SetMessage(read.Error, isError: true);
+            return;
         }
-        catch (Exception ex)
-        {
-            Diag.Log($"FormatterPage.LoadFileAsync('{path}') failed: {ex.Message}");
-        }
+
+        _editor.Text = read.Text;
+        Format();
     }
 
     private FormatOptions Options => new() { IndentWidth = (int)_indentBox.Value, SortKeys = false };

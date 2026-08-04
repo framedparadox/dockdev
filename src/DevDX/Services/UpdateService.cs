@@ -7,7 +7,8 @@ namespace DevDX.Services;
 /// <summary>What a release check found.</summary>
 /// <param name="Version">The release's version, without a leading "v".</param>
 /// <param name="Name">The release's title, or its tag when it has none.</param>
-/// <param name="Url">The release page to send the user to.</param>
+/// <param name="Url">The release page to send the user to. Always vetted by
+/// <see cref="UpdateService.SafeReleaseUrl"/> — an https github.com page or nothing.</param>
 public sealed record ReleaseInfo(Version Version, string Name, string Url);
 
 /// <summary>
@@ -71,10 +72,8 @@ public static class UpdateService
                        && releaseName.GetString() is { Length: > 0 } n
                 ? n
                 : tag!;
-            var url = root.TryGetProperty("html_url", out var htmlUrl)
-                      && htmlUrl.GetString() is { Length: > 0 } u
-                ? u
-                : ReleasesPage;
+            var url = SafeReleaseUrl(
+                root.TryGetProperty("html_url", out var htmlUrl) ? htmlUrl.GetString() : null);
 
             return new ReleaseInfo(version, name, url);
         }
@@ -83,6 +82,42 @@ public static class UpdateService
             Diag.Log($"UpdateService: check failed: {ex.GetType().Name}: {ex.Message}");
             return null;
         }
+    }
+
+    /// <summary>
+    /// The host the release page is allowed to live on. A subdomain is not accepted: only this
+    /// exact host, so <c>github.com.example.net</c> cannot pass by suffix match.
+    /// </summary>
+    private const string ReleaseHost = "github.com";
+
+    /// <summary>
+    /// Vets a URL that arrived over the network before it can become something the user clicks.
+    /// <para>
+    /// <c>html_url</c> is remote, attacker-influenceable JSON, and the only thing DevDX does with it
+    /// is put it on a <c>HyperlinkButton</c> — which hands whatever it is given to the shell. An
+    /// arbitrary string there is an arbitrary protocol activation (<c>file:</c> to a UNC share,
+    /// <c>ms-settings:</c>, any registered handler), so the value is constrained to what it is
+    /// supposed to be — an <c>https</c> page on github.com — and anything else falls back to the
+    /// constant <see cref="ReleasesPage"/>, which is always a correct destination anyway. A
+    /// malformed string would also throw out of <see cref="Uri"/>'s constructor at the point of use,
+    /// which is inside a UI event handler; failing here means it cannot.
+    /// </para>
+    /// </summary>
+    public static string SafeReleaseUrl(string? candidate)
+    {
+        if (string.IsNullOrWhiteSpace(candidate))
+            return ReleasesPage;
+
+        if (!Uri.TryCreate(candidate, UriKind.Absolute, out var uri))
+            return ReleasesPage;
+
+        bool acceptable =
+            uri.Scheme == Uri.UriSchemeHttps &&
+            string.Equals(uri.Host, ReleaseHost, StringComparison.OrdinalIgnoreCase) &&
+            uri.IsDefaultPort &&
+            string.IsNullOrEmpty(uri.UserInfo);
+
+        return acceptable ? uri.AbsoluteUri : ReleasesPage;
     }
 
     /// <summary>Parses a release tag such as <c>"v1.2.0"</c> into a version, or null.</summary>

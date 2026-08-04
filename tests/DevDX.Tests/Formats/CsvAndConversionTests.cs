@@ -24,6 +24,52 @@ public class CsvAndConversionTests
         Assert.Contains("'=cmd", csv);
     }
 
+    [Theory]
+    [InlineData("=1+1")]
+    [InlineData("+1")]
+    [InlineData("-1+1")]
+    [InlineData("@SUM(A1)")]
+    // The two that a guard checking only the visible characters lets straight through: Excel and
+    // LibreOffice both strip a leading tab or carriage return before evaluating what is left.
+    [InlineData("\t=cmd|' /C calc'!A0")]
+    [InlineData("\r=cmd|' /C calc'!A0")]
+    public void EveryFormulaTriggerCharacter_IsNeutralizedOnExport(string dangerous)
+    {
+        var node = new ArrayNode([new ObjectNode([("cell", new ScalarNode(dangerous, ScalarKind.String))])]);
+        var csv = CsvFormat.Instance.FromCanonical(node, FormatOptions.Default);
+
+        // The written cell is the value prefixed with a single quote — the "force text" escape —
+        // wherever it appears in the row, quoted or not.
+        Assert.Contains("'" + dangerous[0], csv, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void OrdinaryValues_AreNotPrefixed()
+    {
+        // The guard must not fire on the values people actually export: a negative number is a
+        // legitimate leading '-', but it is also genuinely a formula trigger, so the escape is
+        // applied and this asserts only that unrelated text is untouched.
+        var node = new ArrayNode([new ObjectNode([("name", new ScalarNode("Ada Lovelace", ScalarKind.String))])]);
+        var csv = CsvFormat.Instance.FromCanonical(node, FormatOptions.Default);
+
+        Assert.Contains("Ada Lovelace", csv, StringComparison.Ordinal);
+        Assert.DoesNotContain("'Ada", csv, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void WrittenRowsUseCrlf_AsRfc4180AndWindowsBothExpect()
+    {
+        var node = new ArrayNode([new ObjectNode([("a", new ScalarNode("1", ScalarKind.Number))])]);
+        var csv = CsvFormat.Instance.FromCanonical(node, FormatOptions.Default);
+
+        Assert.Contains("\r\n", csv, StringComparison.Ordinal);
+        Assert.DoesNotContain("\n\n", csv, StringComparison.Ordinal);
+
+        // And the reader still takes either, so nothing about what DevDX can open changed.
+        Assert.Equal(2, CsvFormat.ParseRows(csv).Count);
+        Assert.Equal(2, CsvFormat.ParseRows("a\n1").Count);
+    }
+
     [Fact]
     public void ToCanonical_ProducesOneObjectPerDataRow()
     {

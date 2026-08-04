@@ -21,8 +21,18 @@ public sealed class HashPage : FormToolPage
     private readonly TextBox _compare = new() { PlaceholderText = Loc.Get("Hash.ComparePlaceholder") };
     private readonly TextBlock _compareResult = new();
     private readonly Dictionary<string, TextBox> _results = new();
+
+    /// <summary>Which file is being hashed, or why the last one wasn't. The chosen file name used
+    /// to be tracked and never shown, which left "why are these hashes not of my text?" with no
+    /// answer on screen — and left a file refused for size with no answer at all.</summary>
+    private readonly TextBlock _fileStatus = new()
+    {
+        Opacity = 0.7,
+        TextWrapping = TextWrapping.Wrap,
+        VerticalAlignment = VerticalAlignment.Center,
+    };
+
     private byte[]? _fileBytes;
-    private string? _fileName;
     private bool _isDirty;
 
     public HashPage()
@@ -33,11 +43,14 @@ public sealed class HashPage : FormToolPage
         var chooseFile = new Button { Content = Loc.Get("Base64.ChooseFile") };
         chooseFile.Click += async (_, _) => await ChooseFileAsync();
         var clearFile = new Button { Content = Loc.Get("Tool.Clear") };
-        clearFile.Click += (_, _) => { _fileBytes = null; _fileName = null; Recompute(); };
+        clearFile.Click += (_, _) => { SetFile(null, null); Recompute(); };
         var fileRow = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
         fileRow.Children.Add(chooseFile);
         fileRow.Children.Add(clearFile);
+        fileRow.Children.Add(_fileStatus);
         AddRow(fileRow);
+        Microsoft.UI.Xaml.Automation.AutomationProperties.SetLiveSetting(
+            _fileStatus, Microsoft.UI.Xaml.Automation.Peers.AutomationLiveSetting.Polite);
 
         _hmac.Checked += (_, _) => { _key.IsEnabled = true; Recompute(); };
         _hmac.Unchecked += (_, _) => { _key.IsEnabled = false; Recompute(); };
@@ -77,10 +90,26 @@ public sealed class HashPage : FormToolPage
         var path = await FilePickers.PickOpenFileAsync(HostHwnd);
         if (path is null)
             return;
-        _fileBytes = await File.ReadAllBytesAsync(path);
-        _fileName = Path.GetFileName(path);
+
+        // Bounded read (§21/§22): the whole file lands in a byte[] here, so an unbounded
+        // ReadAllBytesAsync on a picked path is an out-of-memory waiting for the wrong pick.
+        var read = await InputLimits.ReadBytesAsync(path);
+        if (!read.Ok)
+        {
+            _fileStatus.Text = read.Error;
+            return;
+        }
+
+        SetFile(read.Bytes, Path.GetFileName(path));
         _isDirty = true;
         Recompute();
+    }
+
+    /// <summary>Sets (or clears) the file being hashed and what the row says about it.</summary>
+    private void SetFile(byte[]? bytes, string? name)
+    {
+        _fileBytes = bytes;
+        _fileStatus.Text = name ?? "";
     }
 
     private byte[] CurrentData() => _fileBytes ?? Encoding.UTF8.GetBytes(_input.Text);
@@ -121,8 +150,7 @@ public sealed class HashPage : FormToolPage
     private void Clear()
     {
         _input.Text = "";
-        _fileBytes = null;
-        _fileName = null;
+        SetFile(null, null);
         _compare.Text = "";
         Recompute();
     }

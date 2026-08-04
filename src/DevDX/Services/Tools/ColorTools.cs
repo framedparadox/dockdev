@@ -22,9 +22,19 @@ public readonly record struct Rgba(byte R, byte G, byte B, byte A)
 /// </summary>
 public static class ColorTools
 {
+    /// <summary>
+    /// Design doc §21: <b>every</b> <see cref="Regex"/> in the app carries an explicit
+    /// <see cref="Regex.MatchTimeout"/>, this one included. The pattern is linear and this subject
+    /// is a short colour literal, so the timeout is not expected to fire — but the rule is what
+    /// makes a regex on untrusted text safe by default rather than by case-by-case reasoning, and
+    /// <c>DevDX.Tests.Services.RegexTimeoutArchitectureTests</c> enforces it across the tree.
+    /// </summary>
+    private static readonly TimeSpan MatchTimeout = TimeSpan.FromSeconds(1);
+
     private static readonly Regex FunctionCall = new(
         @"^\s*(?<fn>rgba?|hsla?|hsva?|hsba?)\s*\(\s*(?<args>[^)]*)\)\s*$",
-        RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+        RegexOptions.IgnoreCase | RegexOptions.CultureInvariant,
+        MatchTimeout);
 
     /// <summary>Parses <c>#abc</c>, <c>#aabbcc[dd]</c>, <c>rgb()/rgba()</c>, <c>hsl()/hsla()</c>
     /// and <c>hsv()/hsb()</c>. Returns false rather than guessing at anything else.</summary>

@@ -117,7 +117,14 @@ public sealed class TextToolkitPage : EditorToolPage
 
     public override async Task LoadFileAsync(string path)
     {
-        _input.Text = await File.ReadAllTextAsync(path);
+        var read = await InputLimits.ReadTextAsync(path);
+        if (!read.Ok)
+        {
+            StatusBar.SetMessage(read.Error, isError: true);
+            return;
+        }
+
+        _input.Text = read.Text;
         Apply();
     }
 

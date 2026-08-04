@@ -312,6 +312,8 @@
   "Tool.Discard": "Discard",
   "Tool.DiscardBody": "This scratch window hasn't been saved. Closing it will discard its content.",
   "Tool.DiscardTitle": "Discard unsaved changes?",
+  "Tool.FileTooLarge": "That file is too large to open — the limit is {0}.",
+  "Tool.FileUnreadable": "That file couldn't be read.",
   "Tool.Format": "Format",
   "Tool.Formatter.Desc": "Beautify JSON, XML or CSV with colour and indentation",
   "Tool.Formatter.Name": "Data Formatter",

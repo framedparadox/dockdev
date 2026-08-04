@@ -112,7 +112,17 @@ public sealed class Base64Page : EditorToolPage
         var path = await FilePickers.PickOpenFileAsync(HostHwnd);
         if (path is null)
             return;
-        _fileBytes = await File.ReadAllBytesAsync(path);
+
+        // Bounded read (§21/§22). Base64 is the worst case for an unbounded one: the bytes are held
+        // whole and then turned into a string a third larger again.
+        var read = await InputLimits.ReadBytesAsync(path);
+        if (!read.Ok)
+        {
+            StatusBar.SetMessage(read.Error, isError: true);
+            return;
+        }
+
+        _fileBytes = read.Bytes;
         _encode.IsChecked = true;
         _input.Text = $"[{Path.GetFileName(path)} — {_fileBytes.Length:N0} bytes]";
         _isDirty = true;

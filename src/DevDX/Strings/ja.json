@@ -312,6 +312,8 @@
   "Tool.Discard": "破棄",
   "Tool.DiscardBody": "このスクラッチウィンドウは保存されていません。閉じると内容は失われます。",
   "Tool.DiscardTitle": "保存していない変更を破棄しますか?",
+  "Tool.FileTooLarge": "このファイルは大きすぎて開けません。上限は {0} です。",
+  "Tool.FileUnreadable": "このファイルを読み取れませんでした。",
   "Tool.Format": "整形",
   "Tool.Formatter.Desc": "JSON・XML・CSV を色付き・インデント付きで整形",
   "Tool.Formatter.Name": "データフォーマッター",

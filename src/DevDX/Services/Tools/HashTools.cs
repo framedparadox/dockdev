@@ -22,13 +22,21 @@ public static class HashTools
         _ => "",
     };
 
+    /// <summary>
+    /// The one-shot static <c>HashData(key, source)</c> overloads rather than
+    /// <c>new HMACSHA256(key).ComputeHash(data)</c>: every <c>HMAC*</c> type is
+    /// <see cref="IDisposable"/> and holds a native algorithm handle, and the instance form here
+    /// was constructing five of them per keystroke and disposing none — the key material stayed
+    /// pinned in each one until a finalizer got round to it. The static form allocates no
+    /// disposable at all and zeroes its own working state.
+    /// </summary>
     public static string ComputeHmac(string algorithm, byte[] data, byte[] key) => algorithm switch
     {
-        "MD5" => Hex(new HMACMD5(key).ComputeHash(data)),
-        "SHA-1" => Hex(new HMACSHA1(key).ComputeHash(data)),
-        "SHA-256" => Hex(new HMACSHA256(key).ComputeHash(data)),
-        "SHA-384" => Hex(new HMACSHA384(key).ComputeHash(data)),
-        "SHA-512" => Hex(new HMACSHA512(key).ComputeHash(data)),
+        "MD5" => Hex(HMACMD5.HashData(key, data)),
+        "SHA-1" => Hex(HMACSHA1.HashData(key, data)),
+        "SHA-256" => Hex(HMACSHA256.HashData(key, data)),
+        "SHA-384" => Hex(HMACSHA384.HashData(key, data)),
+        "SHA-512" => Hex(HMACSHA512.HashData(key, data)),
         _ => "", // CRC32 has no keyed variant
     };
 

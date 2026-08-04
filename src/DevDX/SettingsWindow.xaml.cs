@@ -572,10 +572,14 @@ public sealed partial class SettingsWindow : Window
         UpdateBar.Severity = InfoBarSeverity.Informational;
 
         var actions = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
+        // Re-vetted at the point of use rather than trusted from the record: this URL began life as
+        // remote JSON, and a HyperlinkButton hands whatever it is given to the shell. UpdateService
+        // already constrains it, so this is belt-and-braces — and it also guarantees the Uri
+        // constructor cannot throw inside a UI callback.
         actions.Children.Add(new HyperlinkButton
         {
             Content = Loc.Get("Update.Get"),
-            NavigateUri = new Uri(release.Url),
+            NavigateUri = new Uri(UpdateService.SafeReleaseUrl(release.Url)),
         });
         var skip = new Button { Content = Loc.Get("Update.Skip") };
         skip.Click += (_, _) =>

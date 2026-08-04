@@ -90,87 +90,16 @@ internal static partial class NativeMethods
     [LibraryImport("user32.dll")]
     public static partial short GetAsyncKeyState(int vKey);
 
-    // ---- Shell icon extraction (SHGetFileInfo) -----------------------------
-    // A fallback icon source for anything the filesystem says exists. Needed because the
-    // WinRT Storage thumbnail pipeline (IconService's primary path, for higher-res icons)
-    // flatly refuses to open .lnk shortcuts ("UNABLE_TO_MASK_PATH") and can deny arbitrary
-    // paths for an unpackaged app; SHGetFileInfo has neither limitation and, for a .lnk,
-    // naturally resolves to the shortcut target's icon with the arrow overlay, matching
-    // Explorer. Classic DllImport here (not LibraryImport) since the fixed-size string
-    // fields in SHFILEINFO need ByValTStr marshalling.
-    [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
-    public struct SHFILEINFO
-    {
-        public nint hIcon;
-        public int iIcon;
-        public uint dwAttributes;
-        [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 260)]
-        public string szDisplayName;
-        [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 80)]
-        public string szTypeName;
-    }
-
-    public const uint SHGFI_ICON = 0x100;
-    public const uint SHGFI_LARGEICON = 0x0;
-    public const uint SHGFI_SYSICONINDEX = 0x4000;
-
-    [DllImport("shell32.dll", CharSet = CharSet.Unicode)]
-    public static extern nint SHGetFileInfo(
-        string pszPath, uint dwFileAttributes, ref SHFILEINFO psfi, uint cbFileInfo, uint uFlags);
+    // ---- Icon handle cleanup ----------------------------------------------
+    //
+    // DevDX extracts no shell icons: every tool's look is a bundled Segoe Fluent glyph resolved
+    // from ToolCatalog (design doc §26), so there is no SHGetFileInfo, no SHGetImageList and no
+    // IImageList here — a closed tool catalog needs none of the machinery a launcher does. What
+    // remains is releasing the icon handle taken from DevDX's *own* executable for the tray icon.
 
     [DllImport("user32.dll")]
     [return: MarshalAs(UnmanagedType.Bool)]
     public static extern bool DestroyIcon(nint hIcon);
-
-    // ---- Jumbo (256x256) shell icons (SHGetImageList) ----------------------
-    // The crisp, Explorer-matching icon source for IconService: SHGetFileInfo with
-    // SHGFI_SYSICONINDEX resolves a path to its index in the shell's system image list, and
-    // SHGetImageList(SHIL_JUMBO, ...) hands back that list at its largest (256x256) resolution.
-    // This is pure Win32 — no WinRT Storage broker involved — so it works for any path a
-    // full-trust process can see, without needing the broadFileSystemAccess capability.
-    public const int SHIL_JUMBO = 0x4;
-    public const int ILD_TRANSPARENT = 0x1;
-
-    public static readonly Guid IID_IImageList = new("46EB5926-582E-4017-9FDF-E8998DAA0950");
-
-    [ComImport]
-    [Guid("46EB5926-582E-4017-9FDF-E8998DAA0950")]
-    [InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
-    public interface IImageList
-    {
-        [PreserveSig] int Add(nint hbmImage, nint hbmMask, out int pi);
-        [PreserveSig] int ReplaceIcon(int i, nint hicon, out int pi);
-        [PreserveSig] int SetOverlayImage(int iImage, int iOverlay);
-        [PreserveSig] int Replace(int i, nint hbmImage, nint hbmMask);
-        [PreserveSig] int AddMasked(nint hbmImage, int crMask, out int pi);
-        [PreserveSig] int Draw(nint pimldp);
-        [PreserveSig] int Remove(int i);
-        [PreserveSig] int GetIcon(int i, int flags, out nint picon);
-        [PreserveSig] int GetImageInfo(int i, nint pImageInfo);
-        [PreserveSig] int Copy(int iDst, IImageList punkSrc, int iSrc, int uFlags);
-        [PreserveSig] int Merge(int i1, IImageList punk2, int i2, int dx, int dy, ref Guid riid, out nint ppv);
-        [PreserveSig] int Clone(ref Guid riid, out nint ppv);
-        [PreserveSig] int GetImageRect(int i, nint prc);
-        [PreserveSig] int GetIconSize(out int cx, out int cy);
-        [PreserveSig] int SetIconSize(int cx, int cy);
-        [PreserveSig] int GetImageCount(out int pi);
-        [PreserveSig] int SetImageCount(int uNewCount);
-        [PreserveSig] int SetBkColor(int clrBk, out int pclr);
-        [PreserveSig] int GetBkColor(out int pclr);
-        [PreserveSig] int BeginDrag(int iTrack, int dxHotspot, int dyHotspot);
-        [PreserveSig] int EndDrag();
-        [PreserveSig] int DragEnter(nint hwndLock, int x, int y);
-        [PreserveSig] int DragLeave(nint hwndLock);
-        [PreserveSig] int DragMove(int x, int y);
-        [PreserveSig] int SetDragCursorImage(IImageList punk, int iDrag, int dxHotspot, int dyHotspot);
-        [PreserveSig] int DragShowNolock(int fShow);
-        [PreserveSig] int GetDragImage(nint ppt, nint pptHotspot, ref Guid riid, out nint ppv);
-        [PreserveSig] int GetItemFlags(int i, out int dwFlags);
-        [PreserveSig] int GetOverlayImage(int iOverlay, out int piIndex);
-    }
-
-    [DllImport("shell32.dll")]
-    public static extern int SHGetImageList(int iImageList, ref Guid riid, out IImageList ppv);
 
     // ---- Hidden helper window (tray callbacks + global hotkeys) ------------
     //
@@ -334,66 +263,18 @@ internal static partial class NativeMethods
     [return: MarshalAs(UnmanagedType.Bool)]
     public static extern bool ShowWindow(nint hwnd, int cmdShow);
 
-    // ---- Top-level window / process enumeration (running-app indicators) ---
+    // ---- Deliberately absent: window / process enumeration -----------------
     //
-    // "Is this pinned app running?" is answered the same way the taskbar answers it: walk the
-    // visible top-level windows, map each back to the process that owns it, and compare that
-    // process's image path with the item's target. There is no cheaper API for it — a process
-    // name alone is ambiguous (two "Update.exe" in different folders are different apps) and
-    // Process.GetProcesses() can't tell a background service from something with a window.
-
-    public delegate bool EnumWindowsProc(nint hwnd, nint lParam);
-
-    [DllImport("user32.dll", SetLastError = true)]
-    [return: MarshalAs(UnmanagedType.Bool)]
-    public static extern bool EnumWindows(EnumWindowsProc callback, nint lParam);
-
-    [DllImport("user32.dll")]
-    [return: MarshalAs(UnmanagedType.Bool)]
-    public static extern bool IsWindow(nint hwnd);
-
-    [DllImport("user32.dll")]
-    [return: MarshalAs(UnmanagedType.Bool)]
-    public static extern bool IsWindowVisible(nint hwnd);
-
-    /// <summary>True when the window is minimized — it must be restored before it can be focused.</summary>
-    [DllImport("user32.dll")]
-    [return: MarshalAs(UnmanagedType.Bool)]
-    public static extern bool IsIconic(nint hwnd);
-
-    /// <summary>GetWindow relationship: the window's owner (zero for a true top-level window).</summary>
-    public const uint GW_OWNER = 4;
-
-    [DllImport("user32.dll")]
-    public static extern nint GetWindow(nint hwnd, uint command);
-
-    [DllImport("user32.dll")]
-    public static extern int GetWindowTextLength(nint hwnd);
-
-    [DllImport("user32.dll", CharSet = CharSet.Unicode)]
-    public static extern int GetClassName(nint hwnd, System.Text.StringBuilder className, int maxCount);
-
-    [DllImport("user32.dll", SetLastError = true)]
-    public static extern uint GetWindowThreadProcessId(nint hwnd, out uint processId);
-
-    /// <summary>Enough access to read a process's image path, and grantable without elevation.</summary>
-    public const uint PROCESS_QUERY_LIMITED_INFORMATION = 0x1000;
-
-    [DllImport("kernel32.dll", SetLastError = true)]
-    public static extern nint OpenProcess(
-        uint access, [MarshalAs(UnmanagedType.Bool)] bool inheritHandle, uint processId);
-
-    [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
-    [return: MarshalAs(UnmanagedType.Bool)]
-    public static extern bool QueryFullProcessImageName(
-        nint process, uint flags, System.Text.StringBuilder exeName, ref uint size);
-
-    [DllImport("kernel32.dll", SetLastError = true)]
-    [return: MarshalAs(UnmanagedType.Bool)]
-    public static extern bool CloseHandle(nint handle);
-
-    /// <summary>ShowWindow command: restore a minimized window to its previous size and position.</summary>
-    public const int SW_RESTORE = 9;
+    // A launcher dock answers "is this pinned app running?" by walking the visible top-level
+    // windows with EnumWindows, mapping each back to its owner with GetWindowThreadProcessId, and
+    // reading that process's image path through OpenProcess + QueryFullProcessImageName.
+    //
+    // DevDX opens no external process, so it has nothing to poll for (design doc §26): the
+    // open-window indicator is driven by ToolWindowManager's in-process dictionary and its Closed
+    // event, which is both exact and instant where a poll is neither. That makes the whole
+    // enumeration surface dead code — and dead code that reads other processes' identities is
+    // worth deleting rather than leaving for a Store reviewer, or a future contributor, to find
+    // and wonder about. If a feature ever genuinely needs it, it comes back with a caller.
 
     // ---- Global hotkeys ----------------------------------------------------
 
