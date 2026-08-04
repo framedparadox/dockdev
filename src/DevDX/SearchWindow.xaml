@@ -9,7 +9,10 @@
     <!-- Quick-launch: a borderless acrylic card, Start-menu-search shaped — a filter box over a
          short list of matches. The window is the card (no title bar, no chrome), so the whole
          surface is the acrylic the dock itself uses. -->
-    <Grid x:Name="RootGrid" Background="Transparent" RequestedTheme="Dark"
+    <!-- No RequestedTheme here: the constructor sets it from the app's Light/Dark/System choice
+         before the window is shown, so a value in the markup is one the code always overwrites —
+         and one that would quietly become the truth if that line ever moved. -->
+    <Grid x:Name="RootGrid" Background="Transparent"
           AutomationProperties.AutomationId="DevDXSearchRoot">
         <Grid Margin="12" RowSpacing="8">
             <Grid.RowDefinitions>

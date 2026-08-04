@@ -1,3 +1,4 @@
+using System.ComponentModel;
 using DevDX.Controls;
 using DevDX.Models;
 using DevDX.Services;
@@ -31,6 +32,34 @@ public sealed partial class SettingsWindow : Window
     private readonly AppWindow _appWindow;
 
     /// <summary>
+    /// Every <see cref="ToolDockItem.PropertyChanged"/> handler this window has attached, so they
+    /// can be detached at a point that is guaranteed to happen.
+    /// <para>
+    /// The rows in Tools subscribe to their item because a custom icon resolves asynchronously and
+    /// can land after the row is built. The item is <em>config</em> — it lives as long as the
+    /// process — so the subscription has to come off, and it used to come off in the row's
+    /// <c>Unloaded</c>. That hook cannot do the job. <see cref="RebuildTools"/> runs once from this
+    /// constructor, before the content has a <see cref="XamlRoot"/>: those rows are never loaded,
+    /// so replacing them never unloads them, and their handlers stay on a process-lifetime object
+    /// holding this whole window with them. Open Settings, change a tool, close it, repeat — every
+    /// Settings window ever opened stays alive.
+    /// </para>
+    /// <para>
+    /// Tracked here and torn down on <c>Closed</c>, which always fires, and again before each
+    /// rebuild so handlers cannot pile up within one window either.
+    /// </para>
+    /// </summary>
+    private readonly List<(ToolDockItem Item, PropertyChangedEventHandler Handler)> _itemSubscriptions = new();
+
+    /// <summary>Detaches every tracked item subscription. Idempotent.</summary>
+    private void ReleaseItemSubscriptions()
+    {
+        foreach (var (item, handler) in _itemSubscriptions)
+            item.PropertyChanged -= handler;
+        _itemSubscriptions.Clear();
+    }
+
+    /// <summary>
     /// Suppresses the "user changed this" handlers while controls are being populated from the
     /// config, so filling the page in cannot be mistaken for editing it.
     /// <para>
@@ -62,6 +91,9 @@ public sealed partial class SettingsWindow : Window
         // any border color already applied — set it any later and HideWindowBorder's effect gets
         // silently clobbered, leaving the default rim visible along the top edge.
         ExtendsContentIntoTitleBar = true;
+        // After ExtendsContentIntoTitleBar, never before — see WindowChrome.UseTallTitleBar. This
+        // is what makes the caption buttons 48px, matching AppTitleBar's height in the XAML.
+        WindowChrome.UseTallTitleBar(_appWindow);
         SetTitleBar(AppTitleBar);
 
         // Match the dock's chosen Light/Dark/System theme so the Settings window reads the same,
@@ -111,6 +143,9 @@ public sealed partial class SettingsWindow : Window
             _manager.ItemsChanged -= OnDockItemsChanged;
             _manager.DockChanged -= OnDockChanged;
             _manager.UpdateAvailable -= OnUpdateAvailable;
+            // The config items outlive this window by the life of the process, so anything still
+            // attached to one is this window kept alive after it closed.
+            ReleaseItemSubscriptions();
         };
     }
 
@@ -960,6 +995,10 @@ public sealed partial class SettingsWindow : Window
     /// </summary>
     private void RebuildTools()
     {
+        // Every row about to be discarded took a handler on a process-lifetime config item. Drop
+        // them before building the replacements, or one window accumulates a set per rebuild.
+        ReleaseItemSubscriptions();
+
         // Flipping a switch raises ItemsChanged, which lands back here and replaces every card —
         // including the switch the user is standing on. Without this, toggling a tool with the
         // keyboard dumps focus back at the top of the page, so switching three tools on means
@@ -1156,12 +1195,13 @@ public sealed partial class SettingsWindow : Window
         }
         RenderIcon();
 
-        void OnItemPropertyChanged(object? s, System.ComponentModel.PropertyChangedEventArgs e)
+        void OnItemPropertyChanged(object? s, PropertyChangedEventArgs e)
         {
             if (e.PropertyName == nameof(ToolDockItem.IconImage))
                 RenderIcon();
         }
         item.PropertyChanged += OnItemPropertyChanged;
+        _itemSubscriptions.Add((item, OnItemPropertyChanged));
 
         Grid.SetColumn(iconHost, 1);
         grid.Children.Add(iconHost);
@@ -1241,9 +1281,8 @@ public sealed partial class SettingsWindow : Window
             Opacity = active ? 1.0 : 0.55,
             Child = grid,
         };
-        // The item outlives this row (the list is rebuilt wholesale on every RebuildTools), so the
-        // subscription above must be torn down explicitly or it leaks a handler per rebuild.
-        row.Unloaded += (_, _) => item.PropertyChanged -= OnItemPropertyChanged;
+        // Teardown is _itemSubscriptions' job, not this row's: see the field's remarks for why an
+        // Unloaded handler here could never run for the rows this window builds in its constructor.
         return row;
     }
 

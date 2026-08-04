@@ -1,3 +1,4 @@
+using DevDX.Controls;
 using DevDX.Interop;
 using DevDX.Models;
 using DevDX.Services;
@@ -50,15 +51,14 @@ public sealed class ToolWindowBase : Window
         Title = definition.DisplayName;
         SystemBackdrop = new MicaBackdrop();
         ExtendsContentIntoTitleBar = true;
+        // After ExtendsContentIntoTitleBar, never before: the option applies to the
+        // framework-managed title bar, which does not exist until that is set.
+        WindowChrome.UseTallTitleBar(_appWindow);
 
         _root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
         _root.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
 
-        var titleBar = new Border { Height = 40, Background = new SolidColorBrush(Microsoft.UI.Colors.Transparent) };
-        var titleContent = new StackPanel { Orientation = Orientation.Horizontal, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(16, 0, 0, 0) };
-        titleContent.Children.Add(new FontIcon { Glyph = definition.Glyph, FontSize = 15, Margin = new Thickness(0, 0, 8, 0) });
-        titleContent.Children.Add(new TextBlock { Text = definition.DisplayName, FontWeight = Microsoft.UI.Text.FontWeights.SemiBold });
-        titleBar.Child = titleContent;
+        var titleBar = new AppTitleBar(definition.Glyph, definition.DisplayName);
 
         Grid.SetRow(titleBar, 0);
         Grid.SetRow(page, 1);

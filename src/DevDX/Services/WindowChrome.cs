@@ -8,6 +8,61 @@ namespace DevDX.Services;
 /// <summary>Native window chrome tweaks that AppWindow/WinUI don't expose directly.</summary>
 public static class WindowChrome
 {
+    /// <summary>
+    /// The height of the custom title bar on every DevDX window that has one, and the height the
+    /// system caption buttons are asked to match (see <see cref="UseTallTitleBar"/>).
+    /// <para>
+    /// This has to be one of the two heights WinUI will draw caption buttons at, and it is not a
+    /// free choice: <c>PreferredHeightOption</c> offers <c>Standard</c> (32) and <c>Tall</c> (48),
+    /// nothing between. Settings, Add-Tool and every tool window each drew a 40px bar, so the
+    /// minimize/maximize/close buttons — 32px, top-aligned, because nothing asked for anything
+    /// else — sat 4px above the centre of the strip their own window drew, with an 8px band of
+    /// title bar below them that lit up on hover as a rectangle ending short of the edge. Tall
+    /// rather than Standard because 40 was already a deliberate step up from 32; going down would
+    /// have redrawn the whole app's chrome to fix an alignment bug.
+    /// </para>
+    /// <para>
+    /// Enforced by <c>DevDX.Tests.Shell.TitleBarConsistencyTests</c>, which is what keeps the XAML
+    /// literal in <c>SettingsWindow.xaml</c> in step with this number.
+    /// </para>
+    /// </summary>
+    public const double TitleBarHeight = 48;
+
+    /// <summary>
+    /// How far the icon and title sit in from the window's left edge. 16 is the Fluent content
+    /// inset, and it lines the title bar up with the content below it rather than with nothing.
+    /// The three title bars used 14, 14 and 16 — no reason, just three separate authorings.
+    /// </summary>
+    public const double TitleBarContentInset = 16;
+
+    /// <summary>
+    /// Space kept clear on the right for the caption buttons. Three buttons at 46 DIPs each is
+    /// 138 — the width is in DIPs and does not change with scale — plus a little air.
+    /// <para>
+    /// Without it a title bar is a full-width strip whose text WinUI happily lays out underneath
+    /// the close button. It does not show at the default window size; it shows the moment someone
+    /// drags a tool window narrow, which nothing stops them doing.
+    /// </para>
+    /// </summary>
+    public const double CaptionButtonReserve = 144;
+
+    /// <summary>
+    /// Asks WinUI to draw the caption buttons at <see cref="TitleBarHeight"/> rather than the
+    /// 32px default. Must be called <em>after</em> <c>ExtendsContentIntoTitleBar</c> is set —
+    /// before it, there is no framework-managed title bar for the option to apply to.
+    /// <para>
+    /// Guarded on a null <c>TitleBar</c> for the same reason <see cref="SetTitleBarTheme"/> is:
+    /// the property is null on a window whose native counterpart has gone, and this runs from
+    /// constructors and theme handlers where a throw has no caller.
+    /// </para>
+    /// </summary>
+    public static void UseTallTitleBar(AppWindow? appWindow)
+    {
+        if (appWindow?.TitleBar is not { } titleBar)
+            return;
+        titleBar.PreferredHeightOption = TitleBarHeightOption.Tall;
+    }
+
     /// <summary>Sizes a window's client area given a size in device-independent pixels.</summary>
     public static void SetClientSizeDip(AppWindow appWindow, nint hwnd, double dipW, double dipH)
     {

@@ -160,6 +160,14 @@ public sealed class CodeEditor : Grid
         _highlightTimer.Interval = HighlightDelay;
         _highlightTimer.Tick += (_, _) => Highlight();
 
+        // A pending highlight outlives the window that owns it. The dispatcher holds a running
+        // timer, the timer's Tick closure holds this editor, and the editor holds the document —
+        // so between the last keystroke and the tick 180ms later, closing the window leaves a
+        // colouring pass queued against a RichEditBox whose native document has gone. Highlight()
+        // guards its tokenizing but reads the selection before that guard opens, so the throw
+        // lands on a timer tick with no caller: an unhandled exception, not a mis-coloured line.
+        Unloaded += (_, _) => _highlightTimer.Stop();
+
         TextBox.TextChanged += (_, _) =>
         {
             if (_suppressTextChanged)
@@ -196,11 +204,26 @@ public sealed class CodeEditor : Grid
             ? Microsoft.UI.Colors.Black
             : Microsoft.UI.Colors.White;
 
-        int selectionStart = TextBox.Document.Selection.StartPosition;
-        int selectionEnd = TextBox.Document.Selection.EndPosition;
+        int selectionStart;
+        int selectionEnd;
+        try
+        {
+            // Reading the selection and opening the batch are inside a guard of their own, not
+            // above the main one. Every line here talks to the RichEditBox's native document, and
+            // the one caller is a timer tick — so on the closed-window path (see the Unloaded
+            // handler in the constructor) these are the calls that throw, and they used to throw
+            // from outside every try in this method.
+            selectionStart = TextBox.Document.Selection.StartPosition;
+            selectionEnd = TextBox.Document.Selection.EndPosition;
+            TextBox.Document.BatchDisplayUpdates();
+        }
+        catch (Exception ex)
+        {
+            Services.Diag.Log("CodeEditor.Highlight: document unavailable: " + ex.Message);
+            return;
+        }
 
         _suppressTextChanged = true;
-        TextBox.Document.BatchDisplayUpdates();
         try
         {
             // Tokenizing is inside the guard, not before it. This runs on whatever the user has
@@ -232,8 +255,17 @@ public sealed class CodeEditor : Grid
         }
         finally
         {
-            TextBox.Document.Selection.SetRange(selectionStart, selectionEnd);
-            TextBox.Document.ApplyDisplayUpdates();
+            // Guarded too: a finally that throws replaces the exception the catch above just
+            // handled with a new one, and this one runs on that same timer tick.
+            try
+            {
+                TextBox.Document.Selection.SetRange(selectionStart, selectionEnd);
+                TextBox.Document.ApplyDisplayUpdates();
+            }
+            catch (Exception ex)
+            {
+                Services.Diag.Log("CodeEditor.Highlight: could not restore the document: " + ex.Message);
+            }
             _suppressTextChanged = false;
         }
     }

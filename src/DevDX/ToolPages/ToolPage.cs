@@ -38,9 +38,24 @@ public abstract class ToolPage : UserControl
     /// <summary>Cancelled when the host window closes — every background parse ties to this.</summary>
     protected CancellationToken PageClosing => _pageClosing.Token;
 
-    /// <summary>Called by <c>ToolWindowBase</c> when the host window closes.</summary>
+    /// <summary>
+    /// Called by <c>ToolWindowBase</c> when the host window closes. Cancelling is what runs the
+    /// registered callbacks — the pages that own a <c>DispatcherQueueTimer</c> stop it here (see
+    /// <c>DiffPage</c>, <c>TimestampPage</c>), which is what stops the dispatcher holding a closed
+    /// window's whole visual tree.
+    /// <para>
+    /// <b>Not disposed, deliberately.</b> A <see cref="CancellationTokenSource"/> only holds an
+    /// unmanaged resource once something arms its timer (<c>CancelAfter</c>) or asks for its
+    /// <c>WaitHandle</c>; this one does neither, so it is plain managed memory collected with the
+    /// page that owns it — there is nothing for a Dispose to release. Calling one anyway would be
+    /// actively harmful: <c>RegexPage</c> reads <see cref="PageClosing"/> after awaiting its match,
+    /// which is precisely the "the window closed underneath us" case, and reading <c>.Token</c> on
+    /// a disposed source throws <see cref="ObjectDisposedException"/> — from an <c>async void</c>
+    /// handler, where an exception is an unhandled one.
+    /// </para>
+    /// </summary>
     internal void NotifyClosing()
     {
-        try { _pageClosing.Cancel(); } catch { /* already disposed */ }
+        try { _pageClosing.Cancel(); } catch { /* a registered callback threw; the window is going anyway */ }
     }
 }

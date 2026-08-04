@@ -1,3 +1,4 @@
+using DevDX.Controls;
 using DevDX.Models;
 using DevDX.Services;
 using Microsoft.UI;
@@ -57,12 +58,10 @@ public sealed partial class AddToolWindow : Window
         Title = Loc.Get("Add.Title");
         SystemBackdrop = new MicaBackdrop();
         ExtendsContentIntoTitleBar = true;
+        // After ExtendsContentIntoTitleBar, never before — see WindowChrome.UseTallTitleBar.
+        WindowChrome.UseTallTitleBar(_appWindow);
 
-        var titleBar = new Grid { Height = 40, Background = new SolidColorBrush(Colors.Transparent) };
-        var titleContent = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 10, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(14, 0, 0, 0) };
-        titleContent.Children.Add(new FontIcon { Glyph = "", FontSize = 14, Foreground = (Brush)Application.Current.Resources["AccentTextFillColorPrimaryBrush"] });
-        titleContent.Children.Add(new TextBlock { Text = Loc.Get("Add.Title"), Style = (Style)Application.Current.Resources["CaptionTextBlockStyle"], VerticalAlignment = VerticalAlignment.Center });
-        titleBar.Children.Add(titleContent);
+        var titleBar = new AppTitleBar("", Loc.Get("Add.Title"), accentGlyph: true);
 
         // The header row: the hero on the left, the search box on the right of it, the two centred
         // against each other. Search belongs on the line whose results it filters, not stacked
