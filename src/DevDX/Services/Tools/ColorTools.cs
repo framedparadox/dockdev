@@ -27,7 +27,7 @@ public static class ColorTools
     /// <see cref="Regex.MatchTimeout"/>, this one included. The pattern is linear and this subject
     /// is a short colour literal, so the timeout is not expected to fire — but the rule is what
     /// makes a regex on untrusted text safe by default rather than by case-by-case reasoning, and
-    /// <c>DevDX.Tests.Services.RegexTimeoutArchitectureTests</c> enforces it across the tree.
+    /// <c>DevDX.Tests.Services.RegexTimeoutTests</c> enforces it across the tree.
     /// </summary>
     private static readonly TimeSpan MatchTimeout = TimeSpan.FromSeconds(1);
 

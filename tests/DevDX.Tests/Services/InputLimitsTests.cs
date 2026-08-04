@@ -19,12 +19,10 @@ public class InputLimitsTests : IDisposable
     private readonly string _directory =
         Path.Combine(Path.GetTempPath(), "devdx-inputlimits-" + Guid.NewGuid().ToString("N"));
 
-    public InputLimitsTests()
-    {
-        Directory.CreateDirectory(_directory);
-        // So the refusal messages resolve to real sentences rather than bare keys.
-        Loc.Initialize("en");
-    }
+    // The refusal messages resolve to real sentences because TestSetup's module initializer has
+    // already settled the string table — deliberately not done here, since mutating that from a
+    // constructor races the other test classes xUnit runs in parallel.
+    public InputLimitsTests() => Directory.CreateDirectory(_directory);
 
     public void Dispose()
     {

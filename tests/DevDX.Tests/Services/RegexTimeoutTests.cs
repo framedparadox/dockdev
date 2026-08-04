@@ -68,9 +68,14 @@ public class RegexTimeoutTests
         // §21's ReDoS clause, end to end: the Regex Tester's own input is the one place a user can
         // trivially write catastrophic backtracking, and it must come back with a result rather
         // than take the window with it.
+        //
+        // `^(\w+\s?)*$` against a subject that cannot match is Microsoft's own documented example
+        // for RegexMatchTimeout, chosen over the textbook `(a+)+` precisely because .NET's regex
+        // reducer defeats several of the textbook ones outright — a ReDoS test the optimizer
+        // quietly makes linear is a test that passes for the wrong reason.
         var result = RegexRunner.Run(
-            @"^(a+)+$",
-            new string('a', 40) + "!",
+            @"^(\w+\s?)*$",
+            new string('a', 30) + "!",
             RegexOptions.None,
             replacement: null);
 
