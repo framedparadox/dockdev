@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Window
+    x:Class="DevDX.AddToolWindow"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <!-- Content is built in code-behind: a tile gallery grouped by category (design doc §18)
+         needs no designer-authored markup, and building it in C# keeps sixteen* tile definitions
+         (fifteen tools, minus Currency — see ToolCatalog) as data rather than boilerplate XAML. -->
+    <Grid x:Name="RootGrid" />
+</Window>

@@ -1,0 +1,30 @@
+# Build results
+bin/
+obj/
+[Dd]ebug/
+[Rr]elease/
+
+# Visual Studio files
+.vs/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# MSIX / packaging artifacts
+AppPackages/
+BundleArtifacts/
+*.appx
+*.appxbundle
+*.appxupload
+*.appxsym
+*.pfx
+*.cer
+
+# Test results
+[Tt]est[Rr]esult*/
+
+# Misc
+*.log
+
+docs/devdock-design-document.md
