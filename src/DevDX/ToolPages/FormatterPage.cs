@@ -24,11 +24,41 @@ namespace DevDX.ToolPages;
 /// </summary>
 public sealed class FormatterPage : EditorToolPage
 {
+    /// <summary>What the indent starts at, and what it falls back to when the field is empty.</summary>
+    private const int DefaultIndentWidth = 2;
+
+    /// <summary>
+    /// 64 DIPs is Fluent's <c>TextControlThemeMinWidth</c> — the platform's own minimum for a
+    /// text-entry control, and the right size for a field that never holds more than one digit.
+    /// <para>
+    /// It was 96, which is the sizing for the multi-digit spinners on the form-shaped pages
+    /// (Password's 4–512, UUID's 1–1000). Those sit in a labelled form row where the width reads as
+    /// a column; this one sits in a 48px command bar between Format, Minify and Validate, where it
+    /// was the widest element on the bar and mostly empty — a one-character option that looked like
+    /// the tool's main text input.
+    /// </para>
+    /// </summary>
+    private const double IndentBoxWidth = 64;
+
     private readonly IDataFormat? _fixedFormat;
     private readonly CodeEditor _editor = new();
     private readonly StructureTree _tree = new();
     private readonly Border _treeHost;
-    private readonly NumberBox _indentBox = new() { Value = 2, Minimum = 1, Maximum = 8, SpinButtonPlacementMode = NumberBoxSpinButtonPlacementMode.Compact, Width = 96 };
+    private readonly NumberBox _indentBox = new()
+    {
+        Value = DefaultIndentWidth,
+        Minimum = 1,
+        Maximum = 8,
+        // Explicit rather than left to the defaults: LargeChange defaults to 10, which on a range
+        // of 1–8 makes Page Up a jump straight to the end.
+        SmallChange = 1,
+        LargeChange = 2,
+        // Compact keeps the spin buttons out of the box's own width — Inline would put two
+        // RepeatButtons inside it and force it back to roughly the width this is fixing.
+        SpinButtonPlacementMode = NumberBoxSpinButtonPlacementMode.Compact,
+        Width = IndentBoxWidth,
+        VerticalAlignment = VerticalAlignment.Center,
+    };
 
     private IReadOnlyList<ToolCommand>? _commands;
     private IDataFormat? _activeFormat;
@@ -121,7 +151,14 @@ public sealed class FormatterPage : EditorToolPage
         Format();
     }
 
-    private FormatOptions Options => new() { IndentWidth = (int)_indentBox.Value, SortKeys = false };
+    private FormatOptions Options => new()
+    {
+        // NumberBox reports NaN while its field is empty, and (int)double.NaN is undefined in C# —
+        // it happens to land on a value the writers' own clamps absorb, but only by luck, and a
+        // "luckily this is fine" is not what should decide how a document gets indented.
+        IndentWidth = double.IsNaN(_indentBox.Value) ? DefaultIndentWidth : (int)_indentBox.Value,
+        SortKeys = false,
+    };
 
     /// <summary>
     /// Replaces the editor's text with the result of a transformation. The one place the page
