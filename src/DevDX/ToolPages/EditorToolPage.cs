@@ -21,6 +21,14 @@ public abstract class EditorToolPage : ToolPage
 
     protected ToolStatusBar StatusBar { get; } = new();
 
+    /// <summary>
+    /// Exposed read-only so a page can measure against the bar's actual rendered layout (see
+    /// <c>RegexPage</c>'s pattern field, which has to know exactly where the real Clear button
+    /// ends up rather than guess a constant — the stock <c>CommandBar</c> template doesn't let its
+    /// <see cref="SetOptions"/> content stretch to fill the row on its own).
+    /// </summary>
+    protected CommandBar CommandBar => _commandBar;
+
     private readonly CommandBar _commandBar = new()
     {
         DefaultLabelPosition = CommandBarDefaultLabelPosition.Right,

@@ -39,9 +39,9 @@ public sealed class TimestampPage : FormToolPage
         var nowPanel = new StackPanel { Spacing = 4 };
         nowPanel.Children.Add(SectionHeader(Loc.Get("Timestamp.Now")));
         nowPanel.Children.Add(_now);
-        Grid.SetColumn(nowPanel, 0);
+        Grid.SetColumn(nowPanel, 1);
         var inputRow = LabelledRow(Loc.Get("Timestamp.Input"), _input);
-        Grid.SetColumn(inputRow, 1);
+        Grid.SetColumn(inputRow, 0);
         var reset = new Button
         {
             Content = new FontIcon { Glyph = "\uE72C", FontSize = 14 },

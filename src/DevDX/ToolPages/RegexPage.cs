@@ -4,6 +4,7 @@ using DevDX.Models;
 using DevDX.Services;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+using Windows.Foundation;
 using Windows.System;
 using RegexRunner = DevDX.Services.Tools.RegexRunner;
 
@@ -119,16 +120,33 @@ public sealed class RegexPage : EditorToolPage
     }
 
     /// <summary>
-    /// Recomputes <see cref="_pattern"/>'s width from the page's own size. EditorToolPage's
-    /// CommandBar is private and not exposed, and its Content cell can size to content rather than
-    /// stretching, so this reserves room for the 40px icon-only Clear button
-    /// (EditorToolPage.IconOnlyButtonWidth) plus the CommandBar's padding/margins and the page's
-    /// chrome, and gives whatever is left to the field.
+    /// Recomputes <see cref="_pattern"/>'s width from the Clear button's actual rendered position.
+    /// A first pass at this reserved a guessed 150px for the button and the CommandBar's chrome,
+    /// and that guess turned out too large, leaving dead space before the button — a second guess
+    /// would just as easily miss in the other direction. Measuring where the real button ended up
+    /// (via <see cref="EditorToolPage.CommandBar"/>) removes the guesswork entirely: whatever the
+    /// CommandBar template actually reserves, the field's width self-corrects to it.
     /// </summary>
     private void UpdatePatternWidth()
     {
-        const double ReservedForClearButtonAndChrome = 150;
-        _pattern.Width = Math.Max(240, ActualWidth - ReservedForClearButtonAndChrome);
+        if (CommandBar.PrimaryCommands.Count > 0 &&
+            CommandBar.PrimaryCommands[0] is FrameworkElement clearButton &&
+            clearButton.ActualWidth > 0)
+        {
+            const double Gap = 12;
+            var clearOrigin = clearButton.TransformToVisual(this).TransformPoint(new Point(0, 0));
+            var patternOrigin = _pattern.TransformToVisual(this).TransformPoint(new Point(0, 0));
+            _pattern.Width = Math.Max(240, clearOrigin.X - patternOrigin.X - Gap);
+            return;
+        }
+
+        // The Clear button hasn't been through a layout pass yet (can legitimately happen on the
+        // very first Loaded firing, before layout settles) — fall back so the field isn't left
+        // tiny for that one brief window. 80px covers the button's own known 40px width
+        // (EditorToolPage.IconOnlyButtonWidth) plus a tighter, more realistic chrome allowance
+        // than the old 150px guess. SizeChanged keeps firing afterward, so the precise path above
+        // takes over as soon as the button actually has a size.
+        _pattern.Width = Math.Max(240, ActualWidth - 80);
     }
 
     public override ToolKind Kind => ToolKind.RegexTester;

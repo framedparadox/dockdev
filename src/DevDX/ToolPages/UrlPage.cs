@@ -31,7 +31,9 @@ public sealed class UrlPage : EditorToolPage
     private UrlTools.ParsedUrl? _parsed;
     private bool _isDirty;
 
-    private readonly ComboBox _section = new();
+    private readonly Button _percentButton = new() { Content = Loc.Get("Url.Percent") };
+    private readonly Button _htmlButton = new() { Content = Loc.Get("Url.Html") };
+    private readonly Button _parserButton = new() { Content = Loc.Get("Url.Parser") };
     private readonly Grid _sectionHost = new();
 
     /// <summary>Segoe Fluent Icons "Delete", for dropping a query parameter. Spelled as an escape
@@ -54,24 +56,33 @@ public sealed class UrlPage : EditorToolPage
         _sectionHost.Children.Add(htmlSection);
         _sectionHost.Children.Add(parserSection);
 
-        _section.Items.Add(Loc.Get("Url.Percent"));
-        _section.Items.Add(Loc.Get("Url.Html"));
-        _section.Items.Add(Loc.Get("Url.Parser"));
-        _section.SelectedIndex = 0;
-        _section.SelectionChanged += (_, _) =>
+        void SelectSection(int index)
         {
-            percentSection.Visibility = _section.SelectedIndex == 0 ? Visibility.Visible : Visibility.Collapsed;
-            htmlSection.Visibility = _section.SelectedIndex == 1 ? Visibility.Visible : Visibility.Collapsed;
-            parserSection.Visibility = _section.SelectedIndex == 2 ? Visibility.Visible : Visibility.Collapsed;
-        };
+            percentSection.Visibility = index == 0 ? Visibility.Visible : Visibility.Collapsed;
+            htmlSection.Visibility = index == 1 ? Visibility.Visible : Visibility.Collapsed;
+            parserSection.Visibility = index == 2 ? Visibility.Visible : Visibility.Collapsed;
 
-        // No separate caption: unlike Masker's profile/threshold combos, each item here already
-        // names the section it switches to ("Percent-Encoding", "HTML entities", "URL parser"),
-        // the same text sighted users read off the old Pivot headers — so the selected item text
-        // alone (as Narrator already reads any ComboBox) carries the same meaning a label would.
+            var accent = (Style)Application.Current.Resources["AccentButtonStyle"];
+            _percentButton.Style = index == 0 ? accent : null;
+            _htmlButton.Style = index == 1 ? accent : null;
+            _parserButton.Style = index == 2 ? accent : null;
+        }
+
+        _percentButton.Click += (_, _) => SelectSection(0);
+        _htmlButton.Click += (_, _) => SelectSection(1);
+        _parserButton.Click += (_, _) => SelectSection(2);
+
+        // No separate caption: unlike Masker's profile/threshold combos, each button here already
+        // names the section it switches to ("Percent-Encoding", "HTML entities", "URL parser"), the
+        // same text sighted users read off the old Pivot headers — so the button's own label carries
+        // the same meaning a caption would, and the accent style marks which one is active.
         var options = OptionsBar();
-        options.Children.Add(_section);
+        options.Children.Add(_percentButton);
+        options.Children.Add(_htmlButton);
+        options.Children.Add(_parserButton);
         SetOptions(options);
+
+        SelectSection(0);
 
         SetBody(_sectionHost);
         StatusBar.SetUntouched();

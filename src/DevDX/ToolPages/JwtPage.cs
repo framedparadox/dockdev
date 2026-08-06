@@ -91,11 +91,12 @@ public sealed class JwtPage : EditorToolPage
         body.RowDefinitions.Add(new RowDefinition { Height = new GridLength(3, GridUnitType.Star) });
         body.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
         body.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
-        Grid.SetRow(_input, 0);
+        var inputSurface = EditorToolPage.Pane(_input);
+        Grid.SetRow(inputSurface, 0);
         Grid.SetRow(sections, 1);
         Grid.SetRow(claimsBar, 2);
         Grid.SetRow(_warnings, 3);
-        body.Children.Add(_input);
+        body.Children.Add(inputSurface);
         body.Children.Add(sections);
         body.Children.Add(claimsBar);
         body.Children.Add(_warnings);
