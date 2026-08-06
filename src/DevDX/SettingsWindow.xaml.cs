@@ -201,7 +201,8 @@ public sealed partial class SettingsWindow : Window
     {
         var tag = (args.SelectedItem as NavigationViewItem)?.Tag as string;
         if (HomePanel is null || GeneralPanel is null || AppearancePanel is null ||
-            ShortcutsPanel is null || DockPanel is null || ToolsPanel is null || AboutPanel is null)
+            ShortcutsPanel is null || DockPanel is null || ToolsPanel is null ||
+            DocumentationPanel is null || AboutPanel is null)
             return;
         HomePanel.Visibility = tag == "home" ? Visibility.Visible : Visibility.Collapsed;
         GeneralPanel.Visibility = tag == "general" ? Visibility.Visible : Visibility.Collapsed;
@@ -209,6 +210,7 @@ public sealed partial class SettingsWindow : Window
         ShortcutsPanel.Visibility = tag == "shortcuts" ? Visibility.Visible : Visibility.Collapsed;
         DockPanel.Visibility = tag == "dock" ? Visibility.Visible : Visibility.Collapsed;
         ToolsPanel.Visibility = tag == "tools" ? Visibility.Visible : Visibility.Collapsed;
+        DocumentationPanel.Visibility = tag == "documentation" ? Visibility.Visible : Visibility.Collapsed;
         AboutPanel.Visibility = tag == "about" ? Visibility.Visible : Visibility.Collapsed;
     }
 

@@ -1,4 +1,5 @@
 using System.Globalization;
+using DevDX.Controls;
 using DevDX.Models;
 using DevDX.Services;
 using DevDX.Services.Tools;
@@ -19,7 +20,15 @@ public sealed class CronPage : FormToolPage
 
     private readonly TextBox _expression = new() { PlaceholderText = Loc.Get("Cron.Placeholder"), FontFamily = new Microsoft.UI.Xaml.Media.FontFamily("Cascadia Mono, Consolas") };
     private readonly TextBlock _summary = new() { TextWrapping = TextWrapping.Wrap };
-    private readonly TextBox _next;
+    private readonly TextBox _next = new()
+    {
+        IsReadOnly = true,
+        FontFamily = new Microsoft.UI.Xaml.Media.FontFamily("Cascadia Mono, Consolas"),
+        AcceptsReturn = true,
+        TextWrapping = TextWrapping.NoWrap,
+        Height = 240,
+        HorizontalAlignment = HorizontalAlignment.Stretch,
+    };
 
     public CronPage()
     {
@@ -28,11 +37,24 @@ public sealed class CronPage : FormToolPage
         AddRow(new TextBlock { Text = Loc.Get("Cron.FieldHint"), Opacity = 0.75, TextWrapping = TextWrapping.Wrap, FontFamily = new Microsoft.UI.Xaml.Media.FontFamily("Cascadia Mono, Consolas"), FontSize = 12 });
         AddRow(_summary);
 
-        (var nextRow, _next, _) = ResultRow(Loc.Format("Cron.NextRuns", OccurrenceCount));
-        _next.AcceptsReturn = true;
-        _next.TextWrapping = TextWrapping.NoWrap;
-        _next.Height = 240;
-        AddRow(nextRow);
+        // Built by hand rather than via ResultRow: the copy button needs to sit beside the "Next N
+        // runs" title itself, not beside the bottom of the 240px box the title sits above.
+        var nextTitle = Loc.Format("Cron.NextRuns", OccurrenceCount);
+        var nextHeader = new TextBlock { Text = nextTitle, Opacity = 0.8, Style = (Style)Application.Current.Resources["CaptionTextBlockStyle"], VerticalAlignment = VerticalAlignment.Center };
+        var nextCopy = new CopyButton { GetText = () => _next.Text, VerticalAlignment = VerticalAlignment.Center };
+        Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(nextCopy, Loc.Get("Tool.CopyOutput") + ": " + nextTitle);
+        Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(_next, nextTitle);
+
+        var nextHeaderRow = new Grid { ColumnSpacing = 8 };
+        nextHeaderRow.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        nextHeaderRow.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        Grid.SetColumn(nextHeader, 0);
+        Grid.SetColumn(nextCopy, 1);
+        nextHeaderRow.Children.Add(nextHeader);
+        nextHeaderRow.Children.Add(nextCopy);
+
+        AddRow(nextHeaderRow);
+        AddRow(_next);
 
         _expression.TextChanged += (_, _) => Parse();
         _expression.Text = "*/15 9-17 * * mon-fri";

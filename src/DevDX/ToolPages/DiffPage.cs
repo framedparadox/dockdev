@@ -63,6 +63,7 @@ public sealed class DiffPage : EditorToolPage
         options.Children.Add(_ignoreCase);
         options.Children.Add(_ignoreBlankLines);
         SetOptions(options);
+        options.HorizontalAlignment = Microsoft.UI.Xaml.HorizontalAlignment.Right;
 
         // Both editors and the diff below stretch to fill: each is the only child of its cell and
         // every cell is a star row/column, so the three panes always divide the whole window.
@@ -81,7 +82,7 @@ public sealed class DiffPage : EditorToolPage
         diffSurface.BorderThickness = new Thickness(0, 1, 0, 0); // the divider runs along the top here
 
         var body = new Grid { VerticalAlignment = VerticalAlignment.Stretch };
-        body.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
+        body.RowDefinitions.Add(new RowDefinition { Height = new GridLength(3, GridUnitType.Star) });
         body.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
         Grid.SetRow(inputs, 0);
         Grid.SetRow(diffSurface, 1);

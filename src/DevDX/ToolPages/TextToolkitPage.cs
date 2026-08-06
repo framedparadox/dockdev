@@ -86,13 +86,7 @@ public sealed class TextToolkitPage : EditorToolPage
 
         _input.TextChanged += (_, _) => { _isDirty = _input.Text.Length > 0; Apply(); };
 
-        var inputPane = new Grid();
-        inputPane.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
-        inputPane.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
-        Grid.SetRow(header, 0);
-        Grid.SetRow(_input, 1);
-        inputPane.Children.Add(header);
-        inputPane.Children.Add(_input);
+        SetOptions(header);
 
         var outputPane = new Grid();
         outputPane.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
@@ -105,9 +99,9 @@ public sealed class TextToolkitPage : EditorToolPage
         var split = new Grid();
         split.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
         split.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-        Grid.SetColumn(inputPane, 0);
+        Grid.SetColumn(_input, 0);
         Grid.SetColumn(outputPane, 1);
-        split.Children.Add(inputPane);
+        split.Children.Add(_input);
         split.Children.Add(outputPane);
 
         SetBody(split);

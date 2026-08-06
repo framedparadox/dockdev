@@ -11,8 +11,8 @@ namespace DevDX.ToolPages;
 /// <summary>
 /// Backs the JSON, Data Formatter and XML catalog entries — three catalog entries, one page,
 /// differing only by which <see cref="IDataFormat"/> they're constructed with (design doc §8,
-/// §14.1–§14.3). One editable pane plus the structure tree; Format, Minify, Validate, sort keys,
-/// copy. Invalid input never clears the user's text.
+/// §14.1–§14.3). One editable pane; Format, Minify, Validate, sort keys, copy. Invalid input
+/// never clears the user's text.
 /// <para>
 /// <b>One window, not two.</b> Formatting rewrites the editor in place rather than filling a
 /// second read-only pane: the workflow is paste → format → copy, and a side-by-side output pane
@@ -28,22 +28,21 @@ public sealed class FormatterPage : EditorToolPage
     private const int DefaultIndentWidth = 2;
 
     /// <summary>
-    /// 64 DIPs is Fluent's <c>TextControlThemeMinWidth</c> — the platform's own minimum for a
-    /// text-entry control, and the right size for a field that never holds more than one digit.
+    /// Wide enough for the field's one digit plus the Inline spin buttons stacked beside it.
     /// <para>
-    /// It was 96, which is the sizing for the multi-digit spinners on the form-shaped pages
-    /// (Password's 4–512, UUID's 1–1000). Those sit in a labelled form row where the width reads as
-    /// a column; this one sits in a 48px command bar between Format, Minify and Validate, where it
-    /// was the widest element on the bar and mostly empty — a one-character option that looked like
-    /// the tool's main text input.
+    /// This used to be 64 — Fluent's <c>TextControlThemeMinWidth</c> — with the spin buttons in
+    /// Compact placement, which renders its stepper via a popup. On this app's desktop windowing
+    /// setup that popup opens as a separate full-screen overlay window instead of docking to the
+    /// control, which reads as the box going modal. Inline draws the spin buttons inside the
+    /// control's own template instead of a popup, which fixes that — but it also reserves extra
+    /// internal width for two stacked RepeatButtons, so the box needs to grow to keep the digit
+    /// from looking cramped next to them.
     /// </para>
     /// </summary>
-    private const double IndentBoxWidth = 64;
+    private const double IndentBoxWidth = 92;
 
     private readonly IDataFormat? _fixedFormat;
     private readonly CodeEditor _editor = new();
-    private readonly StructureTree _tree = new();
-    private readonly Border _treeHost;
     private readonly NumberBox _indentBox = new()
     {
         Value = DefaultIndentWidth,
@@ -53,9 +52,10 @@ public sealed class FormatterPage : EditorToolPage
         // of 1–8 makes Page Up a jump straight to the end.
         SmallChange = 1,
         LargeChange = 2,
-        // Compact keeps the spin buttons out of the box's own width — Inline would put two
-        // RepeatButtons inside it and force it back to roughly the width this is fixing.
-        SpinButtonPlacementMode = NumberBoxSpinButtonPlacementMode.Compact,
+        // Inline draws the spin buttons inside the control's own template. Compact renders them
+        // via a popup, which on this app's desktop windowing setup opens as a full-screen overlay
+        // instead of docking to the control — Inline avoids that modal-popup bug entirely.
+        SpinButtonPlacementMode = NumberBoxSpinButtonPlacementMode.Inline,
         Width = IndentBoxWidth,
         VerticalAlignment = VerticalAlignment.Center,
     };
@@ -75,7 +75,6 @@ public sealed class FormatterPage : EditorToolPage
 
         _editor.PlaceholderText = Loc.Get("Formatter.InputPlaceholder");
         _editor.AccessibleName = Loc.Get("Common.Input");
-        _tree.AccessibleName = Loc.Get("Formatter.Structure");
         // A single-format tool knows how to colour its input from the start. Auto-detect can't:
         // half-typed text has no reliable format yet, so it picks one up the first time a command
         // successfully parses the document (see SetActiveFormat).
@@ -92,22 +91,7 @@ public sealed class FormatterPage : EditorToolPage
         Microsoft.UI.Xaml.Controls.ToolTipService.SetToolTip(_indentBox, Loc.Get("Formatter.Indent"));
         Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(_indentBox, Loc.Get("Formatter.Indent"));
 
-        // The tree starts collapsed so a fresh window is all editor. It only has something to
-        // show once the document has been parsed, which is exactly what Format and Validate do —
-        // so that is when it appears, rather than sitting there empty from the start.
-        _treeHost = Pane(_tree, secondary: true);
-        _treeHost.Width = 260;
-        _treeHost.Visibility = Visibility.Collapsed;
-
-        var split = new Grid();
-        split.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-        split.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-        Grid.SetColumn(_editor, 0);
-        Grid.SetColumn(_treeHost, 1);
-        split.Children.Add(_editor);
-        split.Children.Add(_treeHost);
-
-        SetBody(split);
+        SetBody(_editor);
         StatusBar.SetUntouched();
         InitializeChrome();
     }
@@ -186,8 +170,6 @@ public sealed class FormatterPage : EditorToolPage
         var text = _editor.Text;
         if (text.Length == 0)
         {
-            _tree.SetRoot(null);
-            _treeHost.Visibility = Visibility.Collapsed;
             StatusBar.SetUntouched();
             return;
         }
@@ -205,7 +187,6 @@ public sealed class FormatterPage : EditorToolPage
 
         Replace(result.Text);
         StatusBar.SetValid();
-        ShowStructure(text);
     }
 
     /// <summary>Records which format the document turned out to be and points the editor's
@@ -214,22 +195,6 @@ public sealed class FormatterPage : EditorToolPage
     {
         _activeFormat = format;
         _editor.Tokenizer = format.Tokenizer;
-    }
-
-    /// <summary>Parses the document into the structure tree and reveals the sidebar. Called by the
-    /// two commands that have already proved the text parses.</summary>
-    private void ShowStructure(string text)
-    {
-        try
-        {
-            _tree.SetRoot((_activeFormat ?? _fixedFormat ?? FormatRegistry.DetectBest(text)).ToCanonical(text));
-            _treeHost.Visibility = Visibility.Visible;
-        }
-        catch
-        {
-            _tree.SetRoot(null);
-            _treeHost.Visibility = Visibility.Collapsed;
-        }
     }
 
     private void Minify()
@@ -258,7 +223,6 @@ public sealed class FormatterPage : EditorToolPage
         {
             StatusBar.SetValid();
             SetActiveFormat(format);
-            ShowStructure(text);
         }
         else
         {
@@ -279,8 +243,6 @@ public sealed class FormatterPage : EditorToolPage
     {
         Replace("");
         _isDirty = false;
-        _tree.SetRoot(null);
-        _treeHost.Visibility = Visibility.Collapsed;
         StatusBar.SetUntouched();
     }
 }

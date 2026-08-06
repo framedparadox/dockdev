@@ -104,6 +104,13 @@
                 <muxc:NavigationViewItem x:Name="ToolsNav" Content="{loc:Localize Key=Nav.Tools}"
                                          AutomationProperties.AutomationId="SettingsNavTools"
                                          Icon="AllApps" Tag="tools" />
+                <muxc:NavigationViewItem x:Name="DocumentationNav" Content="{loc:Localize Key=Nav.Documentation}"
+                                         AutomationProperties.AutomationId="SettingsNavDocumentation"
+                                         Tag="documentation">
+                    <muxc:NavigationViewItem.Icon>
+                        <FontIcon Glyph="&#xE8A5;" FontFamily="{ThemeResource SymbolThemeFontFamily}" />
+                    </muxc:NavigationViewItem.Icon>
+                </muxc:NavigationViewItem>
                 <muxc:NavigationViewItem x:Name="AboutNav" Content="{loc:Localize Key=Nav.About}" Tag="about"
                                          AutomationProperties.AutomationId="SettingsNavAbout">
                     <muxc:NavigationViewItem.Icon>
@@ -655,6 +662,284 @@
                         </Grid>
                     </ScrollViewer>
                 </Grid>
+
+                <!-- ==================== DOCUMENTATION ====================
+                     What every built-in tool does and how to use it, grouped the same way the
+                     catalog groups them (see ToolCatalog.ByCategory) so the order here matches
+                     Home, Tools and the Add-Tool gallery. Names and one-liners reuse each tool's
+                     existing NameKey/DescriptionKey rather than duplicating them; only the "how to
+                     use it" paragraph per tool is new copy. -->
+                <ScrollViewer x:Name="DocumentationPanel" Visibility="Collapsed"
+                              AutomationProperties.AutomationId="SettingsDocumentationPanel">
+                    <StackPanel Spacing="6" HorizontalAlignment="Stretch">
+                        <TextBlock Text="{loc:Localize Key=Nav.Documentation}"
+                                   Style="{ThemeResource TitleTextBlockStyle}"
+                                   Margin="0,0,0,4" />
+                        <TextBlock Text="{loc:Localize Key=Documentation.Hint}"
+                                   Style="{ThemeResource CaptionTextBlockStyle}"
+                                   Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                   TextWrapping="Wrap"
+                                   Margin="0,0,0,8" />
+
+                        <!-- ==== Format & Convert ==== -->
+                        <TextBlock Text="{loc:Localize Key=Category.FormatConvert}"
+                                   Style="{ThemeResource SubtitleTextBlockStyle}"
+                                   Margin="0,8,0,4" />
+                        <Border Style="{StaticResource Card}">
+                            <StackPanel Spacing="4">
+                                <TextBlock Text="{loc:Localize Key=Tool.Json.Name}"
+                                           Style="{ThemeResource BodyStrongTextBlockStyle}" />
+                                <TextBlock Text="{loc:Localize Key=Tool.Json.Desc}"
+                                           Style="{ThemeResource CaptionTextBlockStyle}"
+                                           Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                           TextWrapping="Wrap" />
+                                <TextBlock Text="{loc:Localize Key=Doc.Json.Body}"
+                                           TextWrapping="Wrap" Margin="0,4,0,0" />
+                            </StackPanel>
+                        </Border>
+                        <Border Style="{StaticResource Card}">
+                            <StackPanel Spacing="4">
+                                <TextBlock Text="{loc:Localize Key=Tool.Formatter.Name}"
+                                           Style="{ThemeResource BodyStrongTextBlockStyle}" />
+                                <TextBlock Text="{loc:Localize Key=Tool.Formatter.Desc}"
+                                           Style="{ThemeResource CaptionTextBlockStyle}"
+                                           Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                           TextWrapping="Wrap" />
+                                <TextBlock Text="{loc:Localize Key=Doc.Formatter.Body}"
+                                           TextWrapping="Wrap" Margin="0,4,0,0" />
+                            </StackPanel>
+                        </Border>
+                        <Border Style="{StaticResource Card}">
+                            <StackPanel Spacing="4">
+                                <TextBlock Text="{loc:Localize Key=Tool.Xml.Name}"
+                                           Style="{ThemeResource BodyStrongTextBlockStyle}" />
+                                <TextBlock Text="{loc:Localize Key=Tool.Xml.Desc}"
+                                           Style="{ThemeResource CaptionTextBlockStyle}"
+                                           Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                           TextWrapping="Wrap" />
+                                <TextBlock Text="{loc:Localize Key=Doc.Xml.Body}"
+                                           TextWrapping="Wrap" Margin="0,4,0,0" />
+                            </StackPanel>
+                        </Border>
+                        <Border Style="{StaticResource Card}">
+                            <StackPanel Spacing="4">
+                                <TextBlock Text="{loc:Localize Key=Tool.Converter.Name}"
+                                           Style="{ThemeResource BodyStrongTextBlockStyle}" />
+                                <TextBlock Text="{loc:Localize Key=Tool.Converter.Desc}"
+                                           Style="{ThemeResource CaptionTextBlockStyle}"
+                                           Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                           TextWrapping="Wrap" />
+                                <TextBlock Text="{loc:Localize Key=Doc.Converter.Body}"
+                                           TextWrapping="Wrap" Margin="0,4,0,0" />
+                            </StackPanel>
+                        </Border>
+
+                        <!-- ==== Encode & Decode ==== -->
+                        <TextBlock Text="{loc:Localize Key=Category.EncodeDecode}"
+                                   Style="{ThemeResource SubtitleTextBlockStyle}"
+                                   Margin="0,8,0,4" />
+                        <Border Style="{StaticResource Card}">
+                            <StackPanel Spacing="4">
+                                <TextBlock Text="{loc:Localize Key=Tool.Base64.Name}"
+                                           Style="{ThemeResource BodyStrongTextBlockStyle}" />
+                                <TextBlock Text="{loc:Localize Key=Tool.Base64.Desc}"
+                                           Style="{ThemeResource CaptionTextBlockStyle}"
+                                           Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                           TextWrapping="Wrap" />
+                                <TextBlock Text="{loc:Localize Key=Doc.Base64.Body}"
+                                           TextWrapping="Wrap" Margin="0,4,0,0" />
+                            </StackPanel>
+                        </Border>
+                        <Border Style="{StaticResource Card}">
+                            <StackPanel Spacing="4">
+                                <TextBlock Text="{loc:Localize Key=Tool.Url.Name}"
+                                           Style="{ThemeResource BodyStrongTextBlockStyle}" />
+                                <TextBlock Text="{loc:Localize Key=Tool.Url.Desc}"
+                                           Style="{ThemeResource CaptionTextBlockStyle}"
+                                           Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                           TextWrapping="Wrap" />
+                                <TextBlock Text="{loc:Localize Key=Doc.Url.Body}"
+                                           TextWrapping="Wrap" Margin="0,4,0,0" />
+                            </StackPanel>
+                        </Border>
+                        <Border Style="{StaticResource Card}">
+                            <StackPanel Spacing="4">
+                                <TextBlock Text="{loc:Localize Key=Tool.Jwt.Name}"
+                                           Style="{ThemeResource BodyStrongTextBlockStyle}" />
+                                <TextBlock Text="{loc:Localize Key=Tool.Jwt.Desc}"
+                                           Style="{ThemeResource CaptionTextBlockStyle}"
+                                           Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                           TextWrapping="Wrap" />
+                                <TextBlock Text="{loc:Localize Key=Doc.Jwt.Body}"
+                                           TextWrapping="Wrap" Margin="0,4,0,0" />
+                            </StackPanel>
+                        </Border>
+                        <Border Style="{StaticResource Card}">
+                            <StackPanel Spacing="4">
+                                <TextBlock Text="{loc:Localize Key=Tool.Hash.Name}"
+                                           Style="{ThemeResource BodyStrongTextBlockStyle}" />
+                                <TextBlock Text="{loc:Localize Key=Tool.Hash.Desc}"
+                                           Style="{ThemeResource CaptionTextBlockStyle}"
+                                           Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                           TextWrapping="Wrap" />
+                                <TextBlock Text="{loc:Localize Key=Doc.Hash.Body}"
+                                           TextWrapping="Wrap" Margin="0,4,0,0" />
+                            </StackPanel>
+                        </Border>
+
+                        <!-- ==== Privacy ==== -->
+                        <TextBlock Text="{loc:Localize Key=Category.Privacy}"
+                                   Style="{ThemeResource SubtitleTextBlockStyle}"
+                                   Margin="0,8,0,4" />
+                        <Border Style="{StaticResource Card}">
+                            <StackPanel Spacing="4">
+                                <TextBlock Text="{loc:Localize Key=Tool.Masker.Name}"
+                                           Style="{ThemeResource BodyStrongTextBlockStyle}" />
+                                <TextBlock Text="{loc:Localize Key=Tool.Masker.Desc}"
+                                           Style="{ThemeResource CaptionTextBlockStyle}"
+                                           Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                           TextWrapping="Wrap" />
+                                <TextBlock Text="{loc:Localize Key=Doc.Masker.Body}"
+                                           TextWrapping="Wrap" Margin="0,4,0,0" />
+                            </StackPanel>
+                        </Border>
+
+                        <!-- ==== Text ==== -->
+                        <TextBlock Text="{loc:Localize Key=Category.Text}"
+                                   Style="{ThemeResource SubtitleTextBlockStyle}"
+                                   Margin="0,8,0,4" />
+                        <Border Style="{StaticResource Card}">
+                            <StackPanel Spacing="4">
+                                <TextBlock Text="{loc:Localize Key=Tool.TextToolkit.Name}"
+                                           Style="{ThemeResource BodyStrongTextBlockStyle}" />
+                                <TextBlock Text="{loc:Localize Key=Tool.TextToolkit.Desc}"
+                                           Style="{ThemeResource CaptionTextBlockStyle}"
+                                           Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                           TextWrapping="Wrap" />
+                                <TextBlock Text="{loc:Localize Key=Doc.TextToolkit.Body}"
+                                           TextWrapping="Wrap" Margin="0,4,0,0" />
+                            </StackPanel>
+                        </Border>
+                        <Border Style="{StaticResource Card}">
+                            <StackPanel Spacing="4">
+                                <TextBlock Text="{loc:Localize Key=Tool.Diff.Name}"
+                                           Style="{ThemeResource BodyStrongTextBlockStyle}" />
+                                <TextBlock Text="{loc:Localize Key=Tool.Diff.Desc}"
+                                           Style="{ThemeResource CaptionTextBlockStyle}"
+                                           Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                           TextWrapping="Wrap" />
+                                <TextBlock Text="{loc:Localize Key=Doc.Diff.Body}"
+                                           TextWrapping="Wrap" Margin="0,4,0,0" />
+                            </StackPanel>
+                        </Border>
+                        <Border Style="{StaticResource Card}">
+                            <StackPanel Spacing="4">
+                                <TextBlock Text="{loc:Localize Key=Tool.Regex.Name}"
+                                           Style="{ThemeResource BodyStrongTextBlockStyle}" />
+                                <TextBlock Text="{loc:Localize Key=Tool.Regex.Desc}"
+                                           Style="{ThemeResource CaptionTextBlockStyle}"
+                                           Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                           TextWrapping="Wrap" />
+                                <TextBlock Text="{loc:Localize Key=Doc.Regex.Body}"
+                                           TextWrapping="Wrap" Margin="0,4,0,0" />
+                            </StackPanel>
+                        </Border>
+
+                        <!-- ==== Generate ==== -->
+                        <TextBlock Text="{loc:Localize Key=Category.Generate}"
+                                   Style="{ThemeResource SubtitleTextBlockStyle}"
+                                   Margin="0,8,0,4" />
+                        <Border Style="{StaticResource Card}">
+                            <StackPanel Spacing="4">
+                                <TextBlock Text="{loc:Localize Key=Tool.Uuid.Name}"
+                                           Style="{ThemeResource BodyStrongTextBlockStyle}" />
+                                <TextBlock Text="{loc:Localize Key=Tool.Uuid.Desc}"
+                                           Style="{ThemeResource CaptionTextBlockStyle}"
+                                           Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                           TextWrapping="Wrap" />
+                                <TextBlock Text="{loc:Localize Key=Doc.Uuid.Body}"
+                                           TextWrapping="Wrap" Margin="0,4,0,0" />
+                            </StackPanel>
+                        </Border>
+                        <Border Style="{StaticResource Card}">
+                            <StackPanel Spacing="4">
+                                <TextBlock Text="{loc:Localize Key=Tool.Password.Name}"
+                                           Style="{ThemeResource BodyStrongTextBlockStyle}" />
+                                <TextBlock Text="{loc:Localize Key=Tool.Password.Desc}"
+                                           Style="{ThemeResource CaptionTextBlockStyle}"
+                                           Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                           TextWrapping="Wrap" />
+                                <TextBlock Text="{loc:Localize Key=Doc.Password.Body}"
+                                           TextWrapping="Wrap" Margin="0,4,0,0" />
+                            </StackPanel>
+                        </Border>
+                        <Border Style="{StaticResource Card}">
+                            <StackPanel Spacing="4">
+                                <TextBlock Text="{loc:Localize Key=Tool.Lorem.Name}"
+                                           Style="{ThemeResource BodyStrongTextBlockStyle}" />
+                                <TextBlock Text="{loc:Localize Key=Tool.Lorem.Desc}"
+                                           Style="{ThemeResource CaptionTextBlockStyle}"
+                                           Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                           TextWrapping="Wrap" />
+                                <TextBlock Text="{loc:Localize Key=Doc.Lorem.Body}"
+                                           TextWrapping="Wrap" Margin="0,4,0,0" />
+                            </StackPanel>
+                        </Border>
+                        <Border Style="{StaticResource Card}">
+                            <StackPanel Spacing="4">
+                                <TextBlock Text="{loc:Localize Key=Tool.Color.Name}"
+                                           Style="{ThemeResource BodyStrongTextBlockStyle}" />
+                                <TextBlock Text="{loc:Localize Key=Tool.Color.Desc}"
+                                           Style="{ThemeResource CaptionTextBlockStyle}"
+                                           Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                           TextWrapping="Wrap" />
+                                <TextBlock Text="{loc:Localize Key=Doc.Color.Body}"
+                                           TextWrapping="Wrap" Margin="0,4,0,0" />
+                            </StackPanel>
+                        </Border>
+
+                        <!-- ==== Numbers & Time ==== -->
+                        <TextBlock Text="{loc:Localize Key=Category.NumbersTime}"
+                                   Style="{ThemeResource SubtitleTextBlockStyle}"
+                                   Margin="0,8,0,4" />
+                        <Border Style="{StaticResource Card}">
+                            <StackPanel Spacing="4">
+                                <TextBlock Text="{loc:Localize Key=Tool.Timestamp.Name}"
+                                           Style="{ThemeResource BodyStrongTextBlockStyle}" />
+                                <TextBlock Text="{loc:Localize Key=Tool.Timestamp.Desc}"
+                                           Style="{ThemeResource CaptionTextBlockStyle}"
+                                           Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                           TextWrapping="Wrap" />
+                                <TextBlock Text="{loc:Localize Key=Doc.Timestamp.Body}"
+                                           TextWrapping="Wrap" Margin="0,4,0,0" />
+                            </StackPanel>
+                        </Border>
+                        <Border Style="{StaticResource Card}">
+                            <StackPanel Spacing="4">
+                                <TextBlock Text="{loc:Localize Key=Tool.Cron.Name}"
+                                           Style="{ThemeResource BodyStrongTextBlockStyle}" />
+                                <TextBlock Text="{loc:Localize Key=Tool.Cron.Desc}"
+                                           Style="{ThemeResource CaptionTextBlockStyle}"
+                                           Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                           TextWrapping="Wrap" />
+                                <TextBlock Text="{loc:Localize Key=Doc.Cron.Body}"
+                                           TextWrapping="Wrap" Margin="0,4,0,0" />
+                            </StackPanel>
+                        </Border>
+                        <Border Style="{StaticResource Card}">
+                            <StackPanel Spacing="4">
+                                <TextBlock Text="{loc:Localize Key=Tool.NumberBase.Name}"
+                                           Style="{ThemeResource BodyStrongTextBlockStyle}" />
+                                <TextBlock Text="{loc:Localize Key=Tool.NumberBase.Desc}"
+                                           Style="{ThemeResource CaptionTextBlockStyle}"
+                                           Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                           TextWrapping="Wrap" />
+                                <TextBlock Text="{loc:Localize Key=Doc.NumberBase.Body}"
+                                           TextWrapping="Wrap" Margin="0,4,0,0" />
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+                </ScrollViewer>
 
                 <!-- ==================== ABOUT ==================== -->
                 <ScrollViewer x:Name="AboutPanel" Visibility="Collapsed">

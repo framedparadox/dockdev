@@ -17,7 +17,7 @@ namespace DevDX.ToolPages;
 /// </summary>
 public sealed class RegexPage : EditorToolPage
 {
-    private readonly TextBox _pattern = new() { PlaceholderText = Loc.Get("Regex.PatternPlaceholder"), FontFamily = new Microsoft.UI.Xaml.Media.FontFamily("Cascadia Mono, Consolas") };
+    private readonly TextBox _pattern = new() { PlaceholderText = Loc.Get("Regex.PatternPlaceholder"), FontFamily = new Microsoft.UI.Xaml.Media.FontFamily("Cascadia Mono, Consolas"), Width = 480 };
     private readonly CodeEditor _subject = new() { AccessibleName = Loc.Get("Regex.Subject") };
     private readonly CodeView _matchView = new() { ShowLineNumbers = false, AccessibleName = Loc.Get("Regex.Matches") };
     private readonly TextBox _replacement = new() { PlaceholderText = Loc.Get("Regex.ReplacementPlaceholder"), FontFamily = new Microsoft.UI.Xaml.Media.FontFamily("Cascadia Mono, Consolas") };
@@ -46,14 +46,13 @@ public sealed class RegexPage : EditorToolPage
         foreach (var box in new[] { _ignoreCase, _multiline, _singleline, _ignoreWhitespace, _ecmaScript })
             optionsRow.Children.Add(box);
 
+        SetOptions(_pattern);
+
         var top = new Grid();
         top.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
         top.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
-        top.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
-        Grid.SetRow(_pattern, 0);
-        Grid.SetRow(optionsRow, 1);
-        Grid.SetRow(_error, 2);
-        top.Children.Add(_pattern);
+        Grid.SetRow(optionsRow, 0);
+        Grid.SetRow(_error, 1);
         top.Children.Add(optionsRow);
         top.Children.Add(_error);
 

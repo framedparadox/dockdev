@@ -13,7 +13,7 @@ public sealed class UuidPage : FormToolPage
 {
     private readonly ComboBox _version = new();
     private readonly ComboBox _format = new();
-    private readonly NumberBox _count = new() { Value = 1, Minimum = 1, Maximum = 1000, SpinButtonPlacementMode = NumberBoxSpinButtonPlacementMode.Compact, Width = 100 };
+    private readonly NumberBox _count = new() { Value = 1, Minimum = 1, Maximum = 1000, SpinButtonPlacementMode = NumberBoxSpinButtonPlacementMode.Inline, MinWidth = 130 };
     private readonly TextBox _results = new() { IsReadOnly = true, AcceptsReturn = true, TextWrapping = TextWrapping.NoWrap, Height = 260, FontFamily = new Microsoft.UI.Xaml.Media.FontFamily("Cascadia Mono, Consolas") };
 
     private static readonly UuidVersion[] Versions = [UuidVersion.V4, UuidVersion.V7, UuidVersion.Nil];
@@ -31,13 +31,28 @@ public sealed class UuidPage : FormToolPage
             _format.Items.Add(Loc.Get("Uuid.Format." + f));
         _format.SelectedIndex = 0;
 
-        AddRow(LabelledRow(Loc.Get("Uuid.VersionLabel"), _version));
-        AddRow(LabelledRow(Loc.Get("Uuid.FormatLabel"), _format));
-        AddRow(LabelledRow(Loc.Get("Uuid.Count"), _count));
+        _version.HorizontalAlignment = HorizontalAlignment.Stretch;
+        _format.HorizontalAlignment = HorizontalAlignment.Stretch;
+        _count.HorizontalAlignment = HorizontalAlignment.Stretch;
+
+        var options = new Grid { ColumnSpacing = 16 };
+        options.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        options.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        options.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        var versionField = LabelledRow(Loc.Get("Uuid.VersionLabel"), _version);
+        var formatField = LabelledRow(Loc.Get("Uuid.FormatLabel"), _format);
+        var countField = LabelledRow(Loc.Get("Uuid.Count"), _count);
+        Grid.SetColumn(versionField, 0);
+        Grid.SetColumn(formatField, 1);
+        Grid.SetColumn(countField, 2);
+        options.Children.Add(versionField);
+        options.Children.Add(formatField);
+        options.Children.Add(countField);
+        AddRow(options);
 
         var generate = new Button { Content = Loc.Get("Uuid.Generate"), Style = (Style)Application.Current.Resources["AccentButtonStyle"] };
         generate.Click += (_, _) => Generate();
-        var copyAll = new CopyButton(Loc.Get("Uuid.CopyAll")) { GetText = () => _results.Text };
+        var copyAll = new CopyButton { GetText = () => _results.Text };
         var actions = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
         actions.Children.Add(generate);
         actions.Children.Add(copyAll);

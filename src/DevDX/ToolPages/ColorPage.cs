@@ -26,7 +26,27 @@ public sealed class ColorPage : FormToolPage
     public ColorPage()
     {
         AddRow(SectionHeader(Loc.Get("Tool.Color.Name")));
-        AddRow(LabelledRow(Loc.Get("Color.Input"), _input));
+
+        // The input keeps the star column so the picker buttons don't eat into its typing room;
+        // both buttons sit on its own row rather than below it, matching ResultRow's label+action
+        // layout elsewhere on this page.
+        var inputRow = new Grid { ColumnSpacing = 8 };
+        inputRow.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        inputRow.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        inputRow.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        var labelledInput = LabelledRow(Loc.Get("Color.Input"), _input);
+        var pickRound = CreatePickerButton(ColorSpectrumShape.Ring, "\uE790", "Color.PickRound");
+        var pickSquare = CreatePickerButton(ColorSpectrumShape.Box, "\uE8D3", "Color.PickSquare");
+        pickRound.VerticalAlignment = VerticalAlignment.Bottom;
+        pickSquare.VerticalAlignment = VerticalAlignment.Bottom;
+        Grid.SetColumn(labelledInput, 0);
+        Grid.SetColumn(pickRound, 1);
+        Grid.SetColumn(pickSquare, 2);
+        inputRow.Children.Add(labelledInput);
+        inputRow.Children.Add(pickRound);
+        inputRow.Children.Add(pickSquare);
+        AddRow(inputRow);
+
         _swatch.BorderBrush = (Brush)Application.Current.Resources["CardStrokeColorDefaultBrush"];
         AddRow(_swatch);
 
@@ -83,5 +103,33 @@ public sealed class ColorPage : FormToolPage
         _contrast.Text = Loc.Format("Color.ContrastValue",
             onWhite.ToString("0.00", CultureInfo.CurrentCulture),
             onBlack.ToString("0.00", CultureInfo.CurrentCulture));
+    }
+
+    /// <summary>
+    /// An icon button that opens a <see cref="ColorPicker"/> flyout of the given spectrum shape.
+    /// Picking a colour writes it back into <see cref="_input"/> as the same hex text
+    /// <see cref="Rgba.ToHex"/> produces for the result rows, so the existing
+    /// <c>_input.TextChanged</c> → <see cref="Convert"/> pipeline is what actually updates the
+    /// swatch and the rest of the results — this method never touches them directly.
+    /// </summary>
+    private Button CreatePickerButton(ColorSpectrumShape shape, string glyph, string tooltipKey)
+    {
+        var picker = new ColorPicker { ColorSpectrumShape = shape, IsAlphaEnabled = true };
+        picker.ColorChanged += (_, args) =>
+            _input.Text = new Rgba(args.NewColor.R, args.NewColor.G, args.NewColor.B, args.NewColor.A).ToHex();
+
+        // Seeded from whatever _input currently parses to, each time the flyout opens, so the
+        // picker always starts from the colour actually on screen rather than wherever the last
+        // pick left it.
+        var flyout = new Flyout { Content = picker };
+        flyout.Opening += (_, _) => picker.Color = ColorTools.TryParse(_input.Text, out var color)
+            ? Windows.UI.Color.FromArgb(color.A, color.R, color.G, color.B)
+            : Windows.UI.Color.FromArgb(255, 45, 127, 249);
+
+        var button = new Button { Content = new FontIcon { Glyph = glyph, FontSize = 14 }, Flyout = flyout };
+        var label = Loc.Get(tooltipKey);
+        ToolTipService.SetToolTip(button, label);
+        Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(button, label);
+        return button;
     }
 }

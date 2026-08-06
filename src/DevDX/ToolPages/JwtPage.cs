@@ -12,7 +12,8 @@ namespace DevDX.ToolPages;
 /// <summary>
 /// JWT Decoder (design doc §14.7): splits header/payload/signature, renders them as colourised
 /// JSON, humanises exp/iat/nbf with a live chip, warns on <c>alg: none</c> and a mismatched
-/// <c>typ</c>. <b>Explicitly does not verify signatures</b>, and the banner below says so.
+/// <c>typ</c>. <b>Explicitly does not verify signatures</b>, and the disclaimer beside Clear,
+/// in the command bar, says so.
 /// </summary>
 public sealed class JwtPage : EditorToolPage
 {
@@ -24,19 +25,35 @@ public sealed class JwtPage : EditorToolPage
     private readonly CodeView _headerView = new();
     private readonly CodeView _payloadView = new();
     private readonly TextBlock _signature = new() { FontFamily = new Microsoft.UI.Xaml.Media.FontFamily("Cascadia Mono, Consolas"), TextWrapping = TextWrapping.Wrap, IsTextSelectionEnabled = true, Margin = new Thickness(8) };
-    private readonly InfoBar _neverVerifies = new()
-    {
-        Severity = InfoBarSeverity.Informational,
-        IsClosable = false,
-        IsOpen = true,
-    };
     private readonly InfoBar _warnings = new() { Severity = InfoBarSeverity.Warning, IsClosable = false, IsOpen = false };
     private readonly TextBlock _expiry = new() { FontWeight = Microsoft.UI.Text.FontWeights.SemiBold, Margin = new Thickness(8, 0, 8, 0) };
     private bool _isDirty;
 
     public JwtPage()
     {
-        _neverVerifies.Message = Loc.Get("Jwt.NeverVerifies");
+        // The "this never verifies signatures" disclaimer used to be a full-width InfoBar row of
+        // its own above the input, which left the whole left half of the command bar — the row
+        // Clear already sits in — empty. A permanent disclaimer for a tool that only ever shows
+        // this one message doesn't need an InfoBar's full chrome, so it rides in the command bar
+        // instead: a small info glyph plus the same localized sentence, trimmed to one line with
+        // the untrimmed text on the tooltip and as the automation name, so it still reads in full
+        // on hover/focus even when the window is narrow. Severity stays informational (not a
+        // warning glyph) because that's what the message always was — a fact about the tool, not
+        // an alert about the current token.
+        var neverVerifiesText = Loc.Get("Jwt.NeverVerifies");
+        var neverVerifies = OptionsBar();
+        neverVerifies.Children.Add(new FontIcon { Glyph = "", FontSize = 14, VerticalAlignment = VerticalAlignment.Center, Opacity = 0.8 });
+        neverVerifies.Children.Add(new TextBlock
+        {
+            Text = neverVerifiesText,
+            VerticalAlignment = VerticalAlignment.Center,
+            TextTrimming = TextTrimming.CharacterEllipsis,
+            MaxWidth = 460,
+            Opacity = 0.8,
+        });
+        ToolTipService.SetToolTip(neverVerifies, neverVerifiesText);
+        Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(neverVerifies, neverVerifiesText);
+        SetOptions(neverVerifies);
 
         _input.TextChanged += (_, _) =>
         {
@@ -69,13 +86,10 @@ public sealed class JwtPage : EditorToolPage
         body.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
         body.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
         body.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
-        body.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
-        Grid.SetRow(_neverVerifies, 0);
-        Grid.SetRow(_input, 1);
-        Grid.SetRow(sections, 2);
-        Grid.SetRow(claimsBar, 3);
-        Grid.SetRow(_warnings, 4);
-        body.Children.Add(_neverVerifies);
+        Grid.SetRow(_input, 0);
+        Grid.SetRow(sections, 1);
+        Grid.SetRow(claimsBar, 2);
+        Grid.SetRow(_warnings, 3);
         body.Children.Add(_input);
         body.Children.Add(sections);
         body.Children.Add(claimsBar);

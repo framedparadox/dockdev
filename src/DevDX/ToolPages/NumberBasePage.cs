@@ -19,7 +19,7 @@ public sealed class NumberBasePage : FormToolPage
     private readonly TextBox _octalBox = new() { Text = "0" };
     private readonly ComboBox _width = new();
     private readonly CheckBox _signed = new() { Content = Loc.Get("NumberBase.Signed") };
-    private readonly StackPanel _bitGrid = new() { Orientation = Orientation.Horizontal, Spacing = 2 };
+    private readonly StackPanel _bitGrid = new() { Orientation = Orientation.Horizontal, Spacing = 2, Margin = new Thickness(0, 0, 0, 16) };
 
     private static readonly int[] Widths = [8, 16, 32, 64];
     private long _value;

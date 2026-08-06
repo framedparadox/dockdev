@@ -31,6 +31,9 @@ public sealed class UrlPage : EditorToolPage
     private UrlTools.ParsedUrl? _parsed;
     private bool _isDirty;
 
+    private readonly ComboBox _section = new();
+    private readonly Grid _sectionHost = new();
+
     /// <summary>Segoe Fluent Icons "Delete", for dropping a query parameter. Spelled as an escape
     /// rather than pasted in: the glyph here was an empty string, which renders as nothing — the
     /// button was invisible, and with no label or tooltip either there was no way to tell it was
@@ -39,12 +42,38 @@ public sealed class UrlPage : EditorToolPage
 
     public UrlPage()
     {
-        var pivot = new Pivot();
-        pivot.Items.Add(new PivotItem { Header = Loc.Get("Url.Percent"), Content = BuildPercentSection() });
-        pivot.Items.Add(new PivotItem { Header = Loc.Get("Url.Html"), Content = BuildHtmlSection() });
-        pivot.Items.Add(new PivotItem { Header = Loc.Get("Url.Parser"), Content = BuildParserSection() });
+        // Built once each, up front, so every section's TextChanged/Click wiring stays live no
+        // matter which one is currently on screen — the selector below only ever toggles
+        // Visibility, it never rebuilds a section.
+        var percentSection = BuildPercentSection();
+        var htmlSection = BuildHtmlSection();
+        var parserSection = BuildParserSection();
+        htmlSection.Visibility = Visibility.Collapsed;
+        parserSection.Visibility = Visibility.Collapsed;
+        _sectionHost.Children.Add(percentSection);
+        _sectionHost.Children.Add(htmlSection);
+        _sectionHost.Children.Add(parserSection);
 
-        SetBody(pivot);
+        _section.Items.Add(Loc.Get("Url.Percent"));
+        _section.Items.Add(Loc.Get("Url.Html"));
+        _section.Items.Add(Loc.Get("Url.Parser"));
+        _section.SelectedIndex = 0;
+        _section.SelectionChanged += (_, _) =>
+        {
+            percentSection.Visibility = _section.SelectedIndex == 0 ? Visibility.Visible : Visibility.Collapsed;
+            htmlSection.Visibility = _section.SelectedIndex == 1 ? Visibility.Visible : Visibility.Collapsed;
+            parserSection.Visibility = _section.SelectedIndex == 2 ? Visibility.Visible : Visibility.Collapsed;
+        };
+
+        // No separate caption: unlike Masker's profile/threshold combos, each item here already
+        // names the section it switches to ("Percent-Encoding", "HTML entities", "URL parser"),
+        // the same text sighted users read off the old Pivot headers — so the selected item text
+        // alone (as Narrator already reads any ComboBox) carries the same meaning a label would.
+        var options = OptionsBar();
+        options.Children.Add(_section);
+        SetOptions(options);
+
+        SetBody(_sectionHost);
         StatusBar.SetUntouched();
         InitializeChrome();
     }

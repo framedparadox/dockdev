@@ -32,7 +32,19 @@ public sealed class TimestampPage : FormToolPage
 
     public TimestampPage()
     {
-        AddRow(SectionHeader(Loc.Get("Timestamp.Now")));
+        var headerRow = new Grid { ColumnSpacing = 12 };
+        headerRow.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        headerRow.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        var header = SectionHeader(Loc.Get("Timestamp.Now"));
+        Grid.SetColumn(header, 0);
+        var reset = new Button { Content = new FontIcon { Glyph = "\uE72C", FontSize = 14 }, HorizontalAlignment = HorizontalAlignment.Right };
+        ToolTipService.SetToolTip(reset, Loc.Get("Timestamp.Reset"));
+        Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(reset, Loc.Get("Timestamp.Reset"));
+        reset.Click += (_, _) => { _input.Text = ""; _unit.SelectedIndex = 0; Convert(); };
+        Grid.SetColumn(reset, 1);
+        headerRow.Children.Add(header);
+        headerRow.Children.Add(reset);
+        AddRow(headerRow);
         AddRow(_now);
         var useNow = new Button { Content = Loc.Get("Timestamp.UseNow") };
         useNow.Click += (_, _) => { _input.Text = DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString(); Convert(); };
@@ -53,12 +65,9 @@ public sealed class TimestampPage : FormToolPage
         (var utcRow, _utc, _) = ResultRow(Loc.Get("Timestamp.Utc"));
         (var relativeRow, _relative, _) = ResultRow(Loc.Get("Timestamp.Relative"));
 
-        AddRow(epochSecondsRow);
-        AddRow(epochMillisRow);
-        AddRow(isoRow);
-        AddRow(rfcRow);
-        AddRow(localRow);
-        AddRow(utcRow);
+        AddRow(PairRow(epochSecondsRow, epochMillisRow));
+        AddRow(PairRow(isoRow, rfcRow));
+        AddRow(PairRow(localRow, utcRow));
         AddRow(relativeRow);
 
         _input.TextChanged += (_, _) =>
@@ -111,5 +120,19 @@ public sealed class TimestampPage : FormToolPage
             _utc.Text = when.ToUniversalTime().ToString("F") + " UTC";
         }
         _relative.Text = TimestampTools.ToRelative(when, DateTimeOffset.Now);
+    }
+
+    /// <summary>Lays two result rows side by side in a 2-column grid, so related conversions (e.g.
+    /// epoch seconds/millis, local/UTC) read as a pair instead of each claiming a full-width row.</summary>
+    private static Grid PairRow(FrameworkElement left, FrameworkElement right)
+    {
+        var grid = new Grid { ColumnSpacing = 16 };
+        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        Grid.SetColumn(left, 0);
+        Grid.SetColumn(right, 1);
+        grid.Children.Add(left);
+        grid.Children.Add(right);
+        return grid;
     }
 }

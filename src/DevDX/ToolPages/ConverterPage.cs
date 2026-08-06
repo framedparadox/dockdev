@@ -81,20 +81,14 @@ public sealed class ConverterPage : EditorToolPage
 
         _input.TextChanged += (_, _) => { _isDirty = _input.Text.Length > 0; StatusBar.SetCounts(_input.Text); };
 
-        var inputPane = new Grid();
-        inputPane.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
-        inputPane.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
-        Grid.SetRow(header, 0);
-        Grid.SetRow(_input, 1);
-        inputPane.Children.Add(header);
-        inputPane.Children.Add(_input);
+        SetOptions(header);
 
         var split = new Grid();
         split.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
         split.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-        Grid.SetColumn(inputPane, 0);
+        Grid.SetColumn(_input, 0);
         Grid.SetColumn(_output, 1);
-        split.Children.Add(inputPane);
+        split.Children.Add(_input);
         split.Children.Add(_output);
 
         var body = new Grid();
@@ -115,7 +109,7 @@ public sealed class ConverterPage : EditorToolPage
 
     public override IReadOnlyList<ToolCommand> Commands =>
     [
-        new ToolCommand(Loc.Get("Tool.ConvertAction"), "", Convert, VirtualKey.Enter, VirtualKeyModifiers.Control, id: ToolCommand.Ids.Convert),
+        new ToolCommand(Loc.Get("Tool.ConvertAction"), "\uE895", Convert, VirtualKey.Enter, VirtualKeyModifiers.Control, id: ToolCommand.Ids.Convert),
         ToolCommand.Copy(CopyOutput),
         ToolCommand.Clear(Clear),
     ];
