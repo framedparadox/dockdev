@@ -74,6 +74,8 @@ public sealed class FormatterPage : EditorToolPage
         _fixedFormat = ReferenceEquals(format, FormatRegistry.Auto) ? null : format;
 
         _editor.PlaceholderText = Loc.Get("Formatter.InputPlaceholder");
+        _editor.AccessibleName = Loc.Get("Common.Input");
+        _tree.AccessibleName = Loc.Get("Formatter.Structure");
         // A single-format tool knows how to colour its input from the start. Auto-detect can't:
         // half-typed text has no reliable format yet, so it picks one up the first time a command
         // successfully parses the document (see SetActiveFormat).

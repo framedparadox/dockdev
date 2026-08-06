@@ -14,9 +14,17 @@ namespace DevDX.ToolPages;
 /// </summary>
 public sealed class DiffPage : EditorToolPage
 {
-    private readonly CodeEditor _left = new() { PlaceholderText = Loc.Get("Diff.LeftPlaceholder") };
-    private readonly CodeEditor _right = new() { PlaceholderText = Loc.Get("Diff.RightPlaceholder") };
-    private readonly DiffView _diff = new();
+    private readonly CodeEditor _left = new()
+    {
+        PlaceholderText = Loc.Get("Diff.LeftPlaceholder"),
+        AccessibleName = Loc.Get("Diff.Original"),
+    };
+    private readonly CodeEditor _right = new()
+    {
+        PlaceholderText = Loc.Get("Diff.RightPlaceholder"),
+        AccessibleName = Loc.Get("Diff.Changed"),
+    };
+    private readonly DiffView _diff = new() { AccessibleName = Loc.Get("Diff.Result") };
     private readonly CheckBox _ignoreWhitespace = new() { Content = Loc.Get("Diff.IgnoreWhitespace") };
     private readonly CheckBox _ignoreCase = new() { Content = Loc.Get("Diff.IgnoreCase") };
     private readonly CheckBox _ignoreBlankLines = new() { Content = Loc.Get("Diff.IgnoreBlankLines") };

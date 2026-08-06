@@ -74,7 +74,7 @@ public sealed partial class AddToolWindow : Window
             VerticalAlignment = VerticalAlignment.Center,
         };
         var heroIcon = new Border { Width = 44, Height = 44, CornerRadius = new CornerRadius(10), Background = (Brush)Application.Current.Resources["AccentFillColorDefaultBrush"] };
-        heroIcon.Child = new FontIcon { Glyph = "", FontSize = 22, Foreground = new SolidColorBrush(Colors.White) };
+        heroIcon.Child = new FontIcon { Glyph = "\uE710", FontSize = 22, Foreground = new SolidColorBrush(Colors.White) };
         var heroText = new StackPanel { VerticalAlignment = VerticalAlignment.Center };
         heroText.Children.Add(new TextBlock { Text = Loc.Get("Add.Title"), Style = (Style)Application.Current.Resources["TitleTextBlockStyle"] });
         heroText.Children.Add(new TextBlock { Text = Loc.Get("Add.Subtitle"), Style = (Style)Application.Current.Resources["CaptionTextBlockStyle"], Foreground = (Brush)Application.Current.Resources["TextFillColorSecondaryBrush"] });
@@ -170,7 +170,7 @@ public sealed partial class AddToolWindow : Window
     // ---- Tile gallery -------------------------------------------------------------------
 
     /// <summary>Segoe Fluent Icons "GripperBarVertical" — the structural Separator tile.</summary>
-    private const string SeparatorGlyph = "";
+    private const string SeparatorGlyph = "\uE76F";
 
     private void RenderTiles()
     {

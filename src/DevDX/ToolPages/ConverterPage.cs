@@ -32,6 +32,8 @@ public sealed class ConverterPage : EditorToolPage
     public ConverterPage()
     {
         _lossyTip.Message = Loc.Get("Converter.CsvLossyTip");
+        _input.AccessibleName = Loc.Get("Common.Input");
+        _output.AccessibleName = Loc.Get("Common.Output");
 
         foreach (var format in Formats)
         {
@@ -61,16 +63,20 @@ public sealed class ConverterPage : EditorToolPage
                 Convert();
         };
 
-        var swap = new Button { Content = new FontIcon { Glyph = "", FontSize = 14 }, Margin = new Thickness(8, 0, 8, 0) };
+        var swap = new Button { Content = new FontIcon { Glyph = "\uE8AB", FontSize = 14 }, Margin = new Thickness(8, 0, 8, 0) };
         ToolTipService.SetToolTip(swap, Loc.Get("Tool.SwapInOut"));
         Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(swap, Loc.Get("Tool.SwapInOut"));
         swap.Click += (_, _) => (_source.SelectedIndex, _target.SelectedIndex) = (_target.SelectedIndex, _source.SelectedIndex);
 
         var header = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 4, Margin = new Thickness(12, 8, 12, 0), VerticalAlignment = VerticalAlignment.Center };
-        header.Children.Add(new TextBlock { Text = Loc.Get("Converter.From"), VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 8, 0) });
+        var fromLabel = OptionLabelFor(_source, Loc.Get("Converter.From"));
+        fromLabel.Margin = new Thickness(0, 0, 8, 0);
+        header.Children.Add(fromLabel);
         header.Children.Add(_source);
         header.Children.Add(swap);
-        header.Children.Add(new TextBlock { Text = Loc.Get("Converter.To"), VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(8, 0, 8, 0) });
+        var toLabel = OptionLabelFor(_target, Loc.Get("Converter.To"));
+        toLabel.Margin = new Thickness(8, 0, 8, 0);
+        header.Children.Add(toLabel);
         header.Children.Add(_target);
 
         _input.TextChanged += (_, _) => { _isDirty = _input.Text.Length > 0; StatusBar.SetCounts(_input.Text); };

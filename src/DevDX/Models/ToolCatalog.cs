@@ -82,103 +82,103 @@ public static class ToolCatalog
     [
         // ---- Format & Convert --------------------------------------------------------------
         new ToolDefinition(ToolKind.Json, ToolCategory.FormatConvert,
-            "Tool.Json.Name", "Tool.Json.Desc", "",
+            "Tool.Json.Name", "Tool.Json.Desc", "\uE943",
             () => new FormatterPage(FormatRegistry.Json),
             [".json"], ["json"], VisibleByDefault: true),
 
         new ToolDefinition(ToolKind.DataFormatter, ToolCategory.FormatConvert,
-            "Tool.Formatter.Name", "Tool.Formatter.Desc", "",
+            "Tool.Formatter.Name", "Tool.Formatter.Desc", "\uE8E4",
             () => new FormatterPage(FormatRegistry.Auto),
             [".json", ".xml", ".csv"], ["beautify", "pretty", "format"], VisibleByDefault: true),
 
         new ToolDefinition(ToolKind.Xml, ToolCategory.FormatConvert,
-            "Tool.Xml.Name", "Tool.Xml.Desc", "",
+            "Tool.Xml.Name", "Tool.Xml.Desc", "\uE943",
             () => new FormatterPage(FormatRegistry.Xml),
             [".xml"], ["xml"], VisibleByDefault: false),
 
         new ToolDefinition(ToolKind.DataConverter, ToolCategory.FormatConvert,
-            "Tool.Converter.Name", "Tool.Converter.Desc", "",
+            "Tool.Converter.Name", "Tool.Converter.Desc", "\uE895",
             () => new ConverterPage(),
             [], ["convert", "csv"], VisibleByDefault: false),
 
         // ---- Encode & Decode ----------------------------------------------------------------
         new ToolDefinition(ToolKind.Base64, ToolCategory.EncodeDecode,
-            "Tool.Base64.Name", "Tool.Base64.Desc", "",
+            "Tool.Base64.Name", "Tool.Base64.Desc", "\uE8C1",
             () => new Base64Page(),
             [], ["base64", "encode", "decode"], VisibleByDefault: true),
 
         new ToolDefinition(ToolKind.UrlEncoding, ToolCategory.EncodeDecode,
-            "Tool.Url.Name", "Tool.Url.Desc", "",
+            "Tool.Url.Name", "Tool.Url.Desc", "\uE71B",
             () => new UrlPage(),
             [], ["url", "urlencode", "percent", "html"], VisibleByDefault: false),
 
         new ToolDefinition(ToolKind.Jwt, ToolCategory.EncodeDecode,
-            "Tool.Jwt.Name", "Tool.Jwt.Desc", "",
+            "Tool.Jwt.Name", "Tool.Jwt.Desc", "\uE8D7",
             () => new JwtPage(),
             [], ["jwt", "token", "bearer", "claims"], VisibleByDefault: true),
 
         new ToolDefinition(ToolKind.Hash, ToolCategory.EncodeDecode,
-            "Tool.Hash.Name", "Tool.Hash.Desc", "",
+            "Tool.Hash.Name", "Tool.Hash.Desc", "\uE928",
             () => new HashPage(),
             [], ["md5", "sha", "sha256", "checksum", "hmac", "crc32"], VisibleByDefault: false),
 
         // ---- Privacy --------------------------------------------------------------------------
         new ToolDefinition(ToolKind.DataMasker, ToolCategory.Privacy,
-            "Tool.Masker.Name", "Tool.Masker.Desc", "",
+            "Tool.Masker.Name", "Tool.Masker.Desc", "\uE83D",
             () => new MaskerPage(),
             [".json", ".xml", ".csv", ".txt", ".log"], ["pii", "redact", "anonymise", "anonymize", "mask"],
             VisibleByDefault: true),
 
         // ---- Text -------------------------------------------------------------------------
         new ToolDefinition(ToolKind.TextToolkit, ToolCategory.Text,
-            "Tool.TextToolkit.Name", "Tool.TextToolkit.Desc", "",
+            "Tool.TextToolkit.Name", "Tool.TextToolkit.Desc", "\uE70F",
             () => new TextToolkitPage(),
             [".txt"], ["case", "slugify", "dedupe", "sort"], VisibleByDefault: false),
 
         new ToolDefinition(ToolKind.TextDiff, ToolCategory.Text,
-            "Tool.Diff.Name", "Tool.Diff.Desc", "",
+            "Tool.Diff.Name", "Tool.Diff.Desc", "\uE8AB",
             () => new DiffPage(),
             [".txt"], ["diff", "compare"], VisibleByDefault: true),
 
         new ToolDefinition(ToolKind.RegexTester, ToolCategory.Text,
-            "Tool.Regex.Name", "Tool.Regex.Desc", "",
+            "Tool.Regex.Name", "Tool.Regex.Desc", "\uE721",
             () => new RegexPage(),
             [], ["regex", "pattern", "regexp"], VisibleByDefault: false),
 
         // ---- Generate ---------------------------------------------------------------------
         new ToolDefinition(ToolKind.Uuid, ToolCategory.Generate,
-            "Tool.Uuid.Name", "Tool.Uuid.Desc", "",
+            "Tool.Uuid.Name", "Tool.Uuid.Desc", "\uE8EC",
             () => new UuidPage(),
             [], ["guid", "uuid"], VisibleByDefault: false),
 
         new ToolDefinition(ToolKind.Password, ToolCategory.Generate,
-            "Tool.Password.Name", "Tool.Password.Desc", "",
+            "Tool.Password.Name", "Tool.Password.Desc", "\uE72E",
             () => new PasswordPage(),
             [], ["password", "secret", "random", "passphrase", "entropy"], VisibleByDefault: false),
 
         new ToolDefinition(ToolKind.Lorem, ToolCategory.Generate,
-            "Tool.Lorem.Name", "Tool.Lorem.Desc", "",
+            "Tool.Lorem.Name", "Tool.Lorem.Desc", "\uE8A5",
             () => new LoremPage(),
             [], ["lorem", "ipsum", "placeholder", "dummy", "filler"], VisibleByDefault: false),
 
         new ToolDefinition(ToolKind.Color, ToolCategory.Generate,
-            "Tool.Color.Name", "Tool.Color.Desc", "",
+            "Tool.Color.Name", "Tool.Color.Desc", "\uE790",
             () => new ColorPage(),
             [], ["color", "colour", "hex", "rgb", "hsl", "contrast"], VisibleByDefault: false),
 
         // ---- Numbers & Time -----------------------------------------------------------------
         new ToolDefinition(ToolKind.Timestamp, ToolCategory.NumbersTime,
-            "Tool.Timestamp.Name", "Tool.Timestamp.Desc", "",
+            "Tool.Timestamp.Name", "Tool.Timestamp.Desc", "\uE917",
             () => new TimestampPage(),
             [], ["epoch", "unix", "timestamp"], VisibleByDefault: true),
 
         new ToolDefinition(ToolKind.Cron, ToolCategory.NumbersTime,
-            "Tool.Cron.Name", "Tool.Cron.Desc", "",
+            "Tool.Cron.Name", "Tool.Cron.Desc", "\uE8EE",
             () => new CronPage(),
             [], ["cron", "crontab", "schedule", "quartz"], VisibleByDefault: false),
 
         new ToolDefinition(ToolKind.NumberBase, ToolCategory.NumbersTime,
-            "Tool.NumberBase.Name", "Tool.NumberBase.Desc", "",
+            "Tool.NumberBase.Name", "Tool.NumberBase.Desc", "\uE8EF",
             () => new NumberBasePage(),
             [], ["hex", "binary", "octal", "bitwise"], VisibleByDefault: false),
     ];

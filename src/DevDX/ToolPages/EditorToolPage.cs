@@ -71,6 +71,23 @@ public abstract class EditorToolPage : ToolPage
         new() { Text = text, VerticalAlignment = VerticalAlignment.Center };
 
     /// <summary>
+    /// A caption sitting beside a control in an <see cref="OptionsBar"/>, the same as
+    /// <see cref="OptionLabel"/> — except it also sets <paramref name="control"/>'s
+    /// <c>AutomationProperties.Name</c> to the same text, the toolbar-row equivalent of
+    /// <see cref="FormToolPage.LabelledRow"/>. A <c>Header</c> is the right fix for a vertical form
+    /// row (<see cref="FormToolPage"/>); it is the wrong one here, since it stacks the caption
+    /// above the control and breaks the toolbar's single-line layout, so this pairs the same
+    /// <see cref="TextBlock"/> caption with an explicit automation name instead of a visual
+    /// <c>Header</c> — the visible label was never wired to the control it sits beside, so Narrator
+    /// read the control with no name at all.
+    /// </summary>
+    protected static TextBlock OptionLabelFor(FrameworkElement control, string text)
+    {
+        Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(control, text);
+        return OptionLabel(text);
+    }
+
+    /// <summary>
     /// Wraps a pane in its own surface. Input and output sit on slightly different backgrounds so
     /// the eye can tell at a glance which half it is reading — a one-step tint apart, not a
     /// contrast jump, since both are still just text on the window's glass.

@@ -30,12 +30,13 @@ public sealed class NumberBasePage : FormToolPage
         foreach (var w in Widths)
             _width.Items.Add(w + "-bit");
         _width.SelectedIndex = 2; // 32-bit
+        Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(_width, Loc.Get("NumberBase.Width"));
 
         AddRow(SectionHeader(Loc.Get("NumberBase.Title")));
-        AddRow(LabelledRow("Decimal", _decimalBox));
-        AddRow(LabelledRow("Hex", _hexBox));
-        AddRow(LabelledRow("Binary", _binaryBox));
-        AddRow(LabelledRow("Octal", _octalBox));
+        AddRow(LabelledRow(Loc.Get("NumberBase.Decimal"), _decimalBox));
+        AddRow(LabelledRow(Loc.Get("NumberBase.Hex"), _hexBox));
+        AddRow(LabelledRow(Loc.Get("NumberBase.Binary"), _binaryBox));
+        AddRow(LabelledRow(Loc.Get("NumberBase.Octal"), _octalBox));
 
         var options = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 12 };
         options.Children.Add(_width);
@@ -46,7 +47,7 @@ public sealed class NumberBasePage : FormToolPage
         AddRow(new ScrollViewer { Content = _bitGrid, HorizontalScrollBarVisibility = ScrollBarVisibility.Auto, VerticalScrollBarVisibility = ScrollBarVisibility.Disabled });
 
         AddRow(SectionHeader(Loc.Get("NumberBase.Bitwise")));
-        var opB = new TextBox { PlaceholderText = "operand", Width = 140 };
+        var opB = new TextBox { PlaceholderText = Loc.Get("NumberBase.OperandPlaceholder"), Width = 140 };
         var andBtn = new Button { Content = "AND" };
         var orBtn = new Button { Content = "OR" };
         var xorBtn = new Button { Content = "XOR" };

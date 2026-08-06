@@ -73,7 +73,11 @@ public class RegexTimeoutTests
         // for RegexMatchTimeout, chosen over the textbook `(a+)+` precisely because .NET's regex
         // reducer defeats several of the textbook ones outright — a ReDoS test the optimizer
         // quietly makes linear is a test that passes for the wrong reason.
-        var result = RegexRunner.Run(
+        //
+        // Fully qualified: newer .NET versions expose System.Text.RegularExpressions.RegexRunner
+        // (the regex source-generator's own runner base class), which otherwise collides with this
+        // app's DevDX.Services.Tools.RegexRunner under the `using`s above.
+        var result = DevDX.Services.Tools.RegexRunner.Run(
             @"^(\w+\s?)*$",
             new string('a', 30) + "!",
             RegexOptions.None,

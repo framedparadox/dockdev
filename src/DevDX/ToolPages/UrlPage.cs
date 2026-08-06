@@ -16,12 +16,12 @@ namespace DevDX.ToolPages;
 /// </summary>
 public sealed class UrlPage : EditorToolPage
 {
-    private readonly CodeEditor _percentInput = new();
+    private readonly CodeEditor _percentInput = new() { AccessibleName = Loc.Get("Common.Input") };
     private readonly CodeView _rfc3986Output = new();
     private readonly CodeView _formOutput = new();
 
-    private readonly CodeEditor _htmlInput = new();
-    private readonly CodeView _htmlOutput = new();
+    private readonly CodeEditor _htmlInput = new() { AccessibleName = Loc.Get("Common.Input") };
+    private readonly CodeView _htmlOutput = new() { AccessibleName = Loc.Get("Url.Html") };
 
     private readonly TextBox _urlInput = new() { PlaceholderText = "https://example.com/path?x=1#frag" };
     private readonly TextBlock _urlSummary = new() { FontFamily = new Microsoft.UI.Xaml.Media.FontFamily("Cascadia Mono, Consolas"), TextWrapping = TextWrapping.Wrap };
@@ -35,7 +35,7 @@ public sealed class UrlPage : EditorToolPage
     /// rather than pasted in: the glyph here was an empty string, which renders as nothing — the
     /// button was invisible, and with no label or tooltip either there was no way to tell it was
     /// there at all.</summary>
-    private const string RemoveGlyph = "";
+    private const string RemoveGlyph = "\uE74D";
 
     public UrlPage()
     {
@@ -158,10 +158,13 @@ public sealed class UrlPage : EditorToolPage
         for (int i = 0; i < parsed.Query.Count; i++)
         {
             int idx = i;
-            var keyBox = new TextBox { Text = parsed.Query[i].Key, Width = 160, PlaceholderText = "key" };
-            var valueBox = new TextBox { Text = parsed.Query[i].Value, Width = 220, PlaceholderText = "value" };
-            AutomationProperties.SetName(keyBox, Loc.Get("Url.QueryParams") + " key");
-            AutomationProperties.SetName(valueBox, Loc.Get("Url.QueryParams") + " value");
+            var keyBox = new TextBox { Text = parsed.Query[i].Key, Width = 160, PlaceholderText = Loc.Get("Url.QueryKeyPlaceholder") };
+            var valueBox = new TextBox { Text = parsed.Query[i].Value, Width = 220, PlaceholderText = Loc.Get("Url.QueryValuePlaceholder") };
+            // Formatted rather than concatenated (design doc §20: "no string concatenation for
+            // sentences") and numbered per row, since a table of unnamed "Key"/"Value" boxes reads
+            // as one pair to Narrator no matter which of several rows it is currently on.
+            AutomationProperties.SetName(keyBox, Loc.Format("Url.QueryKeyFor", idx + 1));
+            AutomationProperties.SetName(valueBox, Loc.Format("Url.QueryValueFor", idx + 1));
 
             // Guarded on the index as well: a row that outlives a Remove elsewhere in the table
             // would otherwise index past the end of the list it was built from.
@@ -215,6 +218,16 @@ public sealed class UrlPage : EditorToolPage
         Grid.SetRow(content, 1);
         grid.Children.Add(header);
         grid.Children.Add(content);
+
+        // The visible header above never reached the content itself, so Narrator read the header
+        // and the (nameless) content as two unrelated things instead of one labelled section.
+        switch (content)
+        {
+            case CodeView view: view.AccessibleName = label; break;
+            case CodeEditor editor: editor.AccessibleName = label; break;
+            default: AutomationProperties.SetName(content, label); break;
+        }
+
         return grid;
     }
 

@@ -1,3 +1,4 @@
+using DevDX.Services;
 using DevDX.Services.Syntax;
 using Microsoft.UI.Dispatching;
 using Microsoft.UI.Text;
@@ -84,6 +85,18 @@ public sealed class CodeEditor : Grid
     {
         get => TextBox.PlaceholderText;
         set => TextBox.PlaceholderText = value;
+    }
+
+    /// <summary>
+    /// The editor's accessible name, announced by Narrator when focus lands in it. Distinct from
+    /// <see cref="PlaceholderText"/>, which is example content (and often absent, or a syntax
+    /// sample like a JWT shape) rather than a name for the field — a two-pane tool needs its input
+    /// and output distinguishable by name alone, not by whichever example text happens to be set.
+    /// </summary>
+    public string AccessibleName
+    {
+        get => Microsoft.UI.Xaml.Automation.AutomationProperties.GetName(TextBox);
+        set => Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(TextBox, value);
     }
 
     /// <summary>
@@ -200,9 +213,17 @@ public sealed class CodeEditor : Grid
         _highlightTimer.Stop();
 
         var text = Text;
-        var defaultColor = ActualTheme == ElementTheme.Light
-            ? Microsoft.UI.Colors.Black
-            : Microsoft.UI.Colors.White;
+        // Under High Contrast the platform's own TextControlForeground resource already carries
+        // the palette the user picked (design doc §13.3: "High Contrast always wins") — forcing a
+        // hardcoded Black/White here would fight it, exactly the bug CodeView's own render path
+        // already guards against for the read-only side. There is no "clear to ambient" for a
+        // RichEditBox's character-level ForegroundColor the way there is for a TextBlock brush, so
+        // the ambient colour has to be read back from the control's own (theme-resolved) Foreground
+        // and reapplied explicitly instead.
+        bool highContrast = HighContrast.IsActive();
+        var defaultColor = highContrast
+            ? (TextBox.Foreground as SolidColorBrush)?.Color
+            : ActualTheme == ElementTheme.Light ? Microsoft.UI.Colors.Black : Microsoft.UI.Colors.White;
 
         int selectionStart;
         int selectionEnd;
@@ -231,20 +252,26 @@ public sealed class CodeEditor : Grid
             // so a scanner that walked off the end of a half-typed document would take the process
             // down rather than mis-colour a line. (The scanners are fuzzed against truncated and
             // mutated input in TokenizerFuzzTests; this is the belt to that pair of braces.)
-            IReadOnlyList<Token> tokens = Tokenizer is { } tokenizer && text.Length is > 0 and <= MaxHighlightLength
+            IReadOnlyList<Token> tokens = !highContrast && Tokenizer is { } tokenizer && text.Length is > 0 and <= MaxHighlightLength
                 ? tokenizer.Tokenize(text)
                 : [];
 
             // One reset, then one range per token: the gaps between tokens keep the default
-            // colour rather than needing a range of their own.
-            TextBox.Document.GetRange(0, text.Length + 1).CharacterFormat.ForegroundColor = defaultColor;
+            // colour rather than needing a range of their own. If the ambient colour could not be
+            // resolved to a concrete Color (unexpected, but Foreground is a Brush, not always a
+            // SolidColorBrush), the existing formatting is left alone rather than guessed at.
+            if (defaultColor is { } resolvedDefault)
+                TextBox.Document.GetRange(0, text.Length + 1).CharacterFormat.ForegroundColor = resolvedDefault;
 
-            bool dark = ActualTheme != ElementTheme.Light;
-            foreach (var token in tokens)
+            if (!highContrast)
             {
-                if (SyntaxPalette.ForegroundFor(token.Kind, dark) is not { } color)
-                    continue;
-                TextBox.Document.GetRange(token.Start, token.End).CharacterFormat.ForegroundColor = color;
+                bool dark = ActualTheme != ElementTheme.Light;
+                foreach (var token in tokens)
+                {
+                    if (SyntaxPalette.ForegroundFor(token.Kind, dark) is not { } color)
+                        continue;
+                    TextBox.Document.GetRange(token.Start, token.End).CharacterFormat.ForegroundColor = color;
+                }
             }
         }
         catch (Exception ex)

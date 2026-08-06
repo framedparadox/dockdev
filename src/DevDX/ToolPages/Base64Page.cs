@@ -32,6 +32,8 @@ public sealed class Base64Page : EditorToolPage
 
     public Base64Page()
     {
+        _input.AccessibleName = Loc.Get("Common.Input");
+        _output.AccessibleName = Loc.Get("Common.Output");
         _encode.GroupName = _decode.GroupName = "Base64Mode";
         _encode.Content = Loc.Get("Base64.Encode");
         _decode.Content = Loc.Get("Base64.Decode");

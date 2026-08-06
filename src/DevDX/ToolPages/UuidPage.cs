@@ -61,6 +61,8 @@ public sealed class UuidPage : FormToolPage
 
     private void Generate()
     {
+        if (_version.SelectedIndex < 0 || _format.SelectedIndex < 0)
+            return;
         var version = Versions[_version.SelectedIndex];
         var format = Formats[_format.SelectedIndex];
         int count = (int)_count.Value;

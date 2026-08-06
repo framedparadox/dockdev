@@ -18,8 +18,8 @@ namespace DevDX.ToolPages;
 public sealed class RegexPage : EditorToolPage
 {
     private readonly TextBox _pattern = new() { PlaceholderText = Loc.Get("Regex.PatternPlaceholder"), FontFamily = new Microsoft.UI.Xaml.Media.FontFamily("Cascadia Mono, Consolas") };
-    private readonly CodeEditor _subject = new();
-    private readonly CodeView _matchView = new() { ShowLineNumbers = false };
+    private readonly CodeEditor _subject = new() { AccessibleName = Loc.Get("Regex.Subject") };
+    private readonly CodeView _matchView = new() { ShowLineNumbers = false, AccessibleName = Loc.Get("Regex.Matches") };
     private readonly TextBox _replacement = new() { PlaceholderText = Loc.Get("Regex.ReplacementPlaceholder"), FontFamily = new Microsoft.UI.Xaml.Media.FontFamily("Cascadia Mono, Consolas") };
     private readonly TextBlock _replacementPreview = new() { FontFamily = new Microsoft.UI.Xaml.Media.FontFamily("Cascadia Mono, Consolas"), TextWrapping = TextWrapping.Wrap, IsTextSelectionEnabled = true, Margin = new Thickness(8) };
     private readonly ListView _groupsTable = new() { SelectionMode = ListViewSelectionMode.None };

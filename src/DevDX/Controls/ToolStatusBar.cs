@@ -98,10 +98,17 @@ public sealed class ToolStatusBar : Grid
     /// value, and is a muddy near-black red on a dark surface, where the chip was the one thing on
     /// the status bar you could not read. Colour is not the only signal either way: the chip spells
     /// out the line and column (§10.3).
+    /// <para>
+    /// Under High Contrast this custom colour is skipped entirely (design doc §13.3: "High Contrast
+    /// always wins") — the same rule <see cref="CodeView"/> applies to syntax colours. A custom red
+    /// that was tuned against the two ordinary themes is not guaranteed to clear the OS's chosen HC
+    /// palette, so the chip instead inherits the ambient (HC-correct) text colour and relies on the
+    /// text itself ("Invalid at line 4, column 12") to carry the meaning.
+    /// </para>
     /// </summary>
     private void ApplyChipColor()
     {
-        if (!_isError)
+        if (!_isError || Services.HighContrast.IsActive())
         {
             _chip.ClearValue(TextBlock.ForegroundProperty);
             return;

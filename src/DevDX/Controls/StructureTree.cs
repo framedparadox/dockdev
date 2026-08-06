@@ -30,6 +30,15 @@ public sealed class StructureTree : Grid
 
     public event EventHandler<string>? NodeSelected;
 
+    /// <summary>This tree's accessible name, announced by Narrator when focus lands in it — see
+    /// <see cref="Controls.CodeView.AccessibleName"/> for the equivalent on the sibling panes this
+    /// control sits beside.</summary>
+    public string AccessibleName
+    {
+        get => Microsoft.UI.Xaml.Automation.AutomationProperties.GetName(_tree);
+        set => Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(_tree, value);
+    }
+
     public StructureTree()
     {
         RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });

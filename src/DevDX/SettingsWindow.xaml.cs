@@ -532,7 +532,7 @@ public sealed partial class SettingsWindow : Window
             {
                 Content = new FontIcon
                 {
-                    Glyph = "", // Cancel
+                    Glyph = "\uE711", // Cancel
                     FontFamily = (FontFamily)Application.Current.Resources["SymbolThemeFontFamily"],
                     FontSize = 12,
                 },
@@ -742,6 +742,7 @@ public sealed partial class SettingsWindow : Window
                 HorizontalAlignment = HorizontalAlignment.Right,
                 VerticalAlignment = VerticalAlignment.Center,
             };
+            Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(monitors, Loc.Get("Dock.MonitorLabel"));
             for (int i = 0; i < displays.Count; i++)
             {
                 var bounds = displays[i].OuterBounds;
@@ -767,6 +768,7 @@ public sealed partial class SettingsWindow : Window
             HorizontalAlignment = HorizontalAlignment.Right,
             VerticalAlignment = VerticalAlignment.Center,
         };
+        Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(edges, Loc.Get("Settings.Position"));
         foreach (var key in new[]
                  {
                      "Position.Floating", "Position.Bottom", "Position.Top",
@@ -1256,7 +1258,7 @@ public sealed partial class SettingsWindow : Window
         {
             Content = new FontIcon
             {
-                Glyph = "", // Delete
+                Glyph = "\uE74D", // Delete
                 FontFamily = (FontFamily)Application.Current.Resources["SymbolThemeFontFamily"],
                 FontSize = 14,
             },

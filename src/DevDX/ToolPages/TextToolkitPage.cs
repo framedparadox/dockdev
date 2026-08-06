@@ -17,7 +17,13 @@ public sealed class TextToolkitPage : EditorToolPage
     private readonly CodeEditor _input = new();
     private readonly CodeView _output = new();
     private readonly ComboBox _operation = new();
-    private readonly TextBox _separatorBox = new() { Width = 80, Text = ",", Visibility = Visibility.Collapsed };
+    private readonly TextBox _separatorBox = new()
+    {
+        Width = 80,
+        Text = ",",
+        Visibility = Visibility.Collapsed,
+        PlaceholderText = ",",
+    };
     private readonly TextBlock _countsSummary = new() { Opacity = 0.7, Margin = new Thickness(12, 4, 12, 0) };
     private bool _isDirty;
 
@@ -53,19 +59,25 @@ public sealed class TextToolkitPage : EditorToolPage
 
     public TextToolkitPage()
     {
+        _input.AccessibleName = Loc.Get("Common.Input");
+        _output.AccessibleName = Loc.Get("Common.Output");
         foreach (var (key, _) in Operations)
             _operation.Items.Add(Loc.Get(key));
         _operation.SelectedIndex = 0;
         _operation.SelectionChanged += (_, _) =>
         {
+            if (_operation.SelectedIndex < 0)
+                return;
             var key = Operations[_operation.SelectedIndex].Key;
             _separatorBox.Visibility = key is "Text.Op.Join" or "Text.Op.Split" ? Visibility.Visible : Visibility.Collapsed;
             Apply();
         };
         _separatorBox.TextChanged += (_, _) => Apply();
 
+        Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(_separatorBox, Loc.Get("Text.SeparatorLabel"));
+
         var header = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 12, Margin = new Thickness(12, 8, 12, 0) };
-        header.Children.Add(new TextBlock { Text = Loc.Get("Text.Operation"), VerticalAlignment = VerticalAlignment.Center });
+        header.Children.Add(OptionLabelFor(_operation, Loc.Get("Text.Operation")));
         header.Children.Add(_operation);
         header.Children.Add(_separatorBox);
         var chain = new Button { Content = Loc.Get("Text.ChainToInput") };
@@ -132,7 +144,7 @@ public sealed class TextToolkitPage : EditorToolPage
     {
         var text = _input.Text;
         StatusBar.SetCounts(text);
-        if (text.Length == 0)
+        if (text.Length == 0 || _operation.SelectedIndex < 0)
         {
             _output.Clear();
             _countsSummary.Text = "";

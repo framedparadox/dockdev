@@ -100,7 +100,7 @@ public sealed partial class DockWindow : Window
         ApplyWindowBorder();
         RootGrid.ActualThemeChanged += (_, _) => ApplyWindowBorder();
 
-        if (IsHighContrast())
+        if (HighContrast.IsActive())
         {
             if (Application.Current.Resources.TryGetValue(
                     "SolidBackgroundFillColorBaseBrush", out var bg) && bg is Brush brush)
@@ -682,6 +682,9 @@ public sealed partial class DockWindow : Window
     private void ShowRenameFlyout(FrameworkElement target, ToolDockItem item)
     {
         var box = new TextBox { Text = item.DisplayName, Width = 240 };
+        // The visible "Rename" caption above never reached the box itself, so Narrator read an
+        // unlabelled edit field the moment focus (which the flyout sets automatically) landed in it.
+        Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(box, Loc.Get("Flyout.Rename"));
         var ok = new Button
         {
             Content = Loc.Get("Flyout.Rename"),
@@ -899,7 +902,7 @@ public sealed partial class DockWindow : Window
     /// </summary>
     internal static ElementTheme ResolveTheme(DockTheme theme)
     {
-        if (IsHighContrast())
+        if (HighContrast.IsActive())
             return ElementTheme.Default;
         return theme switch
         {
@@ -1260,16 +1263,6 @@ public sealed partial class DockWindow : Window
     }
 
     // ---- Accessibility / small UI helpers ---------------------------------
-
-    /// <summary>
-    /// True when Windows is using a High Contrast theme. Guarded: on any failure (e.g. the
-    /// setting is unavailable in this host) we assume false and keep the normal glass styling.
-    /// </summary>
-    private static bool IsHighContrast()
-    {
-        try { return new Windows.UI.ViewManagement.AccessibilitySettings().HighContrast; }
-        catch { return false; }
-    }
 
     /// <summary>A flyout section header using the Fluent "body strong" type-ramp style.</summary>
     private static TextBlock FlyoutHeader(string text)

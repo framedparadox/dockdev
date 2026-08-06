@@ -16,7 +16,11 @@ namespace DevDX.ToolPages;
 /// </summary>
 public sealed class JwtPage : EditorToolPage
 {
-    private readonly CodeEditor _input = new() { PlaceholderText = "eyJhbGciOi...header.eyJzdWIi...payload.signature" };
+    private readonly CodeEditor _input = new()
+    {
+        PlaceholderText = "eyJhbGciOi...header.eyJzdWIi...payload.signature",
+        AccessibleName = Loc.Get("Common.Input"),
+    };
     private readonly CodeView _headerView = new();
     private readonly CodeView _payloadView = new();
     private readonly TextBlock _signature = new() { FontFamily = new Microsoft.UI.Xaml.Media.FontFamily("Cascadia Mono, Consolas"), TextWrapping = TextWrapping.Wrap, IsTextSelectionEnabled = true, Margin = new Thickness(8) };
@@ -92,6 +96,16 @@ public sealed class JwtPage : EditorToolPage
         Grid.SetRow(content, 1);
         grid.Children.Add(header);
         grid.Children.Add(content);
+
+        // The visible header above never reached the content itself, so Narrator read the header
+        // and the (nameless) content as two unrelated things instead of one labelled section.
+        switch (content)
+        {
+            case CodeView view: view.AccessibleName = label; break;
+            case CodeEditor editor: editor.AccessibleName = label; break;
+            default: Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(content, label); break;
+        }
+
         return grid;
     }
 

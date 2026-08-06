@@ -29,6 +29,14 @@ public sealed class DiffView : Grid
     /// </summary>
     public bool IsMinimal { get; private set; } = true;
 
+    /// <summary>Forwards to the underlying <see cref="CodeView"/>'s accessible name — see
+    /// <see cref="CodeView.AccessibleName"/>.</summary>
+    public string AccessibleName
+    {
+        get => _codeView.AccessibleName;
+        set => _codeView.AccessibleName = value;
+    }
+
     public DiffView()
     {
         RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });

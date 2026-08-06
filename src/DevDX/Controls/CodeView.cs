@@ -1,3 +1,4 @@
+using DevDX.Services;
 using DevDX.Services.Syntax;
 using Microsoft.UI;
 using Microsoft.UI.Xaml;
@@ -95,6 +96,18 @@ public sealed class CodeView : Grid
 
     public string Text => _text;
 
+    /// <summary>
+    /// This view's accessible name, announced by Narrator when focus lands in its selectable text.
+    /// A read-only colourised view carries no placeholder to fall back on at all, so without this
+    /// it has no name whatsoever — see <see cref="CodeEditor.AccessibleName"/> for the input-side
+    /// equivalent.
+    /// </summary>
+    public string AccessibleName
+    {
+        get => Microsoft.UI.Xaml.Automation.AutomationProperties.GetName(_content);
+        set => Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(_content, value);
+    }
+
     /// <summary>Sets the text and its tokens (empty tokens for plain/large-file display).</summary>
     public void SetContent(string text, IReadOnlyList<Token>? tokens = null)
     {
@@ -119,7 +132,7 @@ public sealed class CodeView : Grid
         if (_text.Length == 0)
             return;
 
-        bool highContrast = IsHighContrast();
+        bool highContrast = HighContrast.IsActive();
         bool dark = ActualTheme != ElementTheme.Light;
 
         var highlightRanges = new Dictionary<TokenKind, List<TextRange>>();
@@ -176,11 +189,6 @@ public sealed class CodeView : Grid
         }
     }
 
-    private static bool IsHighContrast()
-    {
-        try { return new Windows.UI.ViewManagement.AccessibilitySettings().HighContrast; }
-        catch { return false; }
-    }
 }
 
 /// <summary>The theme-aware colour table for every <see cref="TokenKind"/> (design doc Appendix B).

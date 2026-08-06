@@ -10,7 +10,7 @@ namespace DevDX.Controls;
 /// every form-shaped result row gets one (design doc §9.2).</summary>
 public sealed class CopyButton : Button
 {
-    private readonly FontIcon _icon = new() { Glyph = "", FontSize = 14 };
+    private readonly FontIcon _icon = new() { Glyph = "\uE8C8", FontSize = 14 };
     private readonly TextBlock _label = new() { Margin = new Thickness(6, 0, 0, 0) };
     private readonly StackPanel _panel = new() { Orientation = Orientation.Horizontal };
 

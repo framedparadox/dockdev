@@ -25,7 +25,11 @@ namespace DevDX.ToolPages;
 /// </summary>
 public sealed class MaskerPage : EditorToolPage
 {
-    private readonly CodeEditor _editor = new() { PlaceholderText = Loc.Get("Masker.InputPlaceholder") };
+    private readonly CodeEditor _editor = new()
+    {
+        PlaceholderText = Loc.Get("Masker.InputPlaceholder"),
+        AccessibleName = Loc.Get("Common.Input"),
+    };
     private readonly ItemsControl _findingsList = new();
     private readonly TextBlock _findingCount = new() { Margin = new Thickness(8, 4, 8, 0), Opacity = 0.8 };
     private readonly ComboBox _profile = new();
@@ -72,9 +76,9 @@ public sealed class MaskerPage : EditorToolPage
         maskNone.Click += (_, _) => SetAllIncluded(false);
 
         var toolbar = OptionsBar();
-        toolbar.Children.Add(OptionLabel(Loc.Get("Masker.Profile")));
+        toolbar.Children.Add(OptionLabelFor(_profile, Loc.Get("Masker.Profile")));
         toolbar.Children.Add(_profile);
-        toolbar.Children.Add(OptionLabel(Loc.Get("Masker.ThresholdLabel")));
+        toolbar.Children.Add(OptionLabelFor(_threshold, Loc.Get("Masker.ThresholdLabel")));
         toolbar.Children.Add(_threshold);
         toolbar.Children.Add(maskAll);
         toolbar.Children.Add(maskNone);
@@ -200,7 +204,13 @@ public sealed class MaskerPage : EditorToolPage
             var f = _findings[i];
             var preview = Excerpt(f);
 
+            // Every row repeats the ComboBox/CheckBox pair, so their automation names have to
+            // include which finding they belong to — a bare "Strategy" repeated N times is as
+            // unnavigable to Narrator as no name at all.
+            string rowLabel = $"{f.Category} ({f.Confidence})";
+
             var include = new CheckBox { IsChecked = f.Included, Margin = new Thickness(0, 0, 8, 0) };
+            Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(include, Loc.Format("Masker.IncludeFor", rowLabel));
             include.Checked += (_, _) => { _findings[idx] = _findings[idx] with { Included = true }; Remask(); };
             include.Unchecked += (_, _) => { _findings[idx] = _findings[idx] with { Included = false }; Remask(); };
 
@@ -209,6 +219,7 @@ public sealed class MaskerPage : EditorToolPage
             info.Children.Add(new TextBlock { Text = preview, FontFamily = new Microsoft.UI.Xaml.Media.FontFamily("Cascadia Mono, Consolas"), FontSize = 11, Opacity = 0.75, TextTrimming = TextTrimming.CharacterEllipsis });
 
             var strategyBox = new ComboBox { Width = 160 };
+            Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(strategyBox, Loc.Format("Masker.StrategyFor", rowLabel));
             foreach (var s in Enum.GetValues<MaskStrategy>())
                 strategyBox.Items.Add(s.ToString());
             strategyBox.SelectedIndex = (int)f.Strategy;
