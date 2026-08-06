@@ -13,7 +13,7 @@ public sealed class UuidPage : FormToolPage
 {
     private readonly ComboBox _version = new();
     private readonly ComboBox _format = new();
-    private readonly NumberBox _count = new() { Value = 1, Minimum = 1, Maximum = 1000, SpinButtonPlacementMode = NumberBoxSpinButtonPlacementMode.Inline, MinWidth = 130 };
+    private readonly NumberBox _count = new() { Value = 1, Minimum = 1, Maximum = 1000, MinWidth = 130 };
     private readonly TextBox _results = new() { IsReadOnly = true, AcceptsReturn = true, TextWrapping = TextWrapping.NoWrap, Height = 260, FontFamily = new Microsoft.UI.Xaml.Media.FontFamily("Cascadia Mono, Consolas") };
 
     private static readonly UuidVersion[] Versions = [UuidVersion.V4, UuidVersion.V7, UuidVersion.Nil];
@@ -22,8 +22,6 @@ public sealed class UuidPage : FormToolPage
 
     public UuidPage()
     {
-        AddRow(SectionHeader(Loc.Get("Uuid.Title")));
-
         foreach (var v in Versions)
             _version.Items.Add(Loc.Get("Uuid.Version." + v));
         _version.SelectedIndex = 0;
@@ -34,6 +32,7 @@ public sealed class UuidPage : FormToolPage
         _version.HorizontalAlignment = HorizontalAlignment.Stretch;
         _format.HorizontalAlignment = HorizontalAlignment.Stretch;
         _count.HorizontalAlignment = HorizontalAlignment.Stretch;
+        _count.EnableWheelStep();
 
         var options = new Grid { ColumnSpacing = 16 };
         options.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
@@ -52,13 +51,21 @@ public sealed class UuidPage : FormToolPage
 
         var generate = new Button { Content = Loc.Get("Uuid.Generate"), Style = (Style)Application.Current.Resources["AccentButtonStyle"] };
         generate.Click += (_, _) => Generate();
-        var copyAll = new CopyButton { GetText = () => _results.Text };
-        var actions = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
-        actions.Children.Add(generate);
-        actions.Children.Add(copyAll);
-        AddRow(actions);
+        AddRow(generate);
 
-        AddRow(LabelledRow(Loc.Get("Uuid.Results"), _results));
+        // The copy button sits beside the "Results" label rather than beside Generate, with the
+        // label standalone (not the box's Header) since the box gets its own full-width row below.
+        var resultsRow = new Grid { ColumnSpacing = 8 };
+        resultsRow.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        resultsRow.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        var resultsLabel = new TextBlock { Text = Loc.Get("Uuid.Results"), Style = (Style)Application.Current.Resources["BodyStrongTextBlockStyle"] };
+        var copyAll = new CopyButton { GetText = () => _results.Text, VerticalAlignment = VerticalAlignment.Bottom };
+        Grid.SetColumn(resultsLabel, 0);
+        Grid.SetColumn(copyAll, 1);
+        resultsRow.Children.Add(resultsLabel);
+        resultsRow.Children.Add(copyAll);
+        AddRow(resultsRow);
+        AddRow(_results);
 
         _version.SelectionChanged += (_, _) => Generate();
         _format.SelectionChanged += (_, _) => Generate();

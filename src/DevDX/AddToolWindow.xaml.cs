@@ -290,11 +290,15 @@ public sealed partial class AddToolWindow : Window
 
     private static StackPanel TileContent(string glyph, string label)
     {
+        bool isTextGlyph = GlyphFonts.IsTextGlyph(glyph);
         var content = new StackPanel { Spacing = 8, VerticalAlignment = VerticalAlignment.Center };
         content.Children.Add(new FontIcon
         {
             Glyph = glyph,
-            FontSize = 22,
+            FontFamily = isTextGlyph
+                ? new FontFamily("Segoe UI")
+                : (FontFamily)Application.Current.Resources["SymbolThemeFontFamily"],
+            FontSize = isTextGlyph ? 22 * 0.8 : 22,
             HorizontalAlignment = HorizontalAlignment.Center,
         });
         content.Children.Add(new TextBlock

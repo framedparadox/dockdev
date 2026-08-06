@@ -127,6 +127,7 @@ public sealed partial class SettingsWindow : Window
         RebuildTools();
         RebuildItemHotkeys();
         VersionText.Text = Loc.Format("About.Version", UpdateService.CurrentVersion.ToString());
+        VersionPillText.Text = $"v{UpdateService.CurrentVersion}";
 
         // A check that ran at startup put nothing on screen; if it found something, this is the
         // first chance to say so.
@@ -943,11 +944,14 @@ public sealed partial class SettingsWindow : Window
         Grid.SetColumn(indicator, 0);
         grid.Children.Add(indicator);
 
+        bool isTextGlyph = GlyphFonts.IsTextGlyph(tool.Glyph);
         var icon = new FontIcon
         {
             Glyph = tool.Glyph,
-            FontFamily = (FontFamily)Application.Current.Resources["SymbolThemeFontFamily"],
-            FontSize = 18,
+            FontFamily = isTextGlyph
+                ? new FontFamily("Segoe UI")
+                : (FontFamily)Application.Current.Resources["SymbolThemeFontFamily"],
+            FontSize = isTextGlyph ? 18 * 0.8 : 18,
             VerticalAlignment = VerticalAlignment.Center,
         };
         Grid.SetColumn(icon, 1);
@@ -1095,11 +1099,15 @@ public sealed partial class SettingsWindow : Window
         }
         else
         {
+            var glyph = item is { Glyph.Length: > 0 } ? item.Glyph : tool.Glyph;
+            bool isTextGlyph = GlyphFonts.IsTextGlyph(glyph);
             iconHost.Children.Add(new FontIcon
             {
-                Glyph = item is { Glyph.Length: > 0 } ? item.Glyph : tool.Glyph,
-                FontFamily = (FontFamily)Application.Current.Resources["SymbolThemeFontFamily"],
-                FontSize = 18,
+                Glyph = glyph,
+                FontFamily = isTextGlyph
+                    ? new FontFamily("Segoe UI")
+                    : (FontFamily)Application.Current.Resources["SymbolThemeFontFamily"],
+                FontSize = isTextGlyph ? 18 * 0.8 : 18,
             });
         }
         Grid.SetColumn(iconHost, 1);
@@ -1189,11 +1197,14 @@ public sealed partial class SettingsWindow : Window
             }
             else
             {
+                bool isTextGlyph = GlyphFonts.IsTextGlyph(item.Glyph);
                 iconHost.Children.Add(new FontIcon
                 {
                     Glyph = item.Glyph,
-                    FontFamily = (FontFamily)Application.Current.Resources["SymbolThemeFontFamily"],
-                    FontSize = 18,
+                    FontFamily = isTextGlyph
+                        ? new FontFamily("Segoe UI")
+                        : (FontFamily)Application.Current.Resources["SymbolThemeFontFamily"],
+                    FontSize = isTextGlyph ? 18 * 0.8 : 18,
                 });
             }
         }

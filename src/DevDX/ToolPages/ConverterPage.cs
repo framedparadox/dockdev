@@ -86,10 +86,12 @@ public sealed class ConverterPage : EditorToolPage
         var split = new Grid();
         split.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
         split.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-        Grid.SetColumn(_input, 0);
-        Grid.SetColumn(_output, 1);
-        split.Children.Add(_input);
-        split.Children.Add(_output);
+        var inputPane = Pane(_input);
+        var outputPane = Pane(_output, secondary: true);
+        Grid.SetColumn(inputPane, 0);
+        Grid.SetColumn(outputPane, 1);
+        split.Children.Add(inputPane);
+        split.Children.Add(outputPane);
 
         var body = new Grid();
         body.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
@@ -111,6 +113,7 @@ public sealed class ConverterPage : EditorToolPage
     [
         new ToolCommand(Loc.Get("Tool.ConvertAction"), "\uE895", Convert, VirtualKey.Enter, VirtualKeyModifiers.Control, id: ToolCommand.Ids.Convert),
         ToolCommand.Copy(CopyOutput),
+        ToolCommand.Save(SaveOutput),
         ToolCommand.Clear(Clear),
     ];
 
@@ -175,6 +178,29 @@ public sealed class ConverterPage : EditorToolPage
         var package = new Windows.ApplicationModel.DataTransfer.DataPackage();
         package.SetText(_output.Text);
         Windows.ApplicationModel.DataTransfer.Clipboard.SetContent(package);
+    }
+
+    private void SaveOutput()
+    {
+        if (_output.Text.Length == 0)
+            return;
+
+        var extension = Formats[_target.SelectedIndex].Extensions[0];
+        try
+        {
+            var desktop = Environment.GetFolderPath(Environment.SpecialFolder.Desktop);
+            var name = "converted";
+            var path = Path.Combine(desktop, name + extension);
+            for (int i = 2; File.Exists(path); i++)
+                path = Path.Combine(desktop, $"{name} ({i}){extension}");
+
+            File.WriteAllText(path, _output.Text);
+            StatusBar.SetMessage(Loc.Format("Tool.SavedTo", Path.GetFileName(path)), isError: false);
+        }
+        catch (Exception ex)
+        {
+            StatusBar.SetMessage(ex.Message, isError: true);
+        }
     }
 
     private void Clear()

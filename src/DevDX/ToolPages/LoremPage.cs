@@ -11,7 +11,7 @@ namespace DevDX.ToolPages;
 public sealed class LoremPage : FormToolPage
 {
     private readonly ComboBox _unit = new();
-    private readonly NumberBox _count = new() { Value = 3, Minimum = 1, Maximum = 500, SpinButtonPlacementMode = NumberBoxSpinButtonPlacementMode.Inline, Width = 140 };
+    private readonly NumberBox _count = new() { Value = 3, Minimum = 1, Maximum = 500, Width = 140 };
     private readonly CheckBox _classicOpening = new() { Content = Loc.Get("Lorem.ClassicOpening"), IsChecked = true };
     private readonly TextBox _results = new() { IsReadOnly = true, AcceptsReturn = true, TextWrapping = TextWrapping.Wrap, Height = 300 };
 
@@ -19,13 +19,10 @@ public sealed class LoremPage : FormToolPage
 
     public LoremPage()
     {
-        AddRow(SectionHeader(Loc.Get("Tool.Lorem.Name")));
-
         foreach (var u in Units)
             _unit.Items.Add(Loc.Get("Lorem.Unit." + u));
         _unit.SelectedIndex = 0;
-
-        AddRow(LabelledRow(Loc.Get("Lorem.UnitLabel"), _unit));
+        _count.EnableWheelStep();
 
         var generate = new Button
         {
@@ -34,26 +31,32 @@ public sealed class LoremPage : FormToolPage
             VerticalAlignment = VerticalAlignment.Bottom,
         };
         generate.Click += (_, _) => Generate();
-        _classicOpening.VerticalAlignment = VerticalAlignment.Bottom;
 
         var actions = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
-        actions.Children.Add(generate);
+        actions.Children.Add(LabelledRow(Loc.Get("Lorem.UnitLabel"), _unit));
         actions.Children.Add(LabelledRow(Loc.Get("Lorem.Count"), _count));
-        actions.Children.Add(_classicOpening);
+        actions.Children.Add(generate);
         AddRow(actions);
 
-        // The copy button sits beside the results box (its own row) rather than beside Generate,
-        // mirroring FormToolPage.ResultRow's shape for a box that already exists as a field.
-        var resultsRow = new Grid { ColumnSpacing = 8 };
-        resultsRow.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-        resultsRow.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-        var resultsLabelled = LabelledRow(Loc.Get("Uuid.Results"), _results);
+        AddRow(_classicOpening);
+
+        var resultsHeaderRow = new Grid { ColumnSpacing = 8 };
+        resultsHeaderRow.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        resultsHeaderRow.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        var resultsLabel = new TextBlock
+        {
+            Text = Loc.Get("Uuid.Results"),
+            Opacity = 0.8,
+            Style = (Style)Application.Current.Resources["CaptionTextBlockStyle"],
+            VerticalAlignment = VerticalAlignment.Center,
+        };
         var copyAll = new CopyButton { GetText = () => _results.Text, VerticalAlignment = VerticalAlignment.Bottom };
-        Grid.SetColumn(resultsLabelled, 0);
+        Grid.SetColumn(resultsLabel, 0);
         Grid.SetColumn(copyAll, 1);
-        resultsRow.Children.Add(resultsLabelled);
-        resultsRow.Children.Add(copyAll);
-        AddRow(resultsRow);
+        resultsHeaderRow.Children.Add(resultsLabel);
+        resultsHeaderRow.Children.Add(copyAll);
+        AddRow(resultsHeaderRow);
+        AddRow(_results);
 
         _unit.SelectionChanged += (_, _) => Generate();
         _count.ValueChanged += (_, _) => Generate();

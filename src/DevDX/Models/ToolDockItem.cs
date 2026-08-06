@@ -1,6 +1,7 @@
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using System.Text.Json.Serialization;
+using DevDX.Services;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Media;
 
@@ -50,6 +51,9 @@ public sealed class ToolDockItem : INotifyPropertyChanged
             OnPropertyChanged();
             OnPropertyChanged(nameof(Glyph));
             OnPropertyChanged(nameof(HasCustomIcon));
+            OnPropertyChanged(nameof(GlyphFontFamily));
+            OnPropertyChanged(nameof(GlyphFontScale));
+            OnPropertyChanged(nameof(RenderGlyphSizeScaled));
         }
     }
 
@@ -130,6 +134,23 @@ public sealed class ToolDockItem : INotifyPropertyChanged
         ToolKind.Separator => "",
         _ => ToolCatalog.Get(Kind)?.Glyph ?? "",
     };
+
+    /// <summary>
+    /// The font a bound <see cref="FontIcon"/> needs to draw <see cref="Glyph"/>: the icon font for
+    /// a real Segoe Fluent Icons codepoint, or a normal UI font for literal text like Base64's "01"
+    /// or Xml's "&lt;/&gt;", which the icon font's private-use-area charset does not cover. Hardcoded
+    /// to the icon font's actual family name (matching <see cref="Controls.CopyButton"/>) rather than
+    /// looked up via <c>Application.Current.Resources["SymbolThemeFontFamily"]</c>, since this
+    /// re-evaluates per dock tile.
+    /// </summary>
+    [JsonIgnore]
+    public FontFamily GlyphFontFamily =>
+        new(GlyphFonts.IsTextGlyph(Glyph) ? "Segoe UI" : "Segoe Fluent Icons");
+
+    /// <summary>A text glyph runs visually wider than a single icon character, so it is drawn a
+    /// touch smaller to avoid looking oversized in a cell sized for one icon glyph.</summary>
+    [JsonIgnore]
+    public double GlyphFontScale => GlyphFonts.IsTextGlyph(Glyph) ? 0.8 : 1.0;
 
     [JsonIgnore]
     public Visibility ImageVisibility => _iconImage is null ? Visibility.Collapsed : Visibility.Visible;
@@ -229,6 +250,7 @@ public sealed class ToolDockItem : INotifyPropertyChanged
         _magnify = scale;
         OnPropertyChanged(nameof(RenderIconSize));
         OnPropertyChanged(nameof(RenderGlyphSize));
+        OnPropertyChanged(nameof(RenderGlyphSizeScaled));
     }
 
     /// <summary>
@@ -241,6 +263,11 @@ public sealed class ToolDockItem : INotifyPropertyChanged
     /// <summary>The fallback glyph's size, magnified on the same curve as <see cref="RenderIconSize"/>.</summary>
     [JsonIgnore]
     public double RenderGlyphSize => Math.Min(DockMetrics.Glyph * _magnify, (DockMetrics.Cell - 2) * 0.72);
+
+    /// <summary><see cref="RenderGlyphSize"/>, further scaled down for a text glyph like "01" or
+    /// "&lt;/&gt;" so it does not look oversized in a cell sized for one icon character.</summary>
+    [JsonIgnore]
+    public double RenderGlyphSizeScaled => RenderGlyphSize * GlyphFontScale;
 
     /// <summary>The open-window indicator's length, which tracks the density.</summary>
     [JsonIgnore]
@@ -259,6 +286,7 @@ public sealed class ToolDockItem : INotifyPropertyChanged
         OnPropertyChanged(nameof(CellCorner));
         OnPropertyChanged(nameof(RenderIconSize));
         OnPropertyChanged(nameof(RenderGlyphSize));
+        OnPropertyChanged(nameof(RenderGlyphSizeScaled));
         OnPropertyChanged(nameof(IndicatorLength));
         OnPropertyChanged(nameof(SeparatorLineWidth));
         OnPropertyChanged(nameof(SeparatorLineHeight));

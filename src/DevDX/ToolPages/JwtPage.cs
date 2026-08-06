@@ -21,6 +21,7 @@ public sealed class JwtPage : EditorToolPage
     {
         PlaceholderText = "eyJhbGciOi...header.eyJzdWIi...payload.signature",
         AccessibleName = Loc.Get("Common.Input"),
+        MinHeight = 200,
     };
     private readonly CodeView _headerView = new();
     private readonly CodeView _payloadView = new();
@@ -82,9 +83,13 @@ public sealed class JwtPage : EditorToolPage
         sections.Children.Add(sigPane);
 
         var body = new Grid();
+        // The input is where a pasted JWT — usually one very long line — actually gets worked
+        // with (scrolled, selected, edited), so it gets the larger share of the body's height
+        // instead of shrinking to its own auto-content height with the decoded sections below
+        // claiming the rest.
+        body.RowDefinitions.Add(new RowDefinition { Height = new GridLength(2, GridUnitType.Star) });
+        body.RowDefinitions.Add(new RowDefinition { Height = new GridLength(3, GridUnitType.Star) });
         body.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
-        body.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
-        body.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
         body.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
         Grid.SetRow(_input, 0);
         Grid.SetRow(sections, 1);
@@ -120,7 +125,9 @@ public sealed class JwtPage : EditorToolPage
             default: Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(content, label); break;
         }
 
-        return grid;
+        // Header, payload and signature are all read-only decoded output, so all three get the
+        // output/secondary tint that distinguishes them from _input above.
+        return EditorToolPage.Pane(grid, secondary: true);
     }
 
     public override ToolKind Kind => ToolKind.Jwt;

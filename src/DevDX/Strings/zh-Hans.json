@@ -1,6 +1,8 @@
 {
-  "About.Credits": "由 ajaykontham 开发。DevDX 是遵循 MIT 许可证的免费开源软件，欢迎在 GitHub 上提交问题报告和功能建议。",
+  "About.Credits": "DevDX 是免费开源软件，欢迎在 GitHub 上提交问题报告和功能建议。",
   "About.License": "许可证",
+  "About.LicensePill": "MIT 许可证",
+  "About.OpenSourcePill": "开源",
   "About.Privacy": "隐私",
   "About.PrivacyDesc": "DevDX 会以及不会如何处理你的数据。",
   "About.PrivacyLocal": "完全在你的电脑上运行",
@@ -377,6 +379,8 @@
   "Tool.Regex.Desc": "实时测试 .NET 正则表达式",
   "Tool.Regex.Name": "正则测试器",
   "Tool.Run": "运行",
+  "Tool.Save": "保存",
+  "Tool.SavedTo": "已保存到 {0}",
   "Tool.SwapInOut": "交换输入/输出",
   "Tool.TextToolkit.Desc": "大小写转换、排序、去重和转义",
   "Tool.TextToolkit.Name": "文本工具箱",

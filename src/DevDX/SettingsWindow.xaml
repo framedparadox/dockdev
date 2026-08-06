@@ -954,24 +954,51 @@
                         <!-- Identity + developer -->
                         <Border Style="{StaticResource Card}">
                             <StackPanel Spacing="12">
-                                <StackPanel Orientation="Horizontal" Spacing="16">
-                                    <!-- The real app logo, not a stand-in glyph. targetsize-256 is the
-                                         largest unpadded variant, so it stays crisp at 56px. -->
-                                    <Border Width="56" Height="56" CornerRadius="12">
-                                        <Image Source="ms-appx:///Images/Square44x44Logo.targetsize-256.png"
-                                               Width="56" Height="56" Stretch="UniformToFill" />
-                                    </Border>
-                                    <StackPanel VerticalAlignment="Center" Spacing="2">
-                                        <TextBlock Text="DevDX" Style="{ThemeResource SubtitleTextBlockStyle}" />
-                                        <TextBlock x:Name="VersionText"
-                                                   Style="{ThemeResource CaptionTextBlockStyle}"
-                                                   Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                                        <TextBlock Text="{loc:Localize Key=About.Tagline}"
-                                                   Style="{ThemeResource CaptionTextBlockStyle}"
-                                                   Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                                                   TextWrapping="Wrap" />
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="16">
+                                        <!-- The real app logo, not a stand-in glyph. targetsize-256 is the
+                                             largest unpadded variant, so it stays crisp at 56px. -->
+                                        <Border Width="56" Height="56" CornerRadius="12">
+                                            <Image Source="ms-appx:///Images/Square44x44Logo.targetsize-256.png"
+                                                   Width="56" Height="56" Stretch="UniformToFill" />
+                                        </Border>
+                                        <StackPanel VerticalAlignment="Center" Spacing="2">
+                                            <TextBlock Text="DevDX" Style="{ThemeResource SubtitleTextBlockStyle}" />
+                                            <TextBlock x:Name="VersionText"
+                                                       Style="{ThemeResource CaptionTextBlockStyle}"
+                                                       Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                            <TextBlock Text="{loc:Localize Key=About.Tagline}"
+                                                       Style="{ThemeResource CaptionTextBlockStyle}"
+                                                       Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                                       TextWrapping="Wrap" />
+                                        </StackPanel>
                                     </StackPanel>
-                                </StackPanel>
+
+                                    <!-- At-a-glance badges: version, license, open-source. Purely
+                                         informational, so plain fills rather than interactive controls. -->
+                                    <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8"
+                                                HorizontalAlignment="Right" VerticalAlignment="Top">
+                                        <Border Background="{ThemeResource ControlFillColorSecondaryBrush}"
+                                                CornerRadius="10" Padding="8,3">
+                                            <TextBlock x:Name="VersionPillText"
+                                                       Style="{ThemeResource CaptionTextBlockStyle}" />
+                                        </Border>
+                                        <Border Background="{ThemeResource ControlFillColorSecondaryBrush}"
+                                                CornerRadius="10" Padding="8,3">
+                                            <TextBlock Text="{loc:Localize Key=About.LicensePill}"
+                                                       Style="{ThemeResource CaptionTextBlockStyle}" />
+                                        </Border>
+                                        <Border Background="{ThemeResource ControlFillColorSecondaryBrush}"
+                                                CornerRadius="10" Padding="8,3">
+                                            <TextBlock Text="{loc:Localize Key=About.OpenSourcePill}"
+                                                       Style="{ThemeResource CaptionTextBlockStyle}" />
+                                        </Border>
+                                    </StackPanel>
+                                </Grid>
 
                                 <TextBlock TextWrapping="Wrap"
                                            Style="{ThemeResource CaptionTextBlockStyle}"
@@ -979,24 +1006,31 @@
                                            Text="{loc:Localize Key=About.Credits}" />
 
                                 <!-- HyperlinkButton opens the URI with the default browser; no
-                                     code-behind needed. Margin trims the button's built-in padding
-                                     so the links line up with the text above. -->
-                                <StackPanel Orientation="Horizontal" Spacing="4" Margin="-12,0,0,0">
-                                    <HyperlinkButton Content="{loc:Localize Key=About.SourceCode}"
-                                                     NavigateUri="https://github.com/framedparadox/dev-dx" />
-                                    <HyperlinkButton Content="{loc:Localize Key=About.ReportIssue}"
-                                                     NavigateUri="https://github.com/framedparadox/dev-dx/issues" />
+                                     code-behind needed. Right-aligned and smaller so this reads as a
+                                     footer rather than competing with the credits text above; the
+                                     negative right margin trims the last button's built-in padding so
+                                     it lines up flush with the pills above. -->
+                                <StackPanel Orientation="Horizontal" Spacing="4" HorizontalAlignment="Right"
+                                            Margin="0,0,-12,0">
+                                    <HyperlinkButton NavigateUri="https://github.com/framedparadox/dev-dx">
+                                        <TextBlock Text="{loc:Localize Key=About.SourceCode}" FontSize="12" />
+                                    </HyperlinkButton>
+                                    <HyperlinkButton NavigateUri="https://github.com/framedparadox/dev-dx/issues">
+                                        <TextBlock Text="{loc:Localize Key=About.ReportIssue}" FontSize="12" />
+                                    </HyperlinkButton>
                                     <!-- blob/HEAD, not blob/main: HEAD resolves to whatever the
                                          repository's default branch is, so these keep working if it
                                          is ever renamed. A shipped build cannot be corrected once
                                          the link in it 404s. -->
-                                    <HyperlinkButton Content="{loc:Localize Key=About.License}"
-                                                     NavigateUri="https://github.com/framedparadox/dev-dx/blob/HEAD/LICENSE" />
+                                    <HyperlinkButton NavigateUri="https://github.com/framedparadox/dev-dx/blob/HEAD/LICENSE">
+                                        <TextBlock Text="{loc:Localize Key=About.License}" FontSize="12" />
+                                    </HyperlinkButton>
                                     <!-- The same document whose URL the Microsoft Store listing
                                          carries; Store policy 10.5.1 requires a Win32 product to
                                          have one, and having it in-app too costs nothing. -->
-                                    <HyperlinkButton Content="{loc:Localize Key=About.PrivacyPolicy}"
-                                                     NavigateUri="https://github.com/framedparadox/dev-dx/blob/HEAD/docs/privacy-policy.md" />
+                                    <HyperlinkButton NavigateUri="https://github.com/framedparadox/dev-dx/blob/HEAD/docs/privacy-policy.md">
+                                        <TextBlock Text="{loc:Localize Key=About.PrivacyPolicy}" FontSize="12" />
+                                    </HyperlinkButton>
                                 </StackPanel>
                             </StackPanel>
                         </Border>
@@ -1015,25 +1049,25 @@
                                     </Grid.ColumnDefinitions>
                                     <FontIcon Grid.Column="0" Glyph="&#xE895;"
                                               FontFamily="{ThemeResource SymbolThemeFontFamily}" FontSize="18" />
-                                    <StackPanel Grid.Column="1">
-                                        <TextBlock Text="{loc:Localize Key=Settings.Updates}"
-                                                   Style="{ThemeResource BodyStrongTextBlockStyle}" />
-                                        <TextBlock Text="{loc:Localize Key=Settings.UpdatesDesc}"
-                                                   Style="{ThemeResource CaptionTextBlockStyle}"
-                                                   Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                                                   TextWrapping="Wrap" />
-                                    </StackPanel>
-                                    <StackPanel Grid.Column="2" Spacing="10" VerticalAlignment="Center"
-                                                HorizontalAlignment="Right">
+                                    <TextBlock Grid.Column="1" Text="{loc:Localize Key=Settings.Updates}"
+                                               Style="{ThemeResource BodyStrongTextBlockStyle}"
+                                               VerticalAlignment="Center" />
+                                    <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="10"
+                                                VerticalAlignment="Center" HorizontalAlignment="Right">
                                         <ToggleSwitch x:Name="UpdatesSwitch"
                                                       OnContent="" OffContent="" MinWidth="0"
-                                                      HorizontalAlignment="Right"
                                                       AutomationProperties.Name="{loc:Localize Key=Settings.Updates}"
                                                       Toggled="UpdatesSwitch_Toggled" />
-                                        <Button x:Name="CheckUpdatesButton" MinWidth="150"
-                                                HorizontalAlignment="Right"
-                                                Content="{loc:Localize Key=Update.CheckNow}"
-                                                Click="CheckUpdates_Click" />
+                                        <!-- Icon-only: the visible label moves to the tooltip/automation
+                                             name so the row stays a compact switch + refresh pair. -->
+                                        <Button x:Name="CheckUpdatesButton"
+                                                ToolTipService.ToolTip="{loc:Localize Key=Update.CheckNow}"
+                                                AutomationProperties.Name="{loc:Localize Key=Update.CheckNow}"
+                                                Click="CheckUpdates_Click">
+                                            <FontIcon Glyph="&#xE72C;"
+                                                      FontFamily="{ThemeResource SymbolThemeFontFamily}"
+                                                      FontSize="14" />
+                                        </Button>
                                     </StackPanel>
                                 </Grid>
 

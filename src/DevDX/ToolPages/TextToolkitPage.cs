@@ -99,10 +99,12 @@ public sealed class TextToolkitPage : EditorToolPage
         var split = new Grid();
         split.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
         split.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-        Grid.SetColumn(_input, 0);
-        Grid.SetColumn(outputPane, 1);
-        split.Children.Add(_input);
-        split.Children.Add(outputPane);
+        var inputSurface = Pane(_input);
+        var outputSurface = Pane(outputPane, secondary: true);
+        Grid.SetColumn(inputSurface, 0);
+        Grid.SetColumn(outputSurface, 1);
+        split.Children.Add(inputSurface);
+        split.Children.Add(outputSurface);
 
         SetBody(split);
         StatusBar.SetUntouched();

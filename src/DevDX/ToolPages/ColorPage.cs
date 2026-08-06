@@ -4,6 +4,7 @@ using DevDX.Services;
 using DevDX.Services.Tools;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Controls.Primitives;
 using Microsoft.UI.Xaml.Media;
 
 namespace DevDX.ToolPages;
@@ -55,10 +56,8 @@ public sealed class ColorPage : FormToolPage
         (var hslRow, _hsl, _) = ResultRow(Loc.Get("Color.Hsl"));
         (var hsvRow, _hsv, _) = ResultRow(Loc.Get("Color.Hsv"));
         (var contrastRow, _contrast, _) = ResultRow(Loc.Get("Color.Contrast"));
-        AddRow(hexRow);
-        AddRow(rgbRow);
-        AddRow(hslRow);
-        AddRow(hsvRow);
+        AddRow(PairRow(hexRow, rgbRow));
+        AddRow(PairRow(hslRow, hsvRow));
         AddRow(contrastRow);
 
         _input.TextChanged += (_, _) => Convert();
@@ -122,6 +121,15 @@ public sealed class ColorPage : FormToolPage
         // picker always starts from the colour actually on screen rather than wherever the last
         // pick left it.
         var flyout = new Flyout { Content = picker };
+
+        // These buttons sit right under the custom title bar, and Flyout's default (unset)
+        // placement prefers opening *above* its target when it decides there's room — which here
+        // means straight into the title bar strip, underneath the minimize/maximize/close buttons
+        // WinUI draws there (those are non-client chrome, always on top of in-window content, so a
+        // flyout that opens into that area renders behind them rather than over them). Pinning the
+        // placement downward keeps the popup entirely inside the page, away from the title bar.
+        flyout.Placement = FlyoutPlacementMode.Bottom;
+
         flyout.Opening += (_, _) => picker.Color = ColorTools.TryParse(_input.Text, out var color)
             ? Windows.UI.Color.FromArgb(color.A, color.R, color.G, color.B)
             : Windows.UI.Color.FromArgb(255, 45, 127, 249);
@@ -131,5 +139,19 @@ public sealed class ColorPage : FormToolPage
         ToolTipService.SetToolTip(button, label);
         Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(button, label);
         return button;
+    }
+
+    /// <summary>Lays two result rows side by side in a 2-column grid, so related conversions (e.g.
+    /// hex/rgb, hsl/hsv) read as a pair instead of each claiming a full-width row.</summary>
+    private static Grid PairRow(FrameworkElement left, FrameworkElement right)
+    {
+        var grid = new Grid { ColumnSpacing = 16 };
+        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        Grid.SetColumn(left, 0);
+        Grid.SetColumn(right, 1);
+        grid.Children.Add(left);
+        grid.Children.Add(right);
+        return grid;
     }
 }

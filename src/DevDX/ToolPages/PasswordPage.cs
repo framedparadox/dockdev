@@ -15,8 +15,8 @@ namespace DevDX.ToolPages;
 /// </summary>
 public sealed class PasswordPage : FormToolPage
 {
-    private readonly NumberBox _length = new() { Value = 20, Minimum = 4, Maximum = 512, SpinButtonPlacementMode = NumberBoxSpinButtonPlacementMode.Inline, Width = 150 };
-    private readonly NumberBox _count = new() { Value = 5, Minimum = 1, Maximum = 500, SpinButtonPlacementMode = NumberBoxSpinButtonPlacementMode.Inline, Width = 150 };
+    private readonly NumberBox _length = new() { Value = 20, Minimum = 4, Maximum = 512, Width = 150 };
+    private readonly NumberBox _count = new() { Value = 5, Minimum = 1, Maximum = 500, Width = 150 };
     private readonly CheckBox _lower = new() { Content = Loc.Get("Password.Lowercase"), IsChecked = true };
     private readonly CheckBox _upper = new() { Content = Loc.Get("Password.Uppercase"), IsChecked = true };
     private readonly CheckBox _digits = new() { Content = Loc.Get("Password.Digits"), IsChecked = true };
@@ -27,9 +27,6 @@ public sealed class PasswordPage : FormToolPage
 
     public PasswordPage()
     {
-        AddRow(SectionHeader(Loc.Get("Tool.Password.Name")));
-        AddRow(LabelledRow(Loc.Get("Password.Length"), _length));
-
         var classes = new Grid { RowSpacing = 8, ColumnSpacing = 12 };
         classes.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
         classes.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
@@ -48,19 +45,37 @@ public sealed class PasswordPage : FormToolPage
             box.Unchecked += (_, _) => Generate();
         }
         AddRow(LabelledRow(Loc.Get("Password.Characters"), classes));
-        AddRow(LabelledRow(Loc.Get("Password.Count"), _count));
+
+        var generate = new Button
+        {
+            Content = Loc.Get("Password.Generate"),
+            Style = (Style)Application.Current.Resources["AccentButtonStyle"],
+            VerticalAlignment = VerticalAlignment.Bottom,
+        };
+        generate.Click += (_, _) => Generate();
+
+        var settings = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
+        settings.Children.Add(LabelledRow(Loc.Get("Password.Length"), _length));
+        settings.Children.Add(LabelledRow(Loc.Get("Password.Count"), _count));
+        settings.Children.Add(generate);
+        AddRow(settings);
         AddRow(_entropy);
 
-        var generate = new Button { Content = Loc.Get("Password.Generate"), Style = (Style)Application.Current.Resources["AccentButtonStyle"] };
-        generate.Click += (_, _) => Generate();
-        var copyAll = new CopyButton { GetText = () => _results.Text };
-        var actions = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
-        actions.Children.Add(generate);
-        actions.Children.Add(copyAll);
-        AddRow(actions);
+        var copyAll = new CopyButton { GetText = () => _results.Text, VerticalAlignment = VerticalAlignment.Center };
+        var resultsHeader = new Grid { ColumnSpacing = 8 };
+        resultsHeader.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        resultsHeader.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        var resultsLabel = SectionHeader(Loc.Get("Uuid.Results"));
+        resultsLabel.VerticalAlignment = VerticalAlignment.Center;
+        Grid.SetColumn(resultsLabel, 0);
+        Grid.SetColumn(copyAll, 1);
+        resultsHeader.Children.Add(resultsLabel);
+        resultsHeader.Children.Add(copyAll);
+        AddRow(resultsHeader);
+        AddRow(_results);
 
-        AddRow(LabelledRow(Loc.Get("Uuid.Results"), _results));
-
+        _length.EnableWheelStep();
+        _count.EnableWheelStep();
         _length.ValueChanged += (_, _) => Generate();
         _count.ValueChanged += (_, _) => Generate();
         Generate();

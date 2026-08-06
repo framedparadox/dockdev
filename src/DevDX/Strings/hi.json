@@ -1,6 +1,8 @@
 {
-  "About.Credits": "ajaykontham द्वारा विकसित। DevDX MIT लाइसेंस के तहत मुफ़्त और ओपन सोर्स है; बग रिपोर्ट और सुझाव GitHub पर सादर आमंत्रित हैं।",
+  "About.Credits": "DevDX मुफ़्त और ओपन सोर्स है; बग रिपोर्ट और सुझाव GitHub पर सादर आमंत्रित हैं।",
   "About.License": "लाइसेंस",
+  "About.LicensePill": "MIT लाइसेंस",
+  "About.OpenSourcePill": "ओपन सोर्स",
   "About.Privacy": "गोपनीयता",
   "About.PrivacyDesc": "DevDX आपके डेटा के साथ क्या करता है और क्या नहीं।",
   "About.PrivacyLocal": "पूरी तरह आपके पीसी पर चलता है",
@@ -377,6 +379,8 @@
   "Tool.Regex.Desc": ".NET नियमित अभिव्यक्तियाँ लाइव मिलानों के साथ जाँचें",
   "Tool.Regex.Name": "Regex परीक्षक",
   "Tool.Run": "चलाएँ",
+  "Tool.Save": "सहेजें",
+  "Tool.SavedTo": "{0} में सहेजा गया",
   "Tool.SwapInOut": "इनपुट/आउटपुट बदलें",
   "Tool.TextToolkit.Desc": "केस बदलना, क्रमबद्ध करना, डुप्लिकेट हटाना और एस्केपिंग",
   "Tool.TextToolkit.Name": "टेक्स्ट टूलकिट",

@@ -1,4 +1,5 @@
 using DevDX.Models;
+using DevDX.Services;
 using Xunit;
 
 namespace DevDX.Tests.Models;
@@ -49,8 +50,15 @@ public class ToolCatalogTests
     {
         // A Segoe Fluent Icons glyph is always a single UTF-16 code unit in the Basic Multilingual
         // Plane's Private Use Area — never a surrogate pair, never a multi-character string pasted
-        // in by mistake.
-        var wrong = ToolCatalog.All.Where(t => t.Glyph.Length != 1).Select(t => (t.Kind, t.Glyph.Length)).ToList();
+        // in by mistake. The one deliberate exception is a tool whose "glyph" is literal text
+        // rather than an icon codepoint at all (Base64's "01", Xml's "</>") — GlyphFonts.IsTextGlyph
+        // is the same length-based rule every render site already uses to pick a text font instead
+        // of the icon font for these, so a multi-character glyph here is by design, not a typo.
+        var wrong = ToolCatalog.All
+            .Where(t => !GlyphFonts.IsTextGlyph(t.Glyph))
+            .Where(t => t.Glyph.Length != 1)
+            .Select(t => (t.Kind, t.Glyph.Length))
+            .ToList();
 
         Assert.True(wrong.Count == 0,
             "These glyphs are not exactly one character: " +

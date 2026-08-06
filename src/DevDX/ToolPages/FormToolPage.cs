@@ -65,18 +65,36 @@ public abstract class FormToolPage : ToolPage
     {
         switch (input)
         {
-            case TextBox box: box.Header = label; return true;
+            case TextBox box: box.Header = label; Tint(box, secondary: false); return true;
             case ComboBox combo: combo.Header = label; return true;
-            case NumberBox number: number.Header = label; return true;
-            case PasswordBox password: password.Header = label; return true;
+            case NumberBox number: number.Header = label; Tint(number, secondary: false); return true;
+            case PasswordBox password: password.Header = label; Tint(password, secondary: false); return true;
             case AutoSuggestBox suggest: suggest.Header = label; return true;
-            case RichEditBox rich: rich.Header = label; return true;
+            case RichEditBox rich: rich.Header = label; Tint(rich, secondary: false); return true;
             case CalendarDatePicker date: date.Header = label; return true;
             case ToggleSwitch toggle: toggle.Header = label; return true;
             case Slider slider: slider.Header = label; return true;
             default: return false;
         }
     }
+
+    /// <summary>
+    /// A one-step tint against the window's own background — the same "input vs. output" shading
+    /// <see cref="EditorToolPage.Pane"/> gives its two-pane tools, applied here to the free-typed
+    /// text controls a form-shaped tool is built from, which otherwise sit directly on the page and
+    /// read as part of the window rather than as a field.
+    /// </summary>
+    private static void Tint(Control control, bool secondary) =>
+        control.Background = ThemeBrush(secondary
+            ? "CardBackgroundFillColorSecondaryBrush"
+            : "CardBackgroundFillColorDefaultBrush");
+
+    /// <summary>A theme resource brush, or null if this build's resource dictionary lacks it —
+    /// a missing tint is a field that looks like the window, not a crash on startup.</summary>
+    private static Microsoft.UI.Xaml.Media.Brush? ThemeBrush(string key) =>
+        Application.Current.Resources.TryGetValue(key, out var value)
+            ? value as Microsoft.UI.Xaml.Media.Brush
+            : null;
 
     /// <summary>A read-only result row: label, a selectable value, and a copy button. The label is
     /// the value box's own Header, for the reasons in <see cref="LabelledRow"/>; the copy button
@@ -91,6 +109,7 @@ public abstract class FormToolPage : ToolPage
             TextWrapping = TextWrapping.Wrap,
             VerticalAlignment = VerticalAlignment.Bottom,
         };
+        Tint(value, secondary: true);
         Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(value, label);
 
         var copy = new CopyButton { GetText = () => value.Text };

@@ -62,6 +62,7 @@ public sealed class ToolCommand(
     public static class Ids
     {
         public const string Copy = "copy";
+        public const string Save = "save";
         public const string Clear = "clear";
         public const string Validate = "validate";
         public const string Run = "run";
@@ -75,6 +76,11 @@ public sealed class ToolCommand(
     /// <summary>Copy the tool's result to the clipboard. Ctrl+Shift+C.</summary>
     public static ToolCommand Copy(Action execute) =>
         new(Loc.Get("Tool.CopyOutput"), "", execute, VirtualKey.C, CtrlShift, id: Ids.Copy) { IconOnly = true };
+
+    /// <summary>Save the tool's output straight to the desktop. No accelerator: Ctrl+Shift+C/S/V/X
+    /// are already spoken for by Copy, Swap, Validate and Clear.</summary>
+    public static ToolCommand Save(Action execute) =>
+        new(Loc.Get("Tool.Save"), "\uE74E", execute, id: Ids.Save) { IconOnly = true };
 
     /// <summary>Empty the tool's panes. Ctrl+Shift+X.</summary>
     public static ToolCommand Clear(Action execute) =>

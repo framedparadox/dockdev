@@ -48,13 +48,17 @@ public sealed class AppTitleBar : Grid
                 WindowChrome.TitleBarContentInset, 0, WindowChrome.CaptionButtonReserve, 0),
         };
 
+        bool isTextGlyph = GlyphFonts.IsTextGlyph(glyph);
         _icon = new FontIcon
         {
             Glyph = glyph,
-            FontFamily = (FontFamily)Application.Current.Resources["SymbolThemeFontFamily"],
+            FontFamily = isTextGlyph
+                ? new FontFamily("Segoe UI")
+                : (FontFamily)Application.Current.Resources["SymbolThemeFontFamily"],
             // 16 is the title-bar icon size Windows itself uses, and the one size all three of
-            // these were approximating.
-            FontSize = 16,
+            // these were approximating. Text glyphs ("01", "</>") run wider than a single icon
+            // character, so they come in a touch smaller to avoid looking oversized here.
+            FontSize = isTextGlyph ? 16 * 0.8 : 16,
             VerticalAlignment = VerticalAlignment.Center,
             Visibility = glyph.Length > 0 ? Visibility.Visible : Visibility.Collapsed,
         };

@@ -32,26 +32,35 @@ public sealed class TimestampPage : FormToolPage
 
     public TimestampPage()
     {
-        var headerRow = new Grid { ColumnSpacing = 12 };
-        headerRow.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-        headerRow.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-        var header = SectionHeader(Loc.Get("Timestamp.Now"));
-        Grid.SetColumn(header, 0);
-        var reset = new Button { Content = new FontIcon { Glyph = "\uE72C", FontSize = 14 }, HorizontalAlignment = HorizontalAlignment.Right };
+        var nowConvertRow = new Grid { ColumnSpacing = 24 };
+        nowConvertRow.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        nowConvertRow.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        nowConvertRow.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        var nowPanel = new StackPanel { Spacing = 4 };
+        nowPanel.Children.Add(SectionHeader(Loc.Get("Timestamp.Now")));
+        nowPanel.Children.Add(_now);
+        Grid.SetColumn(nowPanel, 0);
+        var inputRow = LabelledRow(Loc.Get("Timestamp.Input"), _input);
+        Grid.SetColumn(inputRow, 1);
+        var reset = new Button
+        {
+            Content = new FontIcon { Glyph = "\uE72C", FontSize = 14 },
+            HorizontalAlignment = HorizontalAlignment.Right,
+            VerticalAlignment = VerticalAlignment.Top,
+        };
         ToolTipService.SetToolTip(reset, Loc.Get("Timestamp.Reset"));
         Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(reset, Loc.Get("Timestamp.Reset"));
         reset.Click += (_, _) => { _input.Text = ""; _unit.SelectedIndex = 0; Convert(); };
-        Grid.SetColumn(reset, 1);
-        headerRow.Children.Add(header);
-        headerRow.Children.Add(reset);
-        AddRow(headerRow);
-        AddRow(_now);
+        Grid.SetColumn(reset, 2);
+        nowConvertRow.Children.Add(nowPanel);
+        nowConvertRow.Children.Add(inputRow);
+        nowConvertRow.Children.Add(reset);
+        AddRow(nowConvertRow);
+
         var useNow = new Button { Content = Loc.Get("Timestamp.UseNow") };
         useNow.Click += (_, _) => { _input.Text = DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString(); Convert(); };
         AddRow(useNow);
 
-        AddRow(SectionHeader(Loc.Get("Timestamp.Convert")));
-        AddRow(LabelledRow(Loc.Get("Timestamp.Input"), _input));
         foreach (var u in Units)
             _unit.Items.Add(Loc.Get("Timestamp.Unit." + u));
         _unit.SelectedIndex = 0;

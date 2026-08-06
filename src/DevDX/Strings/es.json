@@ -1,6 +1,8 @@
 {
-  "About.Credits": "Desarrollado por ajaykontham. DevDX es software libre y de código abierto bajo la Licencia MIT; los informes de errores y las sugerencias son bienvenidos en GitHub.",
+  "About.Credits": "DevDX es software libre y de código abierto; los informes de errores y las sugerencias son bienvenidos en GitHub.",
   "About.License": "Licencia",
+  "About.LicensePill": "Licencia MIT",
+  "About.OpenSourcePill": "Código abierto",
   "About.Privacy": "Privacidad",
   "About.PrivacyDesc": "Qué hace y qué no hace DevDX con tus datos.",
   "About.PrivacyLocal": "Funciona por completo en tu PC",
@@ -377,6 +379,8 @@
   "Tool.Regex.Desc": "Prueba expresiones regulares de .NET con coincidencias en vivo",
   "Tool.Regex.Name": "Probador de regex",
   "Tool.Run": "Ejecutar",
+  "Tool.Save": "Guardar",
+  "Tool.SavedTo": "Guardado en {0}",
   "Tool.SwapInOut": "Intercambiar entrada/salida",
   "Tool.TextToolkit.Desc": "Conversión de mayúsculas, ordenación, duplicados y escapado",
   "Tool.TextToolkit.Name": "Kit de texto",

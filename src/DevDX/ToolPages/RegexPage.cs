@@ -17,7 +17,7 @@ namespace DevDX.ToolPages;
 /// </summary>
 public sealed class RegexPage : EditorToolPage
 {
-    private readonly TextBox _pattern = new() { PlaceholderText = Loc.Get("Regex.PatternPlaceholder"), FontFamily = new Microsoft.UI.Xaml.Media.FontFamily("Cascadia Mono, Consolas"), Width = 480 };
+    private readonly TextBox _pattern = new() { PlaceholderText = Loc.Get("Regex.PatternPlaceholder"), FontFamily = new Microsoft.UI.Xaml.Media.FontFamily("Cascadia Mono, Consolas"), MinWidth = 240 };
     private readonly CodeEditor _subject = new() { AccessibleName = Loc.Get("Regex.Subject") };
     private readonly CodeView _matchView = new() { ShowLineNumbers = false, AccessibleName = Loc.Get("Regex.Matches") };
     private readonly TextBox _replacement = new() { PlaceholderText = Loc.Get("Regex.ReplacementPlaceholder"), FontFamily = new Microsoft.UI.Xaml.Media.FontFamily("Cascadia Mono, Consolas") };
@@ -47,6 +47,15 @@ public sealed class RegexPage : EditorToolPage
             optionsRow.Children.Add(box);
 
         SetOptions(_pattern);
+        // SetOptions just forced Left; the field should read as one continuous bar — pattern field
+        // filling the row, Clear button anchored at the far right — not a short box with dead space
+        // beside it.
+        _pattern.HorizontalAlignment = HorizontalAlignment.Stretch;
+        // A stock CommandBar's Content cell isn't guaranteed to stretch on its own even with
+        // HorizontalAlignment.Stretch — the cell itself can size to content — so the width is also
+        // driven explicitly off the page's own size as a reliable fallback.
+        Loaded += (_, _) => UpdatePatternWidth();
+        SizeChanged += (_, _) => UpdatePatternWidth();
 
         var top = new Grid();
         top.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
@@ -59,10 +68,12 @@ public sealed class RegexPage : EditorToolPage
         var subjectPane = new Grid();
         subjectPane.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
         subjectPane.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-        Grid.SetColumn(_subject, 0);
-        Grid.SetColumn(_matchView, 1);
-        subjectPane.Children.Add(_subject);
-        subjectPane.Children.Add(_matchView);
+        var subjectSurface = Pane(_subject);
+        var matchSurface = Pane(_matchView, secondary: true);
+        Grid.SetColumn(subjectSurface, 0);
+        Grid.SetColumn(matchSurface, 1);
+        subjectPane.Children.Add(subjectSurface);
+        subjectPane.Children.Add(matchSurface);
 
         var bottom = new Grid();
         bottom.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
@@ -84,10 +95,12 @@ public sealed class RegexPage : EditorToolPage
         replacePane.Children.Add(_replacement);
         replacePane.Children.Add(_replacementPreview);
 
-        Grid.SetColumn(groupsPane, 0);
-        Grid.SetColumn(replacePane, 1);
-        bottom.Children.Add(groupsPane);
-        bottom.Children.Add(replacePane);
+        var groupsSurface = Pane(groupsPane, secondary: true);
+        var replaceSurface = Pane(replacePane, secondary: true);
+        Grid.SetColumn(groupsSurface, 0);
+        Grid.SetColumn(replaceSurface, 1);
+        bottom.Children.Add(groupsSurface);
+        bottom.Children.Add(replaceSurface);
 
         var body = new Grid();
         body.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
@@ -103,6 +116,19 @@ public sealed class RegexPage : EditorToolPage
         SetBody(body);
         StatusBar.SetUntouched();
         InitializeChrome();
+    }
+
+    /// <summary>
+    /// Recomputes <see cref="_pattern"/>'s width from the page's own size. EditorToolPage's
+    /// CommandBar is private and not exposed, and its Content cell can size to content rather than
+    /// stretching, so this reserves room for the 40px icon-only Clear button
+    /// (EditorToolPage.IconOnlyButtonWidth) plus the CommandBar's padding/margins and the page's
+    /// chrome, and gives whatever is left to the field.
+    /// </summary>
+    private void UpdatePatternWidth()
+    {
+        const double ReservedForClearButtonAndChrome = 150;
+        _pattern.Width = Math.Max(240, ActualWidth - ReservedForClearButtonAndChrome);
     }
 
     public override ToolKind Kind => ToolKind.RegexTester;

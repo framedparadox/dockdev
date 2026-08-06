@@ -105,10 +105,12 @@ public sealed class MaskerPage : EditorToolPage
         var split = new Grid();
         split.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1.4, GridUnitType.Star) });
         split.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-        Grid.SetColumn(_editor, 0);
-        Grid.SetColumn(findingsPane, 1);
-        split.Children.Add(_editor);
-        split.Children.Add(findingsPane);
+        var editorPane = Pane(_editor);
+        var findingsSurface = Pane(findingsPane, secondary: true);
+        Grid.SetColumn(editorPane, 0);
+        Grid.SetColumn(findingsSurface, 1);
+        split.Children.Add(editorPane);
+        split.Children.Add(findingsSurface);
 
         var body = new Grid();
         body.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });

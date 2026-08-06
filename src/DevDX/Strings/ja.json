@@ -1,6 +1,8 @@
 {
-  "About.Credits": "開発者: ajaykontham。DevDX は MIT ライセンスの無料・オープンソースソフトウェアです。不具合の報告や機能のご要望は GitHub までお寄せください。",
+  "About.Credits": "DevDX は無料・オープンソースソフトウェアです。不具合の報告や機能のご要望は GitHub までお寄せください。",
   "About.License": "ライセンス",
+  "About.LicensePill": "MIT ライセンス",
+  "About.OpenSourcePill": "オープンソース",
   "About.Privacy": "プライバシー",
   "About.PrivacyDesc": "DevDX がデータに対して行うこと・行わないこと。",
   "About.PrivacyLocal": "すべて PC 内で動作します",
@@ -377,6 +379,8 @@
   "Tool.Regex.Desc": ".NET の正規表現をライブ照合でテスト",
   "Tool.Regex.Name": "正規表現テスター",
   "Tool.Run": "実行",
+  "Tool.Save": "保存",
+  "Tool.SavedTo": "{0} に保存しました",
   "Tool.SwapInOut": "入力と出力を入れ替え",
   "Tool.TextToolkit.Desc": "大文字小文字変換、並べ替え、重複除去、エスケープ",
   "Tool.TextToolkit.Name": "テキストツールキット",

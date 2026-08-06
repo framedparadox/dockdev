@@ -94,8 +94,9 @@ public sealed class UrlPage : EditorToolPage
         grid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
         grid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
 
-        Grid.SetColumnSpan(_percentInput, 2);
-        Grid.SetRow(_percentInput, 0);
+        var inputSurface = Pane(_percentInput);
+        Grid.SetColumnSpan(inputSurface, 2);
+        Grid.SetRow(inputSurface, 0);
 
         var rfcPane = LabelledPane(Loc.Get("Url.Rfc3986"), _rfc3986Output);
         var formPane = LabelledPane(Loc.Get("Url.Form"), _formOutput);
@@ -104,7 +105,7 @@ public sealed class UrlPage : EditorToolPage
         Grid.SetRow(formPane, 1);
         Grid.SetColumn(formPane, 1);
 
-        grid.Children.Add(_percentInput);
+        grid.Children.Add(inputSurface);
         grid.Children.Add(rfcPane);
         grid.Children.Add(formPane);
         return grid;
@@ -121,10 +122,12 @@ public sealed class UrlPage : EditorToolPage
         var grid = new Grid();
         grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
         grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-        Grid.SetColumn(_htmlInput, 0);
-        Grid.SetColumn(_htmlOutput, 1);
-        grid.Children.Add(_htmlInput);
-        grid.Children.Add(_htmlOutput);
+        var inputSurface = Pane(_htmlInput);
+        var outputSurface = Pane(_htmlOutput, secondary: true);
+        Grid.SetColumn(inputSurface, 0);
+        Grid.SetColumn(outputSurface, 1);
+        grid.Children.Add(inputSurface);
+        grid.Children.Add(outputSurface);
         return grid;
     }
 
@@ -257,7 +260,7 @@ public sealed class UrlPage : EditorToolPage
             default: AutomationProperties.SetName(content, label); break;
         }
 
-        return grid;
+        return Pane(grid, secondary: true);
     }
 
     public override ToolKind Kind => ToolKind.UrlEncoding;

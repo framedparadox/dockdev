@@ -27,19 +27,9 @@ public sealed class FormatterPage : EditorToolPage
     /// <summary>What the indent starts at, and what it falls back to when the field is empty.</summary>
     private const int DefaultIndentWidth = 2;
 
-    /// <summary>
-    /// Wide enough for the field's one digit plus the Inline spin buttons stacked beside it.
-    /// <para>
-    /// This used to be 64 — Fluent's <c>TextControlThemeMinWidth</c> — with the spin buttons in
-    /// Compact placement, which renders its stepper via a popup. On this app's desktop windowing
-    /// setup that popup opens as a separate full-screen overlay window instead of docking to the
-    /// control, which reads as the box going modal. Inline draws the spin buttons inside the
-    /// control's own template instead of a popup, which fixes that — but it also reserves extra
-    /// internal width for two stacked RepeatButtons, so the box needs to grow to keep the digit
-    /// from looking cramped next to them.
-    /// </para>
-    /// </summary>
-    private const double IndentBoxWidth = 92;
+    /// <summary>Wide enough for the field's one or two digits plus some breathing room — there are
+    /// no spin buttons to share the width with any more (see <see cref="_indentBox"/>).</summary>
+    private const double IndentBoxWidth = 60;
 
     private readonly IDataFormat? _fixedFormat;
     private readonly CodeEditor _editor = new();
@@ -52,10 +42,6 @@ public sealed class FormatterPage : EditorToolPage
         // of 1–8 makes Page Up a jump straight to the end.
         SmallChange = 1,
         LargeChange = 2,
-        // Inline draws the spin buttons inside the control's own template. Compact renders them
-        // via a popup, which on this app's desktop windowing setup opens as a full-screen overlay
-        // instead of docking to the control — Inline avoids that modal-popup bug entirely.
-        SpinButtonPlacementMode = NumberBoxSpinButtonPlacementMode.Inline,
         Width = IndentBoxWidth,
         VerticalAlignment = VerticalAlignment.Center,
     };
@@ -90,8 +76,9 @@ public sealed class FormatterPage : EditorToolPage
 
         Microsoft.UI.Xaml.Controls.ToolTipService.SetToolTip(_indentBox, Loc.Get("Formatter.Indent"));
         Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(_indentBox, Loc.Get("Formatter.Indent"));
+        _indentBox.EnableWheelStep(1);
 
-        SetBody(_editor);
+        SetBody(Pane(_editor));
         StatusBar.SetUntouched();
         InitializeChrome();
     }
@@ -109,6 +96,7 @@ public sealed class FormatterPage : EditorToolPage
         // Indent sits with the two commands whose result it changes, not off in an options strip.
         ToolCommand.Element(_indentBox),
         ToolCommand.Copy(CopyOutput),
+        ToolCommand.Save(SaveOutput),
         ToolCommand.Clear(Clear),
     ];
 
@@ -237,6 +225,29 @@ public sealed class FormatterPage : EditorToolPage
         var package = new Windows.ApplicationModel.DataTransfer.DataPackage();
         package.SetText(_editor.Text);
         Windows.ApplicationModel.DataTransfer.Clipboard.SetContent(package);
+    }
+
+    private void SaveOutput()
+    {
+        if (_editor.Text.Length == 0)
+            return;
+
+        var extension = (_activeFormat ?? _fixedFormat)?.Extensions is [var ext, ..] ? ext : ".txt";
+        try
+        {
+            var desktop = Environment.GetFolderPath(Environment.SpecialFolder.Desktop);
+            var name = "formatted";
+            var path = Path.Combine(desktop, name + extension);
+            for (int i = 2; File.Exists(path); i++)
+                path = Path.Combine(desktop, $"{name} ({i}){extension}");
+
+            File.WriteAllText(path, _editor.Text);
+            StatusBar.SetMessage(Loc.Format("Tool.SavedTo", Path.GetFileName(path)), isError: false);
+        }
+        catch (Exception ex)
+        {
+            StatusBar.SetMessage(ex.Message, isError: true);
+        }
     }
 
     private void Clear()

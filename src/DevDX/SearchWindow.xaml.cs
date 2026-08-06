@@ -132,11 +132,14 @@ public sealed partial class SearchWindow : Window
         grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
         grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
 
+        bool isTextGlyph = GlyphFonts.IsTextGlyph(tool.Glyph);
         var icon = new FontIcon
         {
             Glyph = tool.Glyph,
-            FontFamily = (FontFamily)Application.Current.Resources["SymbolThemeFontFamily"],
-            FontSize = 18,
+            FontFamily = isTextGlyph
+                ? new FontFamily("Segoe UI")
+                : (FontFamily)Application.Current.Resources["SymbolThemeFontFamily"],
+            FontSize = isTextGlyph ? 18 * 0.8 : 18,
             VerticalAlignment = VerticalAlignment.Center,
         };
         Grid.SetColumn(icon, 0);

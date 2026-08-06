@@ -92,7 +92,7 @@ public static class ToolCatalog
             [".json", ".xml", ".csv"], ["beautify", "pretty", "format"], VisibleByDefault: true),
 
         new ToolDefinition(ToolKind.Xml, ToolCategory.FormatConvert,
-            "Tool.Xml.Name", "Tool.Xml.Desc", "\uE774",
+            "Tool.Xml.Name", "Tool.Xml.Desc", "</>",
             () => new FormatterPage(FormatRegistry.Xml),
             [".xml"], ["xml"], VisibleByDefault: false),
 
@@ -103,7 +103,7 @@ public static class ToolCatalog
 
         // ---- Encode & Decode ----------------------------------------------------------------
         new ToolDefinition(ToolKind.Base64, ToolCategory.EncodeDecode,
-            "Tool.Base64.Name", "Tool.Base64.Desc", "\uE968",
+            "Tool.Base64.Name", "Tool.Base64.Desc", "01",
             () => new Base64Page(),
             [], ["base64", "encode", "decode"], VisibleByDefault: true),
 

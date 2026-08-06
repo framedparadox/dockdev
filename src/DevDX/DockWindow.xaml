@@ -199,8 +199,8 @@
                                              kind-derived fallback glyph, which never does. -->
                                         <FontIcon Glyph="{x:Bind Glyph, Mode=OneWay}"
                                                   Visibility="{x:Bind GlyphVisibility, Mode=OneWay}"
-                                                  FontFamily="{ThemeResource SymbolThemeFontFamily}"
-                                                  FontSize="{x:Bind RenderGlyphSize, Mode=OneWay}"
+                                                  FontFamily="{x:Bind GlyphFontFamily, Mode=OneWay}"
+                                                  FontSize="{x:Bind RenderGlyphSizeScaled, Mode=OneWay}"
                                                   Foreground="{ThemeResource TextFillColorPrimaryBrush}"
                                                   AutomationProperties.AccessibilityView="Raw" />
                                     </Grid>
