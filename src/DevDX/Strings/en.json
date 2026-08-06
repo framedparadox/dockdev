@@ -45,7 +45,6 @@
   "Color.Hsl": "HSL",
   "Color.Hsv": "HSV",
   "Color.Input": "Colour (hex, rgb(), hsl() or hsv())",
-  "Color.Opacity": "Opacity",
   "Color.PickRound": "Pick a colour (round picker)",
   "Color.PickSquare": "Pick a colour (square picker)",
   "Color.Placeholder": "e.g. #2D7FF9, rgb(45, 127, 249) or hsl(217, 94%, 58%)",

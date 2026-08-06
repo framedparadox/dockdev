@@ -36,9 +36,13 @@ public sealed class TimestampPage : FormToolPage
         nowConvertRow.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
         nowConvertRow.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
         nowConvertRow.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        var useNow = new Button { Content = Loc.Get("Timestamp.UseNow") };
+        useNow.Click += (_, _) => { _input.Text = DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString(); Convert(); };
+
         var nowPanel = new StackPanel { Spacing = 4 };
         nowPanel.Children.Add(SectionHeader(Loc.Get("Timestamp.Now")));
         nowPanel.Children.Add(_now);
+        nowPanel.Children.Add(useNow);
         Grid.SetColumn(nowPanel, 1);
         var inputRow = LabelledRow(Loc.Get("Timestamp.Input"), _input);
         Grid.SetColumn(inputRow, 0);
@@ -56,10 +60,6 @@ public sealed class TimestampPage : FormToolPage
         nowConvertRow.Children.Add(inputRow);
         nowConvertRow.Children.Add(reset);
         AddRow(nowConvertRow);
-
-        var useNow = new Button { Content = Loc.Get("Timestamp.UseNow") };
-        useNow.Click += (_, _) => { _input.Text = DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString(); Convert(); };
-        AddRow(useNow);
 
         foreach (var u in Units)
             _unit.Items.Add(Loc.Get("Timestamp.Unit." + u));
