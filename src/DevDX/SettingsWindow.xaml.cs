@@ -119,6 +119,20 @@ public sealed partial class SettingsWindow : Window
         WindowChrome.SetClientSizeDip(_appWindow, _hwnd, 1000, 680);
         WindowChrome.CenterOnCursor(_appWindow, windowId);
 
+        // Each of these InfoBars starts closed and stays Collapsed in XAML rather than Visible, so
+        // the Spacing on its parent StackPanel has no rendered sibling to insert a gap around
+        // (StackPanel.Spacing applies even to Collapsed children — WinUI issue #916 — and IsOpen
+        // alone doesn't collapse an InfoBar either — issue #9507 — so left alone this leaves a
+        // permanent empty gap under every card whether or not the bar has ever opened). Opening it
+        // programmatically also has to flip Visibility back, since setting IsOpen=true no longer
+        // implies Visible once XAML starts it Collapsed; Closed covers every way it closes again,
+        // including the user's own close button.
+        LinkInfoBarVisibility(StartupBlockedBar);
+        LinkInfoBarVisibility(BackupBar);
+        LinkInfoBarVisibility(HotkeyBar);
+        LinkInfoBarVisibility(SearchHotkeyBar);
+        LinkInfoBarVisibility(UpdateBar);
+
         BuildLanguageList();
         BuildShortcutCaptures();
         LoadSettings();
@@ -149,6 +163,11 @@ public sealed partial class SettingsWindow : Window
             ReleaseItemSubscriptions();
         };
     }
+
+    /// <summary>Keeps an InfoBar's own Visibility in step with IsOpen so a closed bar takes no
+    /// space in its parent StackPanel. See the comment where this is called from the constructor.</summary>
+    private static void LinkInfoBarVisibility(InfoBar bar) =>
+        bar.Closed += (_, _) => bar.Visibility = Visibility.Collapsed;
 
     // Home is rebuilt alongside Tools: its cards carry the same "on the dock" accent marker, so
     // switching a tool on in one place has to light it up in the other.
@@ -384,6 +403,8 @@ public sealed partial class SettingsWindow : Window
         // left showing "on" would be a lie. Put it back and name the place they can undo it.
         bool blocked = state is StartupService.StartupState.BlockedByUser
                             or StartupService.StartupState.BlockedByPolicy;
+        if (blocked)
+            StartupBlockedBar.Visibility = Visibility.Visible;
         StartupBlockedBar.IsOpen = blocked;
         if (blocked)
             SetStartupSwitchSilently(false);
@@ -559,6 +580,7 @@ public sealed partial class SettingsWindow : Window
     private static void ShowBar(InfoBar bar, string key)
     {
         bar.Message = Loc.Get(key);
+        bar.Visibility = Visibility.Visible;
         bar.IsOpen = true;
     }
 
@@ -579,6 +601,7 @@ public sealed partial class SettingsWindow : Window
         // Cleared, not just replaced: a previous check may have left "Get it / Skip" buttons in the
         // bar, and they must not sit under a later "up to date" message.
         UpdateBar.Content = null;
+        UpdateBar.Visibility = Visibility.Visible;
         UpdateBar.IsOpen = true;
         try
         {
@@ -628,6 +651,7 @@ public sealed partial class SettingsWindow : Window
         actions.Children.Add(skip);
 
         UpdateBar.Content = actions;
+        UpdateBar.Visibility = Visibility.Visible;
         UpdateBar.IsOpen = true;
     }
 
@@ -696,6 +720,7 @@ public sealed partial class SettingsWindow : Window
     {
         BackupBar.Message = message;
         BackupBar.Severity = severity;
+        BackupBar.Visibility = Visibility.Visible;
         BackupBar.IsOpen = true;
     }
 

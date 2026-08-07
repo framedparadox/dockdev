@@ -278,7 +278,7 @@
                                      itself is holding the entry off: a startup task the user
                                      disabled in Task Manager cannot be re-enabled by the app, so
                                      the switch springs back and this says who can. -->
-                                <muxc:InfoBar x:Name="StartupBlockedBar" IsOpen="False" IsClosable="True"
+                                <muxc:InfoBar x:Name="StartupBlockedBar" IsOpen="False" Visibility="Collapsed" IsClosable="True"
                                               Severity="Warning"
                                               Message="{loc:Localize Key=Settings.StartupBlocked}" />
                             </StackPanel>
@@ -312,7 +312,7 @@
                                     </StackPanel>
                                 </Grid>
 
-                                <muxc:InfoBar x:Name="BackupBar" IsOpen="False" IsClosable="True"
+                                <muxc:InfoBar x:Name="BackupBar" IsOpen="False" Visibility="Collapsed" IsClosable="True"
                                               Severity="Success" />
                             </StackPanel>
                         </Border>
@@ -537,7 +537,7 @@
                                     </StackPanel>
                                 </Grid>
 
-                                <muxc:InfoBar x:Name="HotkeyBar" IsOpen="False" IsClosable="False"
+                                <muxc:InfoBar x:Name="HotkeyBar" IsOpen="False" Visibility="Collapsed" IsClosable="False"
                                               Severity="Warning" />
                             </StackPanel>
                         </Border>
@@ -565,7 +565,7 @@
                                                 VerticalAlignment="Center" HorizontalAlignment="Right" />
                                 </Grid>
 
-                                <muxc:InfoBar x:Name="SearchHotkeyBar" IsOpen="False" IsClosable="False"
+                                <muxc:InfoBar x:Name="SearchHotkeyBar" IsOpen="False" Visibility="Collapsed" IsClosable="False"
                                               Severity="Warning" />
                             </StackPanel>
                         </Border>
@@ -1000,11 +1000,6 @@
                                     </StackPanel>
                                 </Grid>
 
-                                <TextBlock TextWrapping="Wrap"
-                                           Style="{ThemeResource CaptionTextBlockStyle}"
-                                           Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                                           Text="{loc:Localize Key=About.Credits}" />
-
                                 <!-- HyperlinkButton opens the URI with the default browser; no
                                      code-behind needed. Right-aligned and smaller so this reads as a
                                      footer rather than competing with the credits text above; the
@@ -1071,7 +1066,7 @@
                                     </StackPanel>
                                 </Grid>
 
-                                <muxc:InfoBar x:Name="UpdateBar" IsOpen="False" IsClosable="False"
+                                <muxc:InfoBar x:Name="UpdateBar" IsOpen="False" Visibility="Collapsed" IsClosable="False"
                                               Severity="Informational" />
                             </StackPanel>
                         </Border>

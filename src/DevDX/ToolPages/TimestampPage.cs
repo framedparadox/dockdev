@@ -36,15 +36,38 @@ public sealed class TimestampPage : FormToolPage
         nowConvertRow.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
         nowConvertRow.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
         nowConvertRow.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-        var useNow = new Button { Content = Loc.Get("Timestamp.UseNow") };
+        var useNow = new Button
+        {
+            Content = new FontIcon { Glyph = "", FontSize = 14 },
+            HorizontalAlignment = HorizontalAlignment.Right,
+            VerticalAlignment = VerticalAlignment.Bottom,
+        };
+        ToolTipService.SetToolTip(useNow, Loc.Get("Timestamp.UseNow"));
+        Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(useNow, Loc.Get("Timestamp.UseNow"));
         useNow.Click += (_, _) => { _input.Text = DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString(); Convert(); };
 
-        var nowPanel = new StackPanel { Spacing = 4 };
-        nowPanel.Children.Add(SectionHeader(Loc.Get("Timestamp.Now")));
-        nowPanel.Children.Add(_now);
-        nowPanel.Children.Add(useNow);
+        var nowDisplay = new Grid { ColumnSpacing = 8 };
+        nowDisplay.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        nowDisplay.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        Grid.SetColumn(_now, 0);
+        Grid.SetColumn(useNow, 1);
+        nowDisplay.Children.Add(_now);
+        nowDisplay.Children.Add(useNow);
+
+        // Matches the TextBox's own built-in Header style (see LabelledRow) rather than
+        // SectionHeader's larger, more-indented style, so this label lines up with the Input
+        // field's label on the same row instead of sitting lower and further from its content.
+        var nowPanel = new StackPanel { Spacing = 4, VerticalAlignment = VerticalAlignment.Top };
+        nowPanel.Children.Add(new TextBlock
+        {
+            Text = Loc.Get("Timestamp.Now"),
+            Opacity = 0.8,
+            Style = (Style)Application.Current.Resources["CaptionTextBlockStyle"],
+        });
+        nowPanel.Children.Add(nowDisplay);
         Grid.SetColumn(nowPanel, 1);
         var inputRow = LabelledRow(Loc.Get("Timestamp.Input"), _input);
+        inputRow.VerticalAlignment = VerticalAlignment.Top;
         Grid.SetColumn(inputRow, 0);
         var reset = new Button
         {
@@ -64,7 +87,15 @@ public sealed class TimestampPage : FormToolPage
         foreach (var u in Units)
             _unit.Items.Add(Loc.Get("Timestamp.Unit." + u));
         _unit.SelectedIndex = 0;
-        AddRow(LabelledRow(Loc.Get("Timestamp.UnitLabel"), _unit));
+        var unitRow = new Grid { ColumnSpacing = 12 };
+        unitRow.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        unitRow.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        var unitLabel = new TextBlock { Text = Loc.Get("Timestamp.UnitLabel"), VerticalAlignment = VerticalAlignment.Center };
+        Grid.SetColumn(unitLabel, 0);
+        Grid.SetColumn(_unit, 1);
+        unitRow.Children.Add(unitLabel);
+        unitRow.Children.Add(_unit);
+        AddRow(unitRow);
 
         (var epochSecondsRow, _epochSeconds, _) = ResultRow(Loc.Get("Timestamp.EpochSeconds"));
         (var epochMillisRow, _epochMillis, _) = ResultRow(Loc.Get("Timestamp.EpochMillis"));

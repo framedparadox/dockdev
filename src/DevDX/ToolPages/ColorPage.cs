@@ -130,6 +130,12 @@ public sealed class ColorPage : FormToolPage
         // placement downward keeps the popup entirely inside the page, away from the title bar.
         flyout.Placement = FlyoutPlacementMode.Bottom;
 
+        // The color spectrum + slider popup is tall enough to still reach up under the title bar
+        // strip on smaller windows even when opening downward, and a root-constrained popup renders
+        // behind that non-client chrome. Letting it escape the XamlRoot's bounds moves it onto its
+        // own top-level surface, which draws above the caption buttons instead of under them.
+        flyout.ShouldConstrainToRootBounds = false;
+
         flyout.Opening += (_, _) => picker.Color = ColorTools.TryParse(_input.Text, out var color)
             ? Windows.UI.Color.FromArgb(color.A, color.R, color.G, color.B)
             : Windows.UI.Color.FromArgb(255, 45, 127, 249);
