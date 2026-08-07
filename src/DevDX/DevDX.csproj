@@ -1,0 +1,93 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows10.0.26100.0</TargetFramework>
+    <TargetPlatformMinVersion>10.0.17763.0</TargetPlatformMinVersion>
+    <RootNamespace>DevDX</RootNamespace>
+    <AssemblyName>DevDX</AssemblyName>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <ApplicationIcon>Assets\DevDX.ico</ApplicationIcon>
+
+    <!-- WinUI apps cannot be AnyCPU, so every build names an architecture (design doc §6, ported
+         -p:Platform=ARM64 builds natively for Windows-on-ARM; x64
+         stays the default so a plain `dotnet build` behaves the same as it always has. -->
+    <Platforms>x64;ARM64</Platforms>
+    <DevDXArchitecture Condition="'$(Platform)' == 'ARM64'">arm64</DevDXArchitecture>
+    <DevDXArchitecture Condition="'$(DevDXArchitecture)' == ''">x64</DevDXArchitecture>
+    <RuntimeIdentifier>win-$(DevDXArchitecture)</RuntimeIdentifier>
+
+    <UseWinUI>true</UseWinUI>
+    <Nullable>enable</Nullable>
+    <LangVersion>latest</LangVersion>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <ImplicitUsings>enable</ImplicitUsings>
+
+    <!-- Unpackaged (no MSIX) so it runs like a normal desktop utility (design doc assumption #5).
+         EnableMsixTooling is still required even unpackaged: it generates the resource index
+         (DevDX.pri) the compiled XAML lives in. -->
+    <WindowsPackageType>None</WindowsPackageType>
+    <EnableMsixTooling>true</EnableMsixTooling>
+    <!-- Self-contained so no separate Windows App Runtime install is required. -->
+    <WindowsAppSDKSelfContained>true</WindowsAppSDKSelfContained>
+    <SelfContained>true</SelfContained>
+
+    <DefaultLanguage>en-US</DefaultLanguage>
+    <EnableDefaultCssItems>false</EnableDefaultCssItems>
+
+    <Product>DevDX</Product>
+    <Company>DevDX</Company>
+    <Authors>DevDX</Authors>
+    <Description>A developer-tools floating dock for Windows 11 — offline, trustworthy scratch tools.</Description>
+    <Version>1.0.0.0</Version>
+    <FileVersion>1.0.0.0</FileVersion>
+    <AssemblyVersion>1.0.0.0</AssemblyVersion>
+    <NeutralLanguage>en-US</NeutralLanguage>
+  </PropertyGroup>
+
+  <!-- MSIX packaging for the Microsoft Store, built on demand with -p:StorePackage=true.
+       Everyday `dotnet build`/`dotnet publish` stays unpackaged. -->
+  <PropertyGroup Condition="'$(StorePackage)' == 'true'">
+    <WindowsPackageType>MSIX</WindowsPackageType>
+    <EnableMsixTooling>true</EnableMsixTooling>
+    <!-- Unsigned on purpose: the Store re-signs every submission with the publisher's own
+         certificate, and a locally signed .msixupload is rejected. Sideload testing signs
+         separately (see scripts/package-store.ps1 -CertificateThumbprint). -->
+    <AppxPackageSigningEnabled>false</AppxPackageSigningEnabled>
+    <GenerateAppInstallerFile>false</GenerateAppInstallerFile>
+    <AppxBundle>Always</AppxBundle>
+    <!-- Which architectures go in the bundle. AppxBundle=Always without this produces a bundle
+         containing only the platform being built, so the two architectures would have to be
+         submitted as two separate packages and Windows-on-ARM users would be served the x64 one
+         under emulation. The pipe-separated form is what the packaging targets expect. -->
+    <AppxBundlePlatforms Condition="'$(AppxBundlePlatforms)' == ''">x64|arm64</AppxBundlePlatforms>
+    <AppxAutoIncrementPackageRevision>false</AppxAutoIncrementPackageRevision>
+    <UapAppxPackageBuildMode>StoreUpload</UapAppxPackageBuildMode>
+    <AppxSymbolPackageEnabled Condition="'$(AppxSymbolPackageEnabled)' == ''">false</AppxSymbolPackageEnabled>
+    <AppxPackageDir Condition="'$(AppxPackageDir)' == ''">$(MSBuildThisFileDirectory)..\..\artifacts\store\</AppxPackageDir>
+  </PropertyGroup>
+
+  <ItemGroup Condition="'$(StorePackage)' == 'true'">
+    <AppxManifest Include="Package.appxmanifest">
+      <SubType>Designer</SubType>
+    </AppxManifest>
+  </ItemGroup>
+
+  <!-- NuGet dependencies: two (design doc §6). No System.Drawing.Common — DevDX has no shell-icon
+       extraction (see ToolIconProvider.cs), so nothing needs it. -->
+  <ItemGroup>
+    <PackageReference Include="Microsoft.WindowsAppSDK" Version="1.8.260317003" />
+    <PackageReference Include="Microsoft.Windows.SDK.BuildTools" Version="10.0.26100.6901" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="Assets\Images\**\*.png" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <!-- UI translations. Embedded (not Content) so a single-file publish carries every language
+       with no loose files to lose; Services/Loc.cs reads them back by resource name. -->
+  <ItemGroup>
+    <EmbeddedResource Include="Strings\*.json" LogicalName="DevDX.Strings.%(Filename).json" />
+  </ItemGroup>
+
+</Project>

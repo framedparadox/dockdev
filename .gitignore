@@ -1,0 +1,41 @@
+# Build results
+bin/
+obj/
+[Dd]ebug/
+[Rr]elease/
+
+# Visual Studio files
+.vs/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# MSIX / packaging artifacts
+#
+# Both spellings: the .appx* names are the older ones, and the packaging targets have emitted
+# .msix* since the format was renamed — which is what scripts/package-store.ps1 produces. Only the
+# .appx* half was listed here, so a several-hundred-megabyte submission package was one `git add .`
+# away from the history.
+AppPackages/
+BundleArtifacts/
+artifacts/
+*.appx
+*.appxbundle
+*.appxupload
+*.appxsym
+*.msix
+*.msixbundle
+*.msixupload
+*.msixsym
+*.pfx
+*.cer
+*.snk
+
+# Test results
+[Tt]est[Rr]esult*/
+
+# Misc
+*.log
+
+docs/devdock-design-document.md

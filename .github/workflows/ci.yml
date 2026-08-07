@@ -1,0 +1,69 @@
+# Design doc §25: "build x64 + ARM64 with -warnaserror, run unit tests, plus a localization
+# key-parity check (§20)."
+#
+# The parity check is not a step of its own on purpose. It lives in the test project
+# (tests/DevDX.Tests/Localization/StringTableTests.cs), so it runs on a developer's machine the
+# same way it runs here — a rule enforced only in CI is a rule you find out about after pushing.
+#
+# Projects are built by path rather than through DevDX.slnx: the solution declares no
+# configurations, so `-p:Platform=x64` against it fails with MSB4126. Per-project is also the form
+# §25 documents.
+name: CI
+
+on:
+  push:
+    branches: [release]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  # A new push supersedes the run in flight for the same branch; nobody reads the older one.
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: build (${{ matrix.platform }})
+    runs-on: windows-latest
+    strategy:
+      # Both platforms report, rather than the first failure hiding the other's result.
+      fail-fast: false
+      matrix:
+        platform: [x64, ARM64]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      # -warnaserror on the command line rather than in the csproj: a warning should stop a build
+      # being published, not stop someone iterating locally with a TODO half-written.
+      - name: Build app
+        run: dotnet build src/DevDX/DevDX.csproj -p:Platform=${{ matrix.platform }} -c Release -warnaserror
+
+      # ARM64 binaries do not run on the x64 hosted runner, so the suite executes on x64 only. The
+      # ARM64 leg still proves the tree compiles for that platform, which is the part that breaks.
+      - name: Build and run tests
+        if: matrix.platform == 'x64'
+        run: >
+          dotnet test tests/DevDX.Tests/DevDX.Tests.csproj
+          -p:Platform=x64 -c Release -warnaserror
+          --logger "trx;LogFileName=results.trx"
+          --results-directory artifacts/test-results
+
+      # ARM64 has no test binary to prove itself with, so build the test project there too — it
+      # references the app and would otherwise be the one thing never compiled for that platform.
+      - name: Build tests
+        if: matrix.platform == 'ARM64'
+        run: dotnet build tests/DevDX.Tests/DevDX.Tests.csproj -p:Platform=ARM64 -c Release -warnaserror
+
+      - name: Upload test results
+        if: matrix.platform == 'x64' && always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: artifacts/test-results
+          if-no-files-found: warn
