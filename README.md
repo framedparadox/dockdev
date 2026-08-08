@@ -27,23 +27,23 @@ on the dock — which routes it to the tool that handles that extension.
 
 **The dock**
 
-![The dockdev dock](docs/devdock.png)
+![The dockdev dock](images/devdock.png)
 
 **Tools settings — pick what shows on the dock**
 
-![Tools settings, listing every tool with a toggle to show it on the dock](docs/DevTools.png)
+![Tools settings, listing every tool with a toggle to show it on the dock](images/DevTools.png)
 
 **JSON**
 
-![The JSON tool, an empty editor ready for JSON, XML or CSV](docs/JSON.png)
+![The JSON tool, an empty editor ready for JSON, XML or CSV](images/JSON.png)
 
 **JWT Decoder**
 
-![The JWT Decoder tool showing header, payload and signature panes](docs/JWT.png)
+![The JWT Decoder tool showing header, payload and signature panes](images/JWT.png)
 
 **General settings**
 
-![General settings — language, window reuse, start with Windows, backup and reset](docs/Settings.png)
+![General settings — language, window reuse, start with Windows, backup and reset](images/Settings.png)
 
 ## Install
 
