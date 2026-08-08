@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Package
+  xmlns="http://schemas.microsoft.com/appx/manifest/foundation/windows10"
+  xmlns:uap="http://schemas.microsoft.com/appx/manifest/uap/windows10"
+  xmlns:desktop="http://schemas.microsoft.com/appx/manifest/desktop/windows10"
+  xmlns:rescap="http://schemas.microsoft.com/appx/manifest/foundation/windows10/restrictedcapabilities"
+  IgnorableNamespaces="uap desktop rescap">
+
+  <Identity Name="44492ajaykontham.dockdev"
+            Publisher="CN=93C75305-77D7-448E-B1C4-591A0E9665E1"
+            Version="1.0.0.0" />
+
+  <Properties>
+    <DisplayName>dockdev</DisplayName>
+    <PublisherDisplayName>ajaykontham</PublisherDisplayName>
+    <Logo>Assets\Images\StoreLogo.png</Logo>
+  </Properties>
+
+  <Dependencies>
+    <!-- MinVersion matches TargetPlatformMinVersion in dockdev.csproj. Windows 11 is where the dock
+         looks the way the listing shows it (Mica in the Settings window, rounded corners); on
+         Windows 10 those degrade to their flat equivalents and everything else works, which is why
+         the description below avoids claiming a specific Windows version.
+
+         MaxVersionTested is written here for documentation only: the MSIX packaging targets
+         overwrite it from $(TargetPlatformVersion), so the value that ships is the csproj's
+         TargetFramework. Keep the two in step. -->
+    <TargetDeviceFamily Name="Windows.Desktop"
+                        MinVersion="10.0.17763.0"
+                        MaxVersionTested="10.0.26100.0" />
+  </Dependencies>
+
+  <Resources>
+    <!-- en-US only, deliberately. The app itself ships eight UI languages and follows the Windows
+         display language, but every language declared here is a language the *Store listing* must
+         also be translated into (Store policy 10.7). Declaring one keeps that promise honest. -->
+    <Resource Language="en-US" />
+  </Resources>
+
+  <Applications>
+    <!-- Windows.FullTrustApplication = a normal full-trust desktop exe. -->
+    <Application Id="App" Executable="dockdev.exe" EntryPoint="Windows.FullTrustApplication">
+      <!-- DisplayName matches Properties/DisplayName (and the reserved Store name) so the Start
+           menu entry, the Store listing and the installed-apps list all say the same thing. -->
+      <uap:VisualElements
+        DisplayName="dockdev"
+        Description="A floating dock of developer tools — format, decode, mask and convert without leaving your desktop."
+        BackgroundColor="transparent"
+        Square150x150Logo="Assets\Images\Square150x150Logo.png"
+        Square44x44Logo="Assets\Images\Square44x44Logo.png">
+        <uap:DefaultTile Wide310x150Logo="Assets\Images\Wide310x150Logo.png"
+                         Square71x71Logo="Assets\Images\Square71x71Logo.png"
+                         Square310x310Logo="Assets\Images\Square310x310Logo.png" />
+        <uap:SplashScreen Image="Assets\Images\SplashScreen.png" />
+      </uap:VisualElements>
+
+      <Extensions>
+        <!-- "Start with Windows" for the packaged build. A packaged process's writes to
+             HKCU\...\CurrentVersion\Run go into the package's virtualized registry hive, which
+             Windows' autostart never reads — so the Run key that serves the portable zip would
+             silently do nothing here. This is the supported equivalent, and it also puts the entry
+             in Task Manager ▸ Startup apps where users expect to manage it.
+
+             Enabled="false" because autostart is opt-in: Services/StartupService.cs turns it on
+             through StartupTask.RequestEnableAsync when the user flips the Settings switch. TaskId
+             must stay in sync with StartupService.TaskId. -->
+        <desktop:Extension Category="windows.startupTask"
+                           Executable="dockdev.exe"
+                           EntryPoint="Windows.FullTrustApplication">
+          <desktop:StartupTask TaskId="dockdevStartupTask"
+                               Enabled="false"
+                               DisplayName="dockdev" />
+        </desktop:Extension>
+      </Extensions>
+    </Application>
+  </Applications>
+
+  <Capabilities>
+    <!-- runFullTrust: required for the DWM/Win32 P/Invoke chrome
+         (WindowChrome.cs, NativeMethods.cs) and the registry-based startup entry
+         (StartupService.cs). dockdev launches nothing externally — there is no
+         ShellExecute anywhere in this app (see docs/dockdev-design-document.md §25/§29 risk #9,
+         which flags this as worth revisiting: dockdev may not need runFullTrust at all). Only
+         relevant to a future `-p:StorePackage=true` MSIX build; the default unpackaged build
+         ignores this file entirely. -->
+    <rescap:Capability Name="runFullTrust" />
+  </Capabilities>
+</Package>

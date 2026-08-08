@@ -1,4 +1,4 @@
-# DevDX
+# dockdev
 
 A floating dock of developer tools for Windows, built with WinUI 3. Format JSON, decode a JWT, hash
 a file, mask personal data before you paste it into a ticket — without leaving your desktop and
@@ -25,8 +25,8 @@ on the dock — which routes it to the tool that handles that extension.
 
 ## Install
 
-**Portable ZIP** — download the latest release, unzip anywhere, run `DevDX.exe`. Self-contained: no
-.NET or Windows App Runtime install needed. Settings live in `%AppData%\DevDX`.
+**Portable ZIP** — download the latest release, unzip anywhere, run `dockdev.exe`. Self-contained: no
+.NET or Windows App Runtime install needed. Settings live in `%AppData%\dockdev`.
 
 **Microsoft Store** — see [docs/store-submission.md](docs/store-submission.md).
 
@@ -39,8 +39,8 @@ Requires the .NET 10 SDK and the Windows 10 SDK build tools. WinUI cannot build 
 build names an architecture.
 
 ```powershell
-dotnet build src/DevDX/DevDX.csproj -p:Platform=x64      # or ARM64
-dotnet test  tests/DevDX.Tests/DevDX.Tests.csproj -p:Platform=x64
+dotnet build src/dockdev/dockdev.csproj -p:Platform=x64      # or ARM64
+dotnet test  tests/dockdev.Tests/dockdev.Tests.csproj -p:Platform=x64
 ```
 
 Packaging:
@@ -54,12 +54,12 @@ Packaging:
 ## Repository layout
 
 ```
-src/DevDX/            The app: shell (dock, tray, hotkeys, settings), tools, services
+src/dockdev/            The app: shell (dock, tray, hotkeys, settings), tools, services
   Services/           Pure, UI-free logic — formats, tokenizers, masking, the tool engines
   ToolPages/          One page per tool, hosted by ToolWindows/ToolWindowBase
   Controls/           CodeView, CodeEditor, DiffView, StructureTree, ToolStatusBar
-tests/DevDX.Tests/    xUnit; runs anywhere, no desktop required
-tests/DevDX.UITests/  FlaUI; opt-in, needs a real desktop (DEVDX_UITESTS=1)
+tests/dockdev.Tests/    xUnit; runs anywhere, no desktop required
+tests/dockdev.UITests/  FlaUI; opt-in, needs a real desktop (DOCKDEV_UITESTS=1)
 docs/                 Design document, privacy policy, Store submission checklist
 scripts/              Packaging and test-run scripts
 ```
@@ -85,7 +85,7 @@ convention, because they are the kind that silently rot:
 - **Nothing from the network reaches the shell** — the one URL the update check reports is
   constrained to an https github.com page before it can be clicked.
 
-Full detail in [the design document](docs/devdx-design-document.md).
+Full detail in [the design document](docs/dockdev-design-document.md).
 
 ## License
 

@@ -2,10 +2,10 @@
 # key-parity check (§20)."
 #
 # The parity check is not a step of its own on purpose. It lives in the test project
-# (tests/DevDX.Tests/Localization/StringTableTests.cs), so it runs on a developer's machine the
+# (tests/dockdev.Tests/Localization/StringTableTests.cs), so it runs on a developer's machine the
 # same way it runs here — a rule enforced only in CI is a rule you find out about after pushing.
 #
-# Projects are built by path rather than through DevDX.slnx: the solution declares no
+# Projects are built by path rather than through dockdev.slnx: the solution declares no
 # configurations, so `-p:Platform=x64` against it fails with MSB4126. Per-project is also the form
 # §25 documents.
 name: CI
@@ -42,14 +42,14 @@ jobs:
       # -warnaserror on the command line rather than in the csproj: a warning should stop a build
       # being published, not stop someone iterating locally with a TODO half-written.
       - name: Build app
-        run: dotnet build src/DevDX/DevDX.csproj -p:Platform=${{ matrix.platform }} -c Release -warnaserror
+        run: dotnet build src/dockdev/dockdev.csproj -p:Platform=${{ matrix.platform }} -c Release -warnaserror
 
       # ARM64 binaries do not run on the x64 hosted runner, so the suite executes on x64 only. The
       # ARM64 leg still proves the tree compiles for that platform, which is the part that breaks.
       - name: Build and run tests
         if: matrix.platform == 'x64'
         run: >
-          dotnet test tests/DevDX.Tests/DevDX.Tests.csproj
+          dotnet test tests/dockdev.Tests/dockdev.Tests.csproj
           -p:Platform=x64 -c Release -warnaserror
           --logger "trx;LogFileName=results.trx"
           --results-directory artifacts/test-results
@@ -58,7 +58,7 @@ jobs:
       # references the app and would otherwise be the one thing never compiled for that platform.
       - name: Build tests
         if: matrix.platform == 'ARM64'
-        run: dotnet build tests/DevDX.Tests/DevDX.Tests.csproj -p:Platform=ARM64 -c Release -warnaserror
+        run: dotnet build tests/dockdev.Tests/dockdev.Tests.csproj -p:Platform=ARM64 -c Release -warnaserror
 
       - name: Upload test results
         if: matrix.platform == 'x64' && always()

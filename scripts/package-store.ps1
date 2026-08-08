@@ -1,6 +1,6 @@
 <#
 .SYNOPSIS
-    Builds the Microsoft Store submission package (.msixupload) for DevDX, and checks it against
+    Builds the Microsoft Store submission package (.msixupload) for dockdev, and checks it against
     the Store's requirements before you upload it.
 
 .DESCRIPTION
@@ -68,8 +68,8 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
 $RepoRoot = Split-Path -Parent $PSScriptRoot
-$ProjectPath = Join-Path $RepoRoot 'src/DevDX/DevDX.csproj'
-$ManifestPath = Join-Path $RepoRoot 'src/DevDX/Package.appxmanifest'
+$ProjectPath = Join-Path $RepoRoot 'src/dockdev/dockdev.csproj'
+$ManifestPath = Join-Path $RepoRoot 'src/dockdev/Package.appxmanifest'
 $ProjectDirectory = Split-Path -Parent $ProjectPath
 
 if (-not $OutputDirectory) {
@@ -106,7 +106,7 @@ function Test-StoreManifest {
     [xml] $project = Get-Content -LiteralPath $ProjectPath -Raw
     $projectVersion = ($project.Project.PropertyGroup.Version | Where-Object { $_ }) | Select-Object -First 1
     if ($projectVersion -and ([Version] $projectVersion) -ne $version) {
-        $problems += "Identity/Version ($version) does not match DevDX.csproj <Version> ($projectVersion)."
+        $problems += "Identity/Version ($version) does not match dockdev.csproj <Version> ($projectVersion)."
     }
 
     if (-not $manifest.Package.Properties.PublisherDisplayName) {

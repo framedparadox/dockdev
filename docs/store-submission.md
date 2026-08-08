@@ -1,4 +1,4 @@
-# Microsoft Store submission — DevDX
+# Microsoft Store submission — dockdev
 
 What has to be true before a submission, what the repository already enforces automatically, and
 what only a human can do in Partner Center. Design doc §25 covers the build; this covers the
@@ -8,14 +8,14 @@ submission.
 
 ## 1. What is enforced automatically
 
-These run in CI as ordinary unit tests (`tests/DevDX.Tests/Packaging/PackageManifestTests.cs`), so
+These run in CI as ordinary unit tests (`tests/dockdev.Tests/Packaging/PackageManifestTests.cs`), so
 they fail on a pull request rather than at upload:
 
 | Check | Why it is a submission blocker |
 |---|---|
 | `Identity/Name` and `Publisher` are not tooling placeholders | A `Publisher` that isn't the account's exact publisher ID is rejected at upload, with an error naming neither field |
 | `Identity/Version`'s fourth component is `0` | The Store reserves the revision component and refuses any package that sets it |
-| Manifest version == `DevDX.csproj` `<Version>` == `<AssemblyVersion>` == `app.manifest` `assemblyIdentity` | Otherwise the listing, Settings ▸ About and Apps & features report three different builds |
+| Manifest version == `dockdev.csproj` `<Version>` == `<AssemblyVersion>` == `app.manifest` `assemblyIdentity` | Otherwise the listing, Settings ▸ About and Apps & features report three different builds |
 | Every logo the manifest names exists on disk | Packaging otherwise fails inside `makeappx` with a message that names a temp path |
 | `DisplayName` agrees between `Properties` and `VisualElements` | Start menu, installed-apps list and listing must read as one product |
 | `runFullTrust` is declared, and nothing broader is | `Windows.FullTrustApplication` cannot deploy without it; anything past it lengthens review |
@@ -41,7 +41,7 @@ Verifies the manifest, then produces `artifacts/store/…_x64_arm64_bundle.msixu
 - **Symbols off by default** (`AppxSymbolPackageEnabled=false`) to avoid the `mspdbcmf.exe`/MSB6011
   failure on a plain SDK install. Turn it on when a crash-analysis feed is wanted.
 
-Sideload the signed build and confirm, on a machine that has never run DevDX:
+Sideload the signed build and confirm, on a machine that has never run dockdev:
 
 - [ ] It launches, the dock appears, and a tool window opens.
 - [ ] Settings ▸ **Start with Windows** turns on, and the entry appears in Task Manager ▸ Startup
@@ -49,15 +49,15 @@ Sideload the signed build and confirm, on a machine that has never run DevDX:
       likely to be broken without anyone noticing — see `PackagedRuntime`.
 - [ ] Settings ▸ About shows **no** update-check card. The Store delivers updates; a packaged build
       pointing at GitHub Releases is a distribution route outside the Store.
-- [ ] Uninstall leaves nothing behind but `%AppData%\DevDX`, which is the user's own data.
+- [ ] Uninstall leaves nothing behind but `%AppData%\dockdev`, which is the user's own data.
 
 ## 3. What only a human can supply in Partner Center
 
 | Field | Value |
 |---|---|
-| **Privacy policy URL** | `https://github.com/framedparadox/dev-dx/blob/HEAD/docs/privacy-policy.md` — required for every submission, and the same document the in-app Settings ▸ About link opens |
+| **Privacy policy URL** | `https://github.com/framedparadox/dockdev/blob/HEAD/docs/privacy-policy.md` — required for every submission, and the same document the in-app Settings ▸ About link opens |
 | **Category** | Developer tools |
-| **Age rating** | Complete the IARC questionnaire. DevDX has no user-generated content, no communication features, no purchases and no data collection |
+| **Age rating** | Complete the IARC questionnaire. dockdev has no user-generated content, no communication features, no purchases and no data collection |
 | **Supported languages** | English (United States) only, deliberately — see below |
 | **Screenshots** | At least one 1366×768 or larger. The dock plus one open tool window is the honest picture of what the app is |
 | **Description** | Must not claim compliance certification for the Data Masker (design doc §29 risk 2). It finds and masks common personal data; it does not make anything "GDPR compliant" |
@@ -72,11 +72,11 @@ is a feature described in the English listing, not a set of promises about trans
 
 ## 4. Policies worth re-reading before each submission
 
-- **10.1.1 Distinct function & value** — DevDX is sixteen tools behind one dock, all working
+- **10.1.1 Distinct function & value** — dockdev is sixteen tools behind one dock, all working
   offline. The listing should lead with that rather than with the tool count.
 - **10.5.1 Personal information** — a privacy policy is required whether or not data is collected,
   and it must be reachable from the listing *and* from inside the app. Both point at the same file.
-- **10.2.1 Security** — no elevation, no code download, no execution of downloaded code. DevDX
+- **10.2.1 Security** — no elevation, no code download, no execution of downloaded code. dockdev
   downloads nothing at all in the packaged build; the update check is hidden there.
 - **10.8.x Notifications / advertising** — none present, nothing to declare.
 - **Capability justification** — `runFullTrust` is the only one, and it is the standard capability

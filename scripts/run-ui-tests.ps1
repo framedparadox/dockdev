@@ -1,15 +1,15 @@
 <#
 .SYNOPSIS
-    Builds DevDX and runs the FlaUI UI tests against it.
+    Builds dockdev and runs the FlaUI UI tests against it.
 
 .DESCRIPTION
     Design doc §24. These tests drive a live window through UI Automation, so they need an
     interactive, logged-in desktop that is not locked — a locked session has no rendering surface,
     and every test would fail for a reason that says nothing about the code. That is why they are
-    opt-in: DEVDX_UITESTS gates them, this script sets it, and running the suite any other way
+    opt-in: DOCKDEV_UITESTS gates them, this script sets it, and running the suite any other way
     skips every case rather than failing it.
 
-    The project is not in DevDX.slnx, so nothing here runs as part of a normal build or CI pass.
+    The project is not in dockdev.slnx, so nothing here runs as part of a normal build or CI pass.
 
 .PARAMETER Platform
     x64 (default) or ARM64. Must match the machine — these run the binary, not just compile it.
@@ -45,8 +45,8 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
 $RepoRoot = Split-Path -Parent $PSScriptRoot
-$AppProject = Join-Path $RepoRoot 'src/DevDX/DevDX.csproj'
-$TestProject = Join-Path $RepoRoot 'tests/DevDX.UITests/DevDX.UITests.csproj'
+$AppProject = Join-Path $RepoRoot 'src/dockdev/dockdev.csproj'
+$TestProject = Join-Path $RepoRoot 'tests/dockdev.UITests/dockdev.UITests.csproj'
 
 function Invoke-Dotnet {
     param([Parameter(Mandatory)][string[]] $Arguments)
@@ -65,30 +65,30 @@ if (-not [Environment]::UserInteractive) {
 }
 
 if (-not $SkipBuild) {
-    Write-Host 'Building DevDX…' -ForegroundColor Cyan
+    Write-Host 'Building dockdev…' -ForegroundColor Cyan
     Invoke-Dotnet @('build', $AppProject, "-p:Platform=$Platform", '-c', $Configuration, '-warnaserror')
 }
 
 $tfm = 'net10.0-windows10.0.26100.0'
 $runtime = "win-$($Platform.ToLowerInvariant())"
-$executable = Join-Path $RepoRoot "src/DevDX/bin/$Platform/$Configuration/$tfm/$runtime/DevDX.exe"
+$executable = Join-Path $RepoRoot "src/dockdev/bin/$Platform/$Configuration/$tfm/$runtime/dockdev.exe"
 if (-not (Test-Path -LiteralPath $executable)) {
     # -p:Platform=x64 puts the output under bin/x64; a plain build puts it under bin/. Accept both
     # so -SkipBuild works against whatever the developer last built.
-    $executable = Join-Path $RepoRoot "src/DevDX/bin/$Configuration/$tfm/$runtime/DevDX.exe"
+    $executable = Join-Path $RepoRoot "src/dockdev/bin/$Configuration/$tfm/$runtime/dockdev.exe"
 }
 if (-not (Test-Path -LiteralPath $executable)) {
-    throw "No DevDX.exe to test. Build it, or drop -SkipBuild. Looked for: $executable"
+    throw "No dockdev.exe to test. Build it, or drop -SkipBuild. Looked for: $executable"
 }
 
 Write-Host "Testing $executable" -ForegroundColor Cyan
 
-# DEVDX_UITESTS opts the suite in; DEVDX_EXE pins exactly which binary it drives, so the tests never
-# have to guess and never silently exercise a stale build. The throwaway DEVDX_DATA_DIR is created
-# per session by the fixture itself — see DevDxSession — so the signed-in user's real dock is never
-# touched and the single-instance mutex never collides with a DevDX already running.
-$env:DEVDX_UITESTS = '1'
-$env:DEVDX_EXE = $executable
+# DOCKDEV_UITESTS opts the suite in; DOCKDEV_EXE pins exactly which binary it drives, so the tests never
+# have to guess and never silently exercise a stale build. The throwaway DOCKDEV_DATA_DIR is created
+# per session by the fixture itself — see dockdevSession — so the signed-in user's real dock is never
+# touched and the single-instance mutex never collides with a dockdev already running.
+$env:DOCKDEV_UITESTS = '1'
+$env:DOCKDEV_EXE = $executable
 
 try {
     $arguments = @(
@@ -103,10 +103,10 @@ try {
     Write-Host 'UI tests passed.' -ForegroundColor Green
 }
 finally {
-    Remove-Item Env:DEVDX_UITESTS -ErrorAction SilentlyContinue
-    Remove-Item Env:DEVDX_EXE -ErrorAction SilentlyContinue
+    Remove-Item Env:DOCKDEV_UITESTS -ErrorAction SilentlyContinue
+    Remove-Item Env:DOCKDEV_EXE -ErrorAction SilentlyContinue
 
     # A test that failed mid-case can leave a window up; nothing else on the machine is called
-    # DevDX, and leaving one behind would make the next run collide on the data directory.
-    Get-Process DevDX -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
+    # dockdev, and leaving one behind would make the next run collide on the data directory.
+    Get-Process dockdev -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
 }
