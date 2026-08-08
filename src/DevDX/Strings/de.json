@@ -249,6 +249,8 @@
   "Settings.AutoHideDesc": "Gleitet hinter den Rand und erscheint beim Überfahren mit der Maus. Eine Kerbe zeigt, wo es liegt.",
   "Settings.Backup": "Sicherung",
   "Settings.BackupDesc": "Dock, Werkzeuge und alle Einstellungen in eine Datei sichern oder wiederherstellen – so ziehst du DevDX auf einen anderen PC um.",
+  "Settings.CheckForUpdates": "Automatisch nach Updates suchen",
+  "Settings.CheckForUpdatesDesc": "Fragt beim Start GitHub, ob eine neuere Version verfügbar ist. Standardmäßig aus – DevDX stellt keine Netzwerkverbindung her, solange dies nicht aktiviert ist.",
   "Settings.Density": "Symbolgröße",
   "Settings.DensityDesc": "Wie groß Symbole und Zellen im Dock sind. „Mittel“ entspricht der Windows-11-Taskleiste.",
   "Settings.Export": "Exportieren…",

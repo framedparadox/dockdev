@@ -249,6 +249,8 @@
   "Settings.AutoHideDesc": "滑到边缘之后，指针靠近时显示。凹槽标记它所在的位置。",
   "Settings.Backup": "备份",
   "Settings.BackupDesc": "把停靠栏、工具和全部设置保存到文件，或从文件恢复——这也是把 DevDX 迁到另一台电脑的方式。",
+  "Settings.CheckForUpdates": "启动时自动检查更新",
+  "Settings.CheckForUpdatesDesc": "启动时向 GitHub 询问是否有更新版本。默认关闭——除非开启此项，否则 DevDX 不会建立任何网络连接。",
   "Settings.Density": "图标大小",
   "Settings.DensityDesc": "程序坞图标和单元格的大小。“中”与 Windows 11 任务栏一致。",
   "Settings.Export": "导出…",

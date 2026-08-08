@@ -249,6 +249,8 @@
   "Settings.AutoHideDesc": "端の裏に滑り込み、カーソルを近づけると現れます。位置はノッチで示されます。",
   "Settings.Backup": "バックアップ",
   "Settings.BackupDesc": "ドック・ツール・すべての設定をファイルに保存、または復元します。DevDX を別の PC に移す方法です。",
+  "Settings.CheckForUpdates": "起動時に自動でアップデートを確認する",
+  "Settings.CheckForUpdatesDesc": "起動時に GitHub へ新しいリリースがあるか問い合わせます。既定はオフ — オンにしない限り、DevDX はネットワーク接続を行いません。",
   "Settings.Density": "アイコンのサイズ",
   "Settings.DensityDesc": "ドックのアイコンとセルの大きさです。「中」は Windows 11 のタスクバーと同じです。",
   "Settings.Export": "エクスポート…",

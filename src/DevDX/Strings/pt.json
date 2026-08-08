@@ -249,6 +249,8 @@
   "Settings.AutoHideDesc": "Desliza para trás da borda e reaparece ao passar o cursor. Um entalhe mostra onde ele está.",
   "Settings.Backup": "Backup",
   "Settings.BackupDesc": "Salve o dock, suas ferramentas e todas as configurações em um arquivo, ou restaure um — é assim que você leva o DevDX para outro PC.",
+  "Settings.CheckForUpdates": "Verificar atualizações automaticamente",
+  "Settings.CheckForUpdatesDesc": "Pergunta ao GitHub, ao iniciar, se há uma versão mais recente. Desativado por padrão — o DevDX não faz nenhuma conexão de rede a menos que isso esteja ativado.",
   "Settings.Density": "Tamanho dos ícones",
   "Settings.DensityDesc": "O tamanho dos ícones e das células do dock. “Médio” corresponde à barra de tarefas do Windows 11.",
   "Settings.Export": "Exportar…",

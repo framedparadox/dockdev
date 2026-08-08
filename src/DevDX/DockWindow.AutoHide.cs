@@ -33,6 +33,15 @@ public sealed partial class DockWindow
     private const int EdgePad = 24;  // slack around the dock's span
     private static readonly TimeSpan HideDelay = TimeSpan.FromMilliseconds(600);
 
+    // The poll runs at FastPollInterval while revealed (so the HideDelay countdown lands within
+    // a tick of its real deadline) or while the cursor is in the hot zone (so a reveal feels
+    // immediate). Once hidden with the cursor away from the edge — the state auto-hide spends
+    // almost all of its time in — nothing changes between ticks, so SlowPollInterval backs off to
+    // roughly a third the tick rate rather than polling GetCursorPos ten times a second forever.
+    private static readonly TimeSpan FastPollInterval = TimeSpan.FromMilliseconds(100);
+    private static readonly TimeSpan SlowPollInterval = TimeSpan.FromMilliseconds(300);
+    private bool _pollingFast = true;
+
     // Grace period after the dock is placed on an edge before auto-hide may take it. Longer than
     // HideDelay so that dropping the dock at an edge reads as "it settles, then tucks away".
     private static readonly TimeSpan SettleDelay = TimeSpan.FromMilliseconds(1200);
@@ -207,7 +216,11 @@ public sealed partial class DockWindow
         _autoHideStarted = true;
 
         _pollTimer ??= DispatcherQueue.CreateTimer();
-        _pollTimer.Interval = TimeSpan.FromMilliseconds(100);
+        // Fast to start: EnsureStarted only runs while settling at an edge or reacting to a
+        // reveal, both of which want the responsive rate. PollCursor backs it off once it
+        // observes the hidden-and-away state that makes the slow rate safe.
+        _pollingFast = true;
+        _pollTimer.Interval = FastPollInterval;
         _pollTimer.Tick -= OnPollTick;
         _pollTimer.Tick += OnPollTick;
         _pollTimer.Start();
@@ -264,6 +277,16 @@ public sealed partial class DockWindow
         else if (_revealed && now - _lastInside > HideDelay && now >= _suppressHideUntil)
         {
             SetRevealed(false);
+        }
+
+        // Only the hidden-and-away state can tolerate the slower rate: revealed needs it to catch
+        // HideDelay elapsing promptly, and the hot zone needs it to catch the cursor leaving it
+        // (or arriving) without a sluggish reveal.
+        bool wantFast = _revealed || atHotZone;
+        if (wantFast != _pollingFast && _pollTimer is not null)
+        {
+            _pollingFast = wantFast;
+            _pollTimer.Interval = wantFast ? FastPollInterval : SlowPollInterval;
         }
     }
 

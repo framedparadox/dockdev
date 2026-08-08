@@ -131,6 +131,7 @@ public sealed partial class SettingsWindow : Window
         LinkInfoBarVisibility(BackupBar);
         LinkInfoBarVisibility(HotkeyBar);
         LinkInfoBarVisibility(SearchHotkeyBar);
+        LinkInfoBarVisibility(UpdateBar);
 
         BuildLanguageList();
         BuildShortcutCaptures();
@@ -140,6 +141,7 @@ public sealed partial class SettingsWindow : Window
         RebuildItemHotkeys();
         VersionText.Text = Loc.Format("About.Version", UpdateService.CurrentVersion.ToString());
         VersionPillText.Text = $"v{UpdateService.CurrentVersion}";
+        LoadUpdateCard();
 
         // Keep the lists in step if something changes elsewhere (a drag reorder, a per-item menu).
         // Deferred so a change we initiate from here doesn't rebuild the tree mid-handler.
@@ -576,6 +578,109 @@ public sealed partial class SettingsWindow : Window
         bar.Message = Loc.Get(key);
         bar.Visibility = Visibility.Visible;
         bar.IsOpen = true;
+    }
+
+    // ---- About page: updates -----------------------------------------------
+    //
+    // The one networked capability (design doc §21), off by default. The card itself is hidden on
+    // a packaged build (see LoadUpdateCard) — see docs/store-submission.md's sideload checklist,
+    // which asserts Settings ▸ About shows no update-check card there, since the Store delivers
+    // updates on that build instead.
+
+    /// <summary>The release <see cref="CheckNowButton_Click"/> or a startup check already found,
+    /// kept so Get/Skip act on the same one that is on screen.</summary>
+    private ReleaseInfo? _foundRelease;
+
+    private void LoadUpdateCard()
+    {
+        UpdateCard.Visibility = DevDxManager.UpdateChecksSupported ? Visibility.Visible : Visibility.Collapsed;
+        if (!DevDxManager.UpdateChecksSupported)
+            return;
+
+        bool wasInitializing = _initializing;
+        _initializing = true;
+        UpdateCheckSwitch.IsOn = _manager.Config.Network.UpdateCheck;
+        _initializing = wasInitializing;
+
+        CheckNowButton.IsEnabled = UpdateCheckSwitch.IsOn;
+
+        // A startup check may already have found something before this window ever opened —
+        // reflect it rather than making the user press Check now again to see what the tray icon
+        // is already showing.
+        if (_manager.PendingUpdate is { } pending)
+            ShowUpdateResult(pending);
+    }
+
+    private void UpdateCheckSwitch_Toggled(object sender, RoutedEventArgs e)
+    {
+        if (_initializing)
+            return;
+        _manager.SetUpdateCheckEnabled(UpdateCheckSwitch.IsOn);
+        CheckNowButton.IsEnabled = UpdateCheckSwitch.IsOn;
+        if (!UpdateCheckSwitch.IsOn)
+        {
+            // Consent just came off: an in-flight or previously shown result would otherwise sit
+            // there implying network access that is no longer permitted.
+            _foundRelease = null;
+            UpdateActionsPanel.Visibility = Visibility.Collapsed;
+            UpdateBar.IsOpen = false;
+        }
+    }
+
+    private async void CheckNowButton_Click(object sender, RoutedEventArgs e)
+    {
+        CheckNowButton.IsEnabled = false;
+        string originalContent = (string)CheckNowButton.Content;
+        CheckNowButton.Content = Loc.Get("Update.Checking");
+        UpdateActionsPanel.Visibility = Visibility.Collapsed;
+        UpdateBar.IsOpen = false;
+
+        try
+        {
+            var release = await _manager.CheckForUpdatesAsync(promptOnly: false);
+            if (release is not null)
+                ShowUpdateResult(release);
+            else
+                ShowUpToDate();
+        }
+        finally
+        {
+            CheckNowButton.Content = originalContent;
+            CheckNowButton.IsEnabled = UpdateCheckSwitch.IsOn;
+        }
+    }
+
+    private void SkipUpdateButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (_foundRelease is not { } release)
+            return;
+        _manager.SkipUpdate(release);
+        _foundRelease = null;
+        UpdateActionsPanel.Visibility = Visibility.Collapsed;
+        UpdateBar.IsOpen = false;
+    }
+
+    private void ShowUpdateResult(ReleaseInfo release)
+    {
+        _foundRelease = release;
+        GetUpdateLink.NavigateUri = new Uri(release.Url);
+        UpdateActionsPanel.Visibility = Visibility.Visible;
+
+        UpdateBar.Severity = InfoBarSeverity.Informational;
+        UpdateBar.Message = Loc.Format("Update.Available", release.Version.ToString());
+        UpdateBar.Visibility = Visibility.Visible;
+        UpdateBar.IsOpen = true;
+    }
+
+    private void ShowUpToDate()
+    {
+        _foundRelease = null;
+        UpdateActionsPanel.Visibility = Visibility.Collapsed;
+
+        UpdateBar.Severity = InfoBarSeverity.Success;
+        UpdateBar.Message = Loc.Get("Update.UpToDate");
+        UpdateBar.Visibility = Visibility.Visible;
+        UpdateBar.IsOpen = true;
     }
 
     // ---- Import / export ---------------------------------------------------

@@ -1,6 +1,7 @@
 using Microsoft.UI.Composition;
 using Microsoft.UI.Composition.SystemBackdrops;
 using Microsoft.UI.Xaml;
+using Windows.System.Power;
 using Windows.UI;
 using WinRT;
 
@@ -10,9 +11,14 @@ namespace DevDX.Services;
 /// Applies a Windows 11 taskbar-style acrylic ("glass") backdrop to a window.
 ///
 /// Two things make this look like the real taskbar rather than a generic WinUI window:
-///  1. The backdrop is forced <b>always active</b> (<c>IsInputActive = true</c>). A dock is
-///     never the foreground window, and by default WinUI collapses acrylic to a flat
-///     fallback color when its window is deactivated. Forcing active keeps the glass alive.
+///  1. The backdrop is forced <b>active</b> (<c>IsInputActive = true</c>) whenever the OS isn't in
+///     Energy Saver. A dock is never the foreground window, and by default WinUI collapses acrylic
+///     to a flat fallback color when its window is deactivated; forcing active keeps the glass
+///     alive the rest of the time. It is the one place a visual effect keeps DWM compositing
+///     continuously regardless of focus, so it steps aside — falling back to the flat
+///     <see cref="AcrylicRecipe.Fallback"/> color, the same look every window gets when
+///     unfocused — the moment the user has told Windows to conserve power (see
+///     <see cref="UpdateEnergySaverState"/>), rather than treating "always" as unconditional.
 ///  2. A hand-tuned tint/luminosity recipe per theme, layered on the system "Base" acrylic,
 ///     so it reads like the shell's own material and follows the Windows light/dark theme.
 /// </summary>
@@ -57,10 +63,9 @@ public sealed class AcrylicBackdropManager : IDisposable
         if (!DesktopAcrylicController.IsSupported())
             return false;
 
-        _config = new SystemBackdropConfiguration
-        {
-            IsInputActive = true, // never fall back to solid when unfocused
-        };
+        _config = new SystemBackdropConfiguration();
+        UpdateEnergySaverState(); // sets IsInputActive from the current Energy Saver state
+        PowerManager.EnergySaverStatusChanged += OnEnergySaverStatusChanged;
 
         _themeRoot = _window.Content as FrameworkElement;
         if (_themeRoot is not null)
@@ -79,6 +84,25 @@ public sealed class AcrylicBackdropManager : IDisposable
     }
 
     private void OnThemeChanged(FrameworkElement sender, object args) => UpdateTheme();
+
+    // PowerManager raises this off the UI thread; DispatcherQueueTimer/composition calls below
+    // are not thread-safe, so the actual update has to happen back on the window's own queue.
+    private void OnEnergySaverStatusChanged(object? sender, object e) =>
+        _window.DispatcherQueue.TryEnqueue(UpdateEnergySaverState);
+
+    /// <summary>
+    /// Ties <c>IsInputActive</c> to Energy Saver rather than leaving it permanently on: active
+    /// keeps DWM compositing the glass continuously since the dock is never focused, which is the
+    /// tradeoff this class exists to make, but it stops being worth making the moment the user has
+    /// told Windows they want to conserve power. <see cref="UpdateTheme"/> still runs on top of
+    /// whichever state this leaves the config in, so the fallback color is theme-correct too.
+    /// </summary>
+    private void UpdateEnergySaverState()
+    {
+        if (_config is null)
+            return;
+        _config.IsInputActive = PowerManager.EnergySaverStatus != EnergySaverStatus.On;
+    }
 
     /// <summary>
     /// Re-applies the current recipes. <see cref="Dark"/> and <see cref="Light"/> are plain
@@ -153,6 +177,7 @@ public sealed class AcrylicBackdropManager : IDisposable
 
         if (_themeRoot is not null)
             _themeRoot.ActualThemeChanged -= OnThemeChanged;
+        PowerManager.EnergySaverStatusChanged -= OnEnergySaverStatusChanged;
 
         _controller?.Dispose();
         _controller = null;
