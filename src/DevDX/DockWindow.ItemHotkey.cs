@@ -19,9 +19,11 @@ namespace DevDX;
 public sealed partial class DockWindow
 {
     /// <summary>
-    /// The <c>Shortcut ▸</c> submenu for an item: what it currently has, a way to assign a new
-    /// one, and — when the master switch is off — a note saying why nothing is firing. Separators
-    /// Separators are excluded by the caller; a separator has nothing to launch.
+    /// The <c>Shortcut ▸</c> submenu for an item: what it currently has, and a way to assign a new
+    /// one. Only built while the per-item shortcuts master switch is on — the caller
+    /// (<see cref="DockWindow.Item_ContextRequested"/>) skips it entirely otherwise, since an
+    /// assignment that quietly does nothing is a worse menu entry than none at all. Separators are
+    /// excluded by the caller; a separator has nothing to launch.
     /// </summary>
     private MenuFlyoutSubItem BuildItemHotkeyMenu(FrameworkElement target, ToolDockItem item)
     {
@@ -41,17 +43,6 @@ public sealed partial class DockWindow
             var clear = new MenuFlyoutItem { Text = Loc.Get("Menu.ShortcutClear") };
             clear.Click += (_, _) => _manager.SetItemHotkey(item, null);
             sub.Items.Add(clear);
-        }
-
-        // The per-item shortcuts are off by default (they claim system-wide combinations), so an
-        // assignment that quietly does nothing is the likeliest confusion here. Say so, and offer
-        // the switch rather than sending the user to Settings to find it.
-        if (!_manager.Config.ItemHotkeysEnabled)
-        {
-            sub.Items.Add(new MenuFlyoutSeparator());
-            var enable = new MenuFlyoutItem { Text = Loc.Get("Menu.ShortcutEnableAll") };
-            enable.Click += (_, _) => _manager.SetItemHotkeysEnabled(true);
-            sub.Items.Add(enable);
         }
 
         return sub;

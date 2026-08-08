@@ -55,4 +55,11 @@ public sealed class DockProfile
     /// default (the dock is horizontal everywhere).
     /// </summary>
     public bool VerticalWhenSideSnapped { get; set; }
+
+    /// <summary>
+    /// Puts the settings (gear) button and its divider at the leading edge of the strip instead of
+    /// the trailing one. Off by default — the gear trails the tools, matching where the Windows 11
+    /// taskbar's own overflow/system tray sits.
+    /// </summary>
+    public bool SettingsButtonAtStart { get; set; }
 }

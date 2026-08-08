@@ -131,7 +131,6 @@ public sealed partial class SettingsWindow : Window
         LinkInfoBarVisibility(BackupBar);
         LinkInfoBarVisibility(HotkeyBar);
         LinkInfoBarVisibility(SearchHotkeyBar);
-        LinkInfoBarVisibility(UpdateBar);
 
         BuildLanguageList();
         BuildShortcutCaptures();
@@ -143,21 +142,14 @@ public sealed partial class SettingsWindow : Window
         VersionText.Text = Loc.Format("About.Version", UpdateService.CurrentVersion.ToString());
         VersionPillText.Text = $"v{UpdateService.CurrentVersion}";
 
-        // A check that ran at startup put nothing on screen; if it found something, this is the
-        // first chance to say so.
-        if (_manager.PendingUpdate is { } pending)
-            ShowUpdateAvailable(pending);
-
         // Keep the lists in step if something changes elsewhere (a drag reorder, a per-item menu).
         // Deferred so a change we initiate from here doesn't rebuild the tree mid-handler.
         _manager.ItemsChanged += OnDockItemsChanged;
         _manager.DockChanged += OnDockChanged;
-        _manager.UpdateAvailable += OnUpdateAvailable;
         Closed += (_, _) =>
         {
             _manager.ItemsChanged -= OnDockItemsChanged;
             _manager.DockChanged -= OnDockChanged;
-            _manager.UpdateAvailable -= OnUpdateAvailable;
             // The config items outlive this window by the life of the process, so anything still
             // attached to one is this window kept alive after it closed.
             ReleaseItemSubscriptions();
@@ -178,14 +170,15 @@ public sealed partial class SettingsWindow : Window
         RebuildItemHotkeys();
     });
 
-    private void OnUpdateAvailable(ReleaseInfo release) =>
-        DispatcherQueue.TryEnqueue(() => ShowUpdateAvailable(release));
-
     private void OnDockChanged() => DispatcherQueue.TryEnqueue(() =>
     {
         RebuildDock();
         RebuildHome();
         RebuildTools();
+        // Lives on the Appearance page rather than the (rebuilt-from-scratch) Dock page, so it
+        // needs its own refresh to stay in step with a change made elsewhere — the dock's own
+        // right-click menu, in particular.
+        SettingsButtonPositionSwitch.IsOn = _manager.Config.Dock.SettingsButtonAtStart;
     });
 
     /// <summary>Applies the given app theme to this window's root (called on open and whenever the
@@ -276,13 +269,6 @@ public sealed partial class SettingsWindow : Window
 
         OpenIndicatorsSwitch.IsOn = cfg.ShowOpenIndicators;
         ReuseWindowsSwitch.IsOn = cfg.ReuseToolWindows;
-        UpdatesSwitch.IsOn = cfg.Network.UpdateCheck;
-
-        // The Store build updates through the Store; there is nothing here for the user to decide,
-        // so the whole card goes rather than sitting there switched off.
-        UpdateCard.Visibility = DevDxManager.UpdateChecksSupported
-            ? Visibility.Visible
-            : Visibility.Collapsed;
 
         // Asked of Windows rather than read from the config, because the user can change it
         // outside DevDX (Task Manager ▸ Startup apps) — and on the packaged build that answer is
@@ -298,6 +284,7 @@ public sealed partial class SettingsWindow : Window
         GlassSlider.Value = Math.Round(cfg.GlassOpacity * 100);
         AccentTintSwitch.IsOn = cfg.AccentTint;
         MagnifySwitch.IsOn = cfg.Magnify;
+        SettingsButtonPositionSwitch.IsOn = cfg.Dock.SettingsButtonAtStart;
         ItemHotkeysSwitch.IsOn = cfg.ItemHotkeysEnabled;
 
         _initializing = false;
@@ -336,6 +323,13 @@ public sealed partial class SettingsWindow : Window
         if (_initializing)
             return;
         _manager.SetMagnify(MagnifySwitch.IsOn);
+    }
+
+    private void SettingsButtonPositionSwitch_Toggled(object sender, RoutedEventArgs e)
+    {
+        if (_initializing)
+            return;
+        _manager.Dock?.SetSettingsButtonAtStart(SettingsButtonPositionSwitch.IsOn);
     }
 
     // ---- Language ----------------------------------------------------------
@@ -582,77 +576,6 @@ public sealed partial class SettingsWindow : Window
         bar.Message = Loc.Get(key);
         bar.Visibility = Visibility.Visible;
         bar.IsOpen = true;
-    }
-
-    // ---- Update check ------------------------------------------------------
-
-    private void UpdatesSwitch_Toggled(object sender, RoutedEventArgs e)
-    {
-        if (_initializing)
-            return;
-        _manager.SetUpdateCheckEnabled(UpdatesSwitch.IsOn);
-    }
-
-    private async void CheckUpdates_Click(object sender, RoutedEventArgs e)
-    {
-        CheckUpdatesButton.IsEnabled = false;
-        UpdateBar.Message = Loc.Get("Update.Checking");
-        UpdateBar.Severity = InfoBarSeverity.Informational;
-        // Cleared, not just replaced: a previous check may have left "Get it / Skip" buttons in the
-        // bar, and they must not sit under a later "up to date" message.
-        UpdateBar.Content = null;
-        UpdateBar.Visibility = Visibility.Visible;
-        UpdateBar.IsOpen = true;
-        try
-        {
-            // promptOnly: false — the user asked, so tell them what is actually out there even if
-            // they skipped this release when it was offered on startup.
-            var release = await _manager.CheckForUpdatesAsync(promptOnly: false);
-            if (release is null)
-            {
-                UpdateBar.Message = Loc.Get("Update.UpToDate");
-                UpdateBar.Severity = InfoBarSeverity.Success;
-                UpdateBar.Content = null;
-            }
-            else
-            {
-                ShowUpdateAvailable(release);
-            }
-        }
-        finally
-        {
-            CheckUpdatesButton.IsEnabled = true;
-        }
-    }
-
-    /// <summary>Offers a found release: a link to the download page, and a way to be left alone
-    /// about this one. Nothing is downloaded or installed — DevDX is a portable zip.</summary>
-    private void ShowUpdateAvailable(ReleaseInfo release)
-    {
-        UpdateBar.Message = Loc.Format("Update.Available", release.Version.ToString());
-        UpdateBar.Severity = InfoBarSeverity.Informational;
-
-        var actions = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
-        // Re-vetted at the point of use rather than trusted from the record: this URL began life as
-        // remote JSON, and a HyperlinkButton hands whatever it is given to the shell. UpdateService
-        // already constrains it, so this is belt-and-braces — and it also guarantees the Uri
-        // constructor cannot throw inside a UI callback.
-        actions.Children.Add(new HyperlinkButton
-        {
-            Content = Loc.Get("Update.Get"),
-            NavigateUri = new Uri(UpdateService.SafeReleaseUrl(release.Url)),
-        });
-        var skip = new Button { Content = Loc.Get("Update.Skip") };
-        skip.Click += (_, _) =>
-        {
-            _manager.SkipUpdate(release);
-            UpdateBar.IsOpen = false;
-        };
-        actions.Children.Add(skip);
-
-        UpdateBar.Content = actions;
-        UpdateBar.Visibility = Visibility.Visible;
-        UpdateBar.IsOpen = true;
     }
 
     // ---- Import / export ---------------------------------------------------

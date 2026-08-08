@@ -118,6 +118,7 @@ public sealed partial class DockWindow : Window
         ItemsHost.ItemsSource = Items;
         RebuildVisible();
         ApplyMetrics();
+        ApplySettingsButtonPosition();
         // One subscription for the life of the window: it drives the cell highlight always, and
         // the magnify swell when that setting is on (see DockWindow.Magnify.cs).
         HookStripPointer();
@@ -430,6 +431,39 @@ public sealed partial class DockWindow : Window
         QueueRelayout();
     }
 
+    /// <summary>
+    /// Moves the settings gear (and its divider) to the leading or trailing end of the strip per
+    /// <see cref="DockProfile.SettingsButtonAtStart"/>. The pair always travels together — a
+    /// divider with nothing on its far side would just be a stray line — and total strip length is
+    /// unchanged either way, so this never needs a relayout of its own.
+    /// </summary>
+    private void ApplySettingsButtonPosition()
+    {
+        Strip.Children.Remove(Divider);
+        Strip.Children.Remove(SettingsButton);
+        if (_profile.SettingsButtonAtStart)
+        {
+            Strip.Children.Insert(0, Divider);
+            Strip.Children.Insert(0, SettingsButton);
+        }
+        else
+        {
+            Strip.Children.Add(Divider);
+            Strip.Children.Add(SettingsButton);
+        }
+    }
+
+    /// <summary>Flips the gear's position and persists the choice. Used by the dock's own
+    /// right-click menu and by Settings ▸ Dock.</summary>
+    public void SetSettingsButtonAtStart(bool atStart)
+    {
+        if (_profile.SettingsButtonAtStart == atStart)
+            return;
+        _profile.SettingsButtonAtStart = atStart;
+        ApplySettingsButtonPosition();
+        SaveConfig();
+    }
+
     // The pill's actual width. Measured rather than fixed at AddNewWidth because its caption is
     // translated, and "Hinzufügen" or "डॉक में जोड़ें" is wider than the English "Add New" that
     // constant was sized for — a fixed width would clip them.
@@ -650,12 +684,12 @@ public sealed partial class DockWindow : Window
         if (!item.IsSeparator)
         {
             menu.Items.Add(Mi(Loc.Get("Menu.Open"), () => LaunchOrFocus(item)));
-            menu.Items.Add(Mi(Loc.Get("Menu.Rename"), () => ShowRenameFlyout(target, item)));
-            menu.Items.Add(Mi(Loc.Get("Menu.ChangeIcon"), () => ShowIconPicker(target, sel => ApplyIconSelection(item, sel))));
+            menu.Items.Add(Mi(Loc.Get("Menu.Edit"), () => OpenEditTool(item)));
             if (item.HasCustomIcon)
                 menu.Items.Add(Mi(Loc.Get("Menu.ResetIcon"), () => SetCustomIcon(item, null)));
 
-            menu.Items.Add(BuildItemHotkeyMenu(target, item));
+            if (_manager.Config.ItemHotkeysEnabled)
+                menu.Items.Add(BuildItemHotkeyMenu(target, item));
             menu.Items.Add(new MenuFlyoutSeparator());
         }
 
@@ -679,51 +713,12 @@ public sealed partial class DockWindow : Window
         }
     }
 
-    private void ShowRenameFlyout(FrameworkElement target, ToolDockItem item)
+    /// <summary>Opens the Edit-Tool window (name + icon) for a single dock item — what "Rename…"
+    /// and "Change icon…" used to be as two separate flyouts.</summary>
+    private void OpenEditTool(ToolDockItem item)
     {
-        var box = new TextBox { Text = item.DisplayName, Width = 240 };
-        // The visible "Rename" caption above never reached the box itself, so Narrator read an
-        // unlabelled edit field the moment focus (which the flyout sets automatically) landed in it.
-        Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(box, Loc.Get("Flyout.Rename"));
-        var ok = new Button
-        {
-            Content = Loc.Get("Flyout.Rename"),
-            HorizontalAlignment = HorizontalAlignment.Right,
-        };
-        var panel = new StackPanel { Spacing = 8, Padding = new Thickness(4) };
-        panel.Children.Add(FlyoutHeader(Loc.Get("Flyout.Rename")));
-        panel.Children.Add(box);
-        panel.Children.Add(ok);
-
-        var flyout = new Flyout { Content = panel };
-
-        void Commit()
-        {
-            var name = box.Text.Trim();
-            if (name.Length > 0)
-            {
-                item.DisplayName = name; // observable -> tooltip updates
-                SaveConfig();
-                RaiseItemsChanged();
-            }
-            flyout.Hide();
-        }
-
-        ok.Click += (_, _) => Commit();
-        // Enter commits like the button would; Escape is handled by the flyout's own
-        // light-dismiss behavior (no extra wiring needed).
-        box.KeyDown += (_, e) =>
-        {
-            if (e.Key == Windows.System.VirtualKey.Enter)
-            {
-                Commit();
-                e.Handled = true;
-            }
-        };
-
-        flyout.ShowAt(target);
-        box.Focus(FocusState.Programmatic);
-        box.SelectAll();
+        var window = new EditToolWindow(_manager, this, item);
+        window.Activate();
     }
 
     private void DockBackground_ContextRequested(UIElement sender, ContextRequestedEventArgs e)
@@ -747,18 +742,23 @@ public sealed partial class DockWindow : Window
 
         menu.Items.Add(new MenuFlyoutSeparator());
 
-        // Where the dock sits is one decision — snapping to an edge and floating are the two
-        // answers to it, so they belong together under one heading rather than side by side with
-        // the unrelated entries above.
-        var position = new MenuFlyoutSubItem { Text = Loc.Get("Menu.PositionSection") };
-        var snap = new MenuFlyoutSubItem { Text = Loc.Get("Menu.SnapToEdge") };
+        // Which edge the dock is flush against — the four choices live directly under "Snap"
+        // rather than in a further-nested "Snap to edge" submenu, since snapping is the only thing
+        // this heading is about.
+        var snap = new MenuFlyoutSubItem { Text = Loc.Get("Menu.PositionSection") };
         snap.Items.Add(SnapItem(Loc.Get("Edge.Bottom"), DockEdge.Bottom));
         snap.Items.Add(SnapItem(Loc.Get("Edge.Top"), DockEdge.Top));
         snap.Items.Add(SnapItem(Loc.Get("Edge.Left"), DockEdge.Left));
         snap.Items.Add(SnapItem(Loc.Get("Edge.Right"), DockEdge.Right));
-        position.Items.Add(snap);
-        position.Items.Add(MenuItem(Loc.Get("Menu.Float"), () => SetSnap(null)));
-        menu.Items.Add(position);
+        menu.Items.Add(snap);
+
+        // Where the gear itself sits along the strip — a separate decision from where the whole
+        // dock sits on screen. One toggling entry rather than a submenu: there are only two
+        // positions, so the label just names the other one — "move it there" — instead of making
+        // the user open a submenu to see which of two options is already checked.
+        menu.Items.Add(MenuItem(
+            _profile.SettingsButtonAtStart ? Loc.Get("Menu.SettingsButtonToEnd") : Loc.Get("Menu.SettingsButtonToStart"),
+            () => SetSettingsButtonAtStart(!_profile.SettingsButtonAtStart)));
 
         menu.Items.Add(new MenuFlyoutSeparator());
 
