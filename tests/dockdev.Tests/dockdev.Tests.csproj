@@ -1,0 +1,50 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Mirrors src/dockdev/dockdev.csproj's TFM/platform settings (design doc §24): most dockdev.Models
+    and dockdev.Services types are WinRT-projected and only resolvable against the windows-qualified
+    TFM + Windows App SDK, so this test project targets the same combination the app does.
+
+    Scope: the layering rule in §5 (services are pure and UI-free) is what makes this cheap —
+    tokenizers, formats, the masking engine, text/number engines and NetworkPolicy are all plain
+    logic with no XAML dependency, so they're covered here. Deliberately NOT covered: DockWindow /
+    SettingsWindow / AddToolWindow / ToolWindowBase and the fifteen ToolPages need a running WinUI
+    Application + window to construct at all (see tests/dockdev.UITests in the design doc, not
+    implemented this pass — exercised by manual/smoke testing instead).
+  -->
+
+  <PropertyGroup>
+    <TargetFramework>net10.0-windows10.0.26100.0</TargetFramework>
+    <TargetPlatformMinVersion>10.0.17763.0</TargetPlatformMinVersion>
+    <RootNamespace>dockdev.Tests</RootNamespace>
+
+    <Platforms>x64;ARM64</Platforms>
+    <dockdevArchitecture Condition="'$(Platform)' == 'ARM64'">arm64</dockdevArchitecture>
+    <dockdevArchitecture Condition="'$(dockdevArchitecture)' == ''">x64</dockdevArchitecture>
+    <RuntimeIdentifier>win-$(dockdevArchitecture)</RuntimeIdentifier>
+
+    <UseWinUI>true</UseWinUI>
+    <Nullable>enable</Nullable>
+    <LangVersion>latest</LangVersion>
+    <ImplicitUsings>enable</ImplicitUsings>
+
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.WindowsAppSDK" Version="1.8.260317003" />
+    <PackageReference Include="Microsoft.Windows.SDK.BuildTools" Version="10.0.26100.6901" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.12.0" />
+    <PackageReference Include="xunit" Version="2.9.2" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="2.8.2">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\dockdev\dockdev.csproj" />
+  </ItemGroup>
+
+</Project>

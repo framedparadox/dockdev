@@ -1,6 +1,6 @@
 <#
 .SYNOPSIS
-    Publishes DevDX as a portable ZIP per architecture, with SHA-256 checksums and optional
+    Publishes dockdev as a portable ZIP per architecture, with SHA-256 checksums and optional
     Authenticode signing.
 
 .DESCRIPTION
@@ -14,7 +14,7 @@
 
 .PARAMETER Platform
     x64, ARM64, or Both (the default). WinUI cannot build AnyCPU, so every artifact names its
-    architecture — see the Platforms property in DevDX.csproj.
+    architecture — see the Platforms property in dockdev.csproj.
 
 .PARAMETER OutputDirectory
     Where the .zip and checksum files land. Defaults to artifacts/release off the repo root.
@@ -43,7 +43,7 @@
 
 .EXAMPLE
     ./scripts/package-release.ps1 -Platform x64 -CertificateThumbprint A1B2C3...
-    Publishes x64, signs DevDX.exe with that certificate, then packages it.
+    Publishes x64, signs dockdev.exe with that certificate, then packages it.
 #>
 [CmdletBinding()]
 param(
@@ -69,7 +69,7 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
 $RepoRoot = Split-Path -Parent $PSScriptRoot
-$ProjectPath = Join-Path $RepoRoot 'src/DevDX/DevDX.csproj'
+$ProjectPath = Join-Path $RepoRoot 'src/dockdev/dockdev.csproj'
 
 if (-not $OutputDirectory) {
     $OutputDirectory = Join-Path $RepoRoot 'artifacts/release'
@@ -180,13 +180,13 @@ function New-ReleasePackage {
         )
     }
 
-    $executable = Join-Path $publishDirectory 'DevDX.exe'
+    $executable = Join-Path $publishDirectory 'dockdev.exe'
     if (-not (Test-Path -LiteralPath $executable)) {
-        throw "Publish produced no DevDX.exe in $publishDirectory."
+        throw "Publish produced no dockdev.exe in $publishDirectory."
     }
 
     if ($certificate) {
-        Write-Host "  Signing DevDX.exe" -ForegroundColor DarkGray
+        Write-Host "  Signing dockdev.exe" -ForegroundColor DarkGray
         $signature = Set-AuthenticodeSignature -FilePath $executable -Certificate $certificate `
             -TimestampServer $TimestampUrl -HashAlgorithm SHA256
         if ($signature.Status -ne 'Valid') {
@@ -195,7 +195,7 @@ function New-ReleasePackage {
     }
 
     $version = Get-ProductVersion -ExecutablePath $executable
-    $archiveName = "DevDX-$version-$runtimeIdentifier.zip"
+    $archiveName = "dockdev-$version-$runtimeIdentifier.zip"
     $archivePath = Join-Path $OutputDirectory $archiveName
 
     if (Test-Path -LiteralPath $archivePath) {
