@@ -963,7 +963,7 @@
                                         <!-- The real app logo, not a stand-in glyph. targetsize-256 is the
                                              largest unpadded variant, so it stays crisp at 56px. -->
                                         <Border Width="56" Height="56" CornerRadius="12">
-                                            <Image Source="ms-appx:///Images/Square44x44Logo.targetsize-256.png"
+                                            <Image Source="ms-appx:///Assets/Images/Square44x44Logo.targetsize-256.png"
                                                    Width="56" Height="56" Stretch="UniformToFill" />
                                         </Border>
                                         <StackPanel VerticalAlignment="Center" Spacing="2">
