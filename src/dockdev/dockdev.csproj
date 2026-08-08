@@ -65,6 +65,16 @@
     <UapAppxPackageBuildMode>StoreUpload</UapAppxPackageBuildMode>
     <AppxSymbolPackageEnabled Condition="'$(AppxSymbolPackageEnabled)' == ''">false</AppxSymbolPackageEnabled>
     <AppxPackageDir Condition="'$(AppxPackageDir)' == ''">$(MSBuildThisFileDirectory)..\..\artifacts\store\</AppxPackageDir>
+    <!-- The bundle target builds the platform *not* passed on the command line as an inner MSBuild
+         call (Build only, no restore), so both RIDs must already be in project.assets.json before
+         that happens. RuntimeIdentifier above is singular and tracks whichever -p:Platform was
+         passed, so restore only ever sees one RID at a time; declaring both here as well is what
+         makes a single `dotnet restore` populate the assets file for both. -->
+    <RuntimeIdentifiers>win-x64;win-arm64</RuntimeIdentifiers>
+    <!-- Without this, AppxBundlePlatforms is ignored and only the platform being built ends up in
+         the bundle (see _GetOtherPlatformsToBundle/_ProducePlatformSpecificBundleArtifactsForOtherPlatforms
+         in the WinAppSDK packaging targets, which are both gated on this flag). -->
+    <GenerateAppxPackageOnBuild>true</GenerateAppxPackageOnBuild>
   </PropertyGroup>
 
   <ItemGroup Condition="'$(StorePackage)' == 'true'">

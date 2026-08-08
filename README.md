@@ -23,6 +23,28 @@ all unless you switch on the optional update check. See [the privacy policy](doc
 Every tool is reachable three ways: from the dock, from quick-launch search, or by dropping a file
 on the dock — which routes it to the tool that handles that extension.
 
+## Screenshots
+
+**The dock**
+
+![The dockdev dock](docs/devdock.png)
+
+**Tools settings — pick what shows on the dock**
+
+![Tools settings, listing every tool with a toggle to show it on the dock](docs/DevTools.png)
+
+**JSON**
+
+![The JSON tool, an empty editor ready for JSON, XML or CSV](docs/JSON.png)
+
+**JWT Decoder**
+
+![The JWT Decoder tool showing header, payload and signature panes](docs/JWT.png)
+
+**General settings**
+
+![General settings — language, window reuse, start with Windows, backup and reset](docs/Settings.png)
+
 ## Install
 
 **Portable ZIP** — download the latest release, unzip anywhere, run `dockdev.exe`. Self-contained: no

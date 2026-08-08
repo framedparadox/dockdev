@@ -104,7 +104,7 @@ function Test-StoreManifest {
     # The version in the listing and the version the app reports about itself have to agree, or a
     # bug report cites a build nobody can identify.
     [xml] $project = Get-Content -LiteralPath $ProjectPath -Raw
-    $projectVersion = ($project.Project.PropertyGroup.Version | Where-Object { $_ }) | Select-Object -First 1
+    $projectVersion = $project.SelectSingleNode('//PropertyGroup/Version')?.InnerText
     if ($projectVersion -and ([Version] $projectVersion) -ne $version) {
         $problems += "Identity/Version ($version) does not match dockdev.csproj <Version> ($projectVersion)."
     }
@@ -160,8 +160,13 @@ $arguments = @(
     '-p:Platform=x64',
     '-p:StorePackage=true',
     "-p:AppxBundlePlatforms=$bundlePlatforms",
-    "-p:AppxPackageDir=$OutputDirectory\",
-    '-warnaserror'
+    "-p:AppxPackageDir=$OutputDirectory\"
+    # No -warnaserror: the MSIX packaging targets emit a codeless warning when mspdbcmf.exe isn't
+    # visible to the dotnet CLI's environment (_EnsurePdbCmfExeFullPath in
+    # Microsoft.Windows.SDK.BuildTools.MSIX.Packaging.targets). It only affects the symbols
+    # package, which AppxSymbolPackageEnabled already disables by default, and it has no code to
+    # exclude selectively — so treating all warnings as errors here just breaks otherwise-good
+    # builds.
 )
 
 if ($CertificateThumbprint) {
