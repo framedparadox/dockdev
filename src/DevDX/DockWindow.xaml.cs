@@ -679,12 +679,10 @@ public sealed partial class DockWindow : Window
 
         var menu = new MenuFlyout();
 
-        // A separator has no target to open, no name to rename and no icon to change, so its menu
-        // is just the Hide command below.
+        // A separator has no target to open, so its menu is just the Hide command below.
         if (!item.IsSeparator)
         {
             menu.Items.Add(Mi(Loc.Get("Menu.Open"), () => LaunchOrFocus(item)));
-            menu.Items.Add(Mi(Loc.Get("Menu.Edit"), () => OpenEditTool(item)));
             if (item.HasCustomIcon)
                 menu.Items.Add(Mi(Loc.Get("Menu.ResetIcon"), () => SetCustomIcon(item, null)));
 
@@ -711,14 +709,6 @@ public sealed partial class DockWindow : Window
             mi.Click += (_, _) => onClick();
             return mi;
         }
-    }
-
-    /// <summary>Opens the Edit-Tool window (name + icon) for a single dock item — what "Rename…"
-    /// and "Change icon…" used to be as two separate flyouts.</summary>
-    private void OpenEditTool(ToolDockItem item)
-    {
-        var window = new EditToolWindow(_manager, this, item);
-        window.Activate();
     }
 
     private void DockBackground_ContextRequested(UIElement sender, ContextRequestedEventArgs e)

@@ -114,8 +114,8 @@ public sealed partial class SettingsWindow : Window
         }
         _appWindow.IsShownInSwitchers = true;
 
-        // Wide enough for the two-column Home/Tools grids: at 880 the nav pane and the page
-        // padding leave ~300px a card, which is where the tool names start being trimmed.
+        // Wide enough for the two-column Tools grid: at 880 the nav pane and the page padding
+        // leave ~300px a card, which is where the tool names start being trimmed.
         WindowChrome.SetClientSizeDip(_appWindow, _hwnd, 1000, 680);
         WindowChrome.CenterOnCursor(_appWindow, windowId);
 
@@ -136,7 +136,6 @@ public sealed partial class SettingsWindow : Window
         BuildShortcutCaptures();
         LoadSettings();
         RebuildDock();
-        RebuildHome();
         RebuildTools();
         RebuildItemHotkeys();
         VersionText.Text = Loc.Format("About.Version", UpdateService.CurrentVersion.ToString());
@@ -161,19 +160,21 @@ public sealed partial class SettingsWindow : Window
     private static void LinkInfoBarVisibility(InfoBar bar) =>
         bar.Closed += (_, _) => bar.Visibility = Visibility.Collapsed;
 
-    // Home is rebuilt alongside Tools: its cards carry the same "on the dock" accent marker, so
-    // switching a tool on in one place has to light it up in the other.
+    // Flipping a switch raises ItemsChanged, which lands back here and rebuilds the Tools list —
+    // including the switch the user is standing on. Focus is captured before the rebuild and
+    // restored after, on whichever card the same tool ended up on.
     private void OnDockItemsChanged() => DispatcherQueue.TryEnqueue(() =>
     {
-        RebuildHome();
+        var focusedKind = FocusedToolKind();
         RebuildTools();
         RebuildItemHotkeys();
+        if (focusedKind is { } kind)
+            RestoreToolFocus(kind);
     });
 
     private void OnDockChanged() => DispatcherQueue.TryEnqueue(() =>
     {
         RebuildDock();
-        RebuildHome();
         RebuildTools();
         // Lives on the Appearance page rather than the (rebuilt-from-scratch) Dock page, so it
         // needs its own refresh to stay in step with a change made elsewhere — the dock's own
@@ -213,11 +214,10 @@ public sealed partial class SettingsWindow : Window
     private void Nav_SelectionChanged(NavigationView sender, NavigationViewSelectionChangedEventArgs args)
     {
         var tag = (args.SelectedItem as NavigationViewItem)?.Tag as string;
-        if (HomePanel is null || GeneralPanel is null || AppearancePanel is null ||
+        if (GeneralPanel is null || AppearancePanel is null ||
             ShortcutsPanel is null || DockPanel is null || ToolsPanel is null ||
             DocumentationPanel is null || AboutPanel is null)
             return;
-        HomePanel.Visibility = tag == "home" ? Visibility.Visible : Visibility.Collapsed;
         GeneralPanel.Visibility = tag == "general" ? Visibility.Visible : Visibility.Collapsed;
         AppearancePanel.Visibility = tag == "appearance" ? Visibility.Visible : Visibility.Collapsed;
         ShortcutsPanel.Visibility = tag == "shortcuts" ? Visibility.Visible : Visibility.Collapsed;
@@ -242,7 +242,7 @@ public sealed partial class SettingsWindow : Window
     }
 
     /// <summary>The page currently showing, as its nav tag.</summary>
-    internal string CurrentPage => (Nav.SelectedItem as NavigationViewItem)?.Tag as string ?? "home";
+    internal string CurrentPage => (Nav.SelectedItem as NavigationViewItem)?.Tag as string ?? "general";
 
     // ---- Loading the pages from the config ---------------------------------
 
@@ -868,77 +868,6 @@ public sealed partial class SettingsWindow : Window
         IsHitTestVisible = false,
     };
 
-    // ---- Home page ---------------------------------------------------------
-
-    /// <summary>
-    /// Fills the Home launcher: one card per catalog tool, in catalog order, each opening that
-    /// tool when clicked. No categories - see the note on HomePanel in the XAML. Cards for tools
-    /// that are on the dock carry the same accent marker the Tools page uses, so "active" means
-    /// one thing across both pages.
-    /// </summary>
-    private void RebuildHome() =>
-        FillTwoColumns(HomeList, ToolCatalog.All.Select(BuildHomeCard).ToList());
-
-    private FrameworkElement BuildHomeCard(ToolDefinition tool)
-    {
-        bool active = _manager.Dock?.IsToolActive(tool.Kind) == true;
-
-        var grid = new Grid { ColumnSpacing = 12, VerticalAlignment = VerticalAlignment.Center };
-        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-
-        var indicator = ActiveIndicator(active);
-        Grid.SetColumn(indicator, 0);
-        grid.Children.Add(indicator);
-
-        bool isTextGlyph = GlyphFonts.IsTextGlyph(tool.Glyph);
-        var icon = new FontIcon
-        {
-            Glyph = tool.Glyph,
-            FontFamily = isTextGlyph
-                ? new FontFamily("Segoe UI")
-                : (FontFamily)Application.Current.Resources["SymbolThemeFontFamily"],
-            FontSize = isTextGlyph ? 18 * 0.8 : 18,
-            VerticalAlignment = VerticalAlignment.Center,
-        };
-        Grid.SetColumn(icon, 1);
-        grid.Children.Add(icon);
-
-        var text = new StackPanel { VerticalAlignment = VerticalAlignment.Center };
-        text.Children.Add(new TextBlock
-        {
-            Text = tool.DisplayName,
-            Style = (Style)Application.Current.Resources["BodyStrongTextBlockStyle"],
-            TextTrimming = TextTrimming.CharacterEllipsis,
-        });
-        // Trimmed rather than wrapped: in a half-width card a wrapped description runs to three
-        // lines and the cards on a row stop lining up. The full text is on the tooltip.
-        text.Children.Add(new TextBlock
-        {
-            Text = tool.Description,
-            Style = SecondaryCaptionStyle,
-            TextTrimming = TextTrimming.CharacterEllipsis,
-        });
-        Grid.SetColumn(text, 2);
-        grid.Children.Add(text);
-
-        // The whole card is the target rather than a button tucked at one end: the card is the tool.
-        var button = new Button
-        {
-            Content = grid,
-            HorizontalAlignment = HorizontalAlignment.Stretch,
-            HorizontalContentAlignment = HorizontalAlignment.Stretch,
-            VerticalContentAlignment = VerticalAlignment.Center,
-            Padding = new Thickness(10, 10, 14, 10),
-            CornerRadius = new CornerRadius(8),
-        };
-        Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(button, tool.DisplayName);
-        ToolTipService.SetToolTip(button, tool.Description);
-        button.Click += (_, _) => _manager.Launcher.Open(tool);
-        return button;
-    }
-
     // ---- Tools page --------------------------------------------------------
 
     /// <summary>
@@ -954,13 +883,6 @@ public sealed partial class SettingsWindow : Window
         // Every row about to be discarded took a handler on a process-lifetime config item. Drop
         // them before building the replacements, or one window accumulates a set per rebuild.
         ReleaseItemSubscriptions();
-
-        // Flipping a switch raises ItemsChanged, which lands back here and replaces every card —
-        // including the switch the user is standing on. Without this, toggling a tool with the
-        // keyboard dumps focus back at the top of the page, so switching three tools on means
-        // tabbing down from the start three times. Note where focus was, and put it back on the
-        // rebuilt card for the same tool.
-        var focusedKind = FocusedToolKind();
 
         var dock = _manager.Dock;
         if (dock is null)
@@ -978,8 +900,24 @@ public sealed partial class SettingsWindow : Window
 
         FillTwoColumns(ToolsList, cards);
 
-        if (focusedKind is { } kind)
-            RestoreToolFocus(kind);
+        // Reflects the catalog's current state rather than driving it: on, only once every tool
+        // already is. Set through _initializing so writing it back here doesn't loop back into
+        // EnableAllToolsSwitch_Toggled and re-run the very enable/disable sweep that got us here.
+        bool wasInitializing = _initializing;
+        _initializing = true;
+        EnableAllToolsSwitch.IsOn = ToolCatalog.All.All(t => dock.IsToolActive(t.Kind));
+        _initializing = wasInitializing;
+    }
+
+    private void EnableAllToolsSwitch_Toggled(object sender, RoutedEventArgs e)
+    {
+        if (_initializing)
+            return;
+        if (_manager.Dock is not { } dock)
+            return;
+        bool on = EnableAllToolsSwitch.IsOn;
+        foreach (var tool in ToolCatalog.All)
+            dock.SetToolActive(tool, on);
     }
 
     /// <summary>

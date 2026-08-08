@@ -20,8 +20,8 @@
 
             <!-- The dimmed second line under a setting's or a tool's name.
 
-                 This exists as a style, and is reached by key from the code that builds the Dock,
-                 Home and Tools cards, because that code cannot look the brush up for itself. This
+                 This exists as a style, and is reached by key from the code that builds the Dock
+                 and Tools cards, because that code cannot look the brush up for itself. This
                  window picks its own Light/Dark theme from the user's choice, which is not
                  necessarily the application's, and `Application.Current.Resources["…"]` resolves
                  against the application's — so a Light window was painting its descriptions in the
@@ -74,12 +74,12 @@
                              OpenPaneLength="200"
                              SelectionChanged="Nav_SelectionChanged">
             <muxc:NavigationView.MenuItems>
-                <muxc:NavigationViewItem x:Name="HomeNav" Content="{loc:Localize Key=Nav.Home}"
-                                         AutomationProperties.AutomationId="SettingsNavHome"
-                                         IsSelected="True" Icon="Home" Tag="home" />
                 <muxc:NavigationViewItem x:Name="GeneralNav" Content="{loc:Localize Key=Nav.General}"
                                          AutomationProperties.AutomationId="SettingsNavGeneral"
-                                         Icon="Setting" Tag="general" />
+                                         IsSelected="True" Icon="Setting" Tag="general" />
+                <muxc:NavigationViewItem x:Name="ToolsNav" Content="{loc:Localize Key=Nav.Tools}"
+                                         AutomationProperties.AutomationId="SettingsNavTools"
+                                         Icon="AllApps" Tag="tools" />
                 <muxc:NavigationViewItem x:Name="AppearanceNav" Content="{loc:Localize Key=Nav.Appearance}"
                                          AutomationProperties.AutomationId="SettingsNavAppearance"
                                          Tag="appearance">
@@ -101,9 +101,6 @@
                         <FontIcon Glyph="&#xE7C4;" FontFamily="{ThemeResource SymbolThemeFontFamily}" />
                     </muxc:NavigationViewItem.Icon>
                 </muxc:NavigationViewItem>
-                <muxc:NavigationViewItem x:Name="ToolsNav" Content="{loc:Localize Key=Nav.Tools}"
-                                         AutomationProperties.AutomationId="SettingsNavTools"
-                                         Icon="AllApps" Tag="tools" />
                 <muxc:NavigationViewItem x:Name="DocumentationNav" Content="{loc:Localize Key=Nav.Documentation}"
                                          AutomationProperties.AutomationId="SettingsNavDocumentation"
                                          Tag="documentation">
@@ -120,47 +117,6 @@
             </muxc:NavigationView.MenuItems>
 
             <Grid Padding="32,24,32,24">
-                <!-- ==================== HOME ====================
-                     Every tool in the catalog, as one flat launcher. Deliberately ungrouped: the
-                     Add-Tool window groups by category because you are choosing what to pin, and
-                     the categories are how you narrow that choice. Here you already know which
-                     tool you want, and six headings between you and it is friction. The order is
-                     still the catalog's, which runs format → encode → privacy → text → generate →
-                     numbers, so related tools stay neighbours. -->
-                <Grid x:Name="HomePanel" RowSpacing="12"
-                      AutomationProperties.AutomationId="SettingsHomePanel">
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto" />
-                        <RowDefinition Height="Auto" />
-                        <RowDefinition Height="*" />
-                    </Grid.RowDefinitions>
-
-                    <TextBlock Grid.Row="0" Text="{loc:Localize Key=Nav.Home}"
-                               Style="{ThemeResource TitleTextBlockStyle}"
-                               VerticalAlignment="Center" />
-
-                    <TextBlock Grid.Row="1" Text="{loc:Localize Key=Home.Hint}"
-                               Style="{ThemeResource CaptionTextBlockStyle}"
-                               Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                               TextWrapping="Wrap" />
-
-                    <!-- Two cards to a row. The columns are declared here and the rows are added
-                         in code (RebuildHome): the card count is the catalog's, not the
-                         designer's. Padding on the right keeps the last column clear of the
-                         scrollbar rather than tucked under it. -->
-                    <ScrollViewer Grid.Row="2" HorizontalContentAlignment="Stretch"
-                                  VerticalScrollBarVisibility="Auto" Padding="0,0,4,0">
-                        <Grid x:Name="HomeList" ColumnSpacing="8" RowSpacing="8"
-                              HorizontalAlignment="Stretch"
-                              AutomationProperties.AutomationId="SettingsHomeList">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*" />
-                                <ColumnDefinition Width="*" />
-                            </Grid.ColumnDefinitions>
-                        </Grid>
-                    </ScrollViewer>
-                </Grid>
-
                 <!-- ==================== GENERAL ==================== -->
                 <ScrollViewer x:Name="GeneralPanel" Visibility="Collapsed">
                     <StackPanel Spacing="6" MaxWidth="720" HorizontalAlignment="Left">
@@ -665,9 +621,26 @@
                         <RowDefinition Height="*" />
                     </Grid.RowDefinitions>
 
-                    <TextBlock Grid.Row="0" Text="{loc:Localize Key=Nav.Tools}"
-                               Style="{ThemeResource TitleTextBlockStyle}"
-                               VerticalAlignment="Center" />
+                    <Grid Grid.Row="0" ColumnSpacing="12">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0" Text="{loc:Localize Key=Nav.Tools}"
+                                   Style="{ThemeResource TitleTextBlockStyle}"
+                                   VerticalAlignment="Center" />
+                        <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8"
+                                    VerticalAlignment="Center">
+                            <TextBlock Text="{loc:Localize Key=Tools.EnableAll}"
+                                       Style="{ThemeResource BodyTextBlockStyle}"
+                                       VerticalAlignment="Center" />
+                            <ToggleSwitch x:Name="EnableAllToolsSwitch"
+                                          OnContent="" OffContent="" MinWidth="0"
+                                          VerticalAlignment="Center"
+                                          AutomationProperties.Name="{loc:Localize Key=Tools.EnableAll}"
+                                          Toggled="EnableAllToolsSwitch_Toggled" />
+                        </StackPanel>
+                    </Grid>
 
                     <TextBlock Grid.Row="1"
                                Text="{loc:Localize Key=Tools.Hint}"
@@ -675,7 +648,7 @@
                                Foreground="{ThemeResource TextFillColorSecondaryBrush}"
                                TextWrapping="Wrap" />
 
-                    <!-- Two cards to a row, same shape as Home above. -->
+                    <!-- Two cards to a row. -->
                     <ScrollViewer Grid.Row="2" HorizontalContentAlignment="Stretch"
                                   VerticalScrollBarVisibility="Auto" Padding="0,0,4,0">
                         <Grid x:Name="ToolsList" ColumnSpacing="8" RowSpacing="8"
@@ -692,7 +665,7 @@
                 <!-- ==================== DOCUMENTATION ====================
                      What every built-in tool does and how to use it, grouped the same way the
                      catalog groups them (see ToolCatalog.ByCategory) so the order here matches
-                     Home, Tools and the Add-Tool gallery. Names and one-liners reuse each tool's
+                     Tools and the Add-Tool gallery. Names and one-liners reuse each tool's
                      existing NameKey/DescriptionKey rather than duplicating them; only the "how to
                      use it" paragraph per tool is new copy. -->
                 <ScrollViewer x:Name="DocumentationPanel" Visibility="Collapsed"
