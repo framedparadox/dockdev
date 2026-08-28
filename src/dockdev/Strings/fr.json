@@ -282,8 +282,6 @@
   "Settings.Theme": "Thème",
   "Settings.ThemeDesc": "Choisissez un thème clair ou sombre, ou suivez le réglage de Windows.",
   "Settings.Title": "Paramètres d'dockdev",
-  "Settings.Transpose": "Transposer",
-  "Settings.TransposeDesc": "Lorsque le dock est ancré au bord gauche ou droit, empile ses icônes verticalement. En haut, en bas et en flottant, il reste horizontal.",
   "Settings.Updates": "Rechercher les mises à jour",
   "Settings.UpdatesDesc": "Demander à GitHub si une version plus récente de dockdev est parue. Désactivé par défaut — c’est la seule chose que dockdev envoie sur le réseau, et rien n’est téléchargé ni installé à votre place.",
   "Shortcuts.NoneAssigned": "Aucun élément n'a encore de raccourci. Faites un clic droit sur une icône du dock et choisissez « Raccourci clavier » pour lui en donner un.",

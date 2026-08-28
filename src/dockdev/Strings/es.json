@@ -282,8 +282,6 @@
   "Settings.Theme": "Tema",
   "Settings.ThemeDesc": "Elige un aspecto claro u oscuro, o sigue la configuración de Windows.",
   "Settings.Title": "Configuración de dockdev",
-  "Settings.Transpose": "Transponer",
-  "Settings.TransposeDesc": "Cuando el dock está acoplado al borde izquierdo o derecho, apila sus iconos en vertical. Arriba, abajo y flotante siguen en horizontal.",
   "Settings.Updates": "Buscar actualizaciones",
   "Settings.UpdatesDesc": "Preguntar a GitHub si hay una versión más reciente de dockdev. Desactivado de forma predeterminada: es lo único que dockdev envía por la red, y nunca se descarga ni se instala nada por ti.",
   "Shortcuts.NoneAssigned": "Ningún elemento tiene atajo todavía. Haz clic derecho en un icono del dock y elige «Atajo de teclado» para darle uno.",

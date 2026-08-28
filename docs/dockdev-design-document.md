@@ -1366,8 +1366,7 @@ stable enough to audit.
     "freeX": null,
     "freeY": null,
     "autoHide": true,
-    "alwaysOnTop": true,
-    "verticalWhenSideSnapped": false
+    "alwaysOnTop": true
   },
   "launchAtStartup": false,
   "theme": "Dark",

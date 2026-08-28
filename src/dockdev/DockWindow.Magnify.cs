@@ -74,8 +74,15 @@ public sealed partial class DockWindow
             return;
         }
 
-        var p = e.GetCurrentPoint(ItemsHost).Position;
-        TrackStripPointer(IsVertical ? p.Y : p.X);
+        // Nothing on the ring yet (the empty-state pill is showing instead): nothing to track.
+        if (Items.Count == 0)
+            return;
+
+        // The cursor's position relative to the Canvas the ring is drawn on, turned into the same
+        // circumference coordinate LayoutRing placed every item at — TrackStripPointer's own walk
+        // is unchanged from the straight bar; only how the coordinate reaching it is derived is.
+        var p = e.GetCurrentPoint(Strip).Position;
+        TrackStripPointer(RingOffsetAt(p.X, p.Y) - _ringItemsStart);
     }
 
     private void Strip_PointerExited(object sender, PointerRoutedEventArgs e) => ResetStripPointer();
@@ -92,8 +99,8 @@ public sealed partial class DockWindow
     /// one, eases rather than snaps.
     /// </para>
     /// </summary>
-    /// <param name="coordinate">Cursor position along the strip's flow, in DIPs from the start of
-    /// the item host.</param>
+    /// <param name="coordinate">Cursor position along the ring's circumference, in DIPs, measured
+    /// from the start of the item group (see <c>DockWindow.RingOffsetAt</c>).</param>
     private void TrackStripPointer(double coordinate)
     {
         bool magnify = MagnifyActive;

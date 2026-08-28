@@ -282,8 +282,6 @@
   "Settings.Theme": "Design",
   "Settings.ThemeDesc": "Wählen Sie ein helles oder dunkles Design – oder folgen Sie der Windows-Einstellung.",
   "Settings.Title": "dockdev-Einstellungen",
-  "Settings.Transpose": "Transponieren",
-  "Settings.TransposeDesc": "Wenn das Dock am linken oder rechten Rand angedockt ist, werden die Symbole vertikal gestapelt. Oben, unten und schwebend bleibt es waagerecht.",
   "Settings.Updates": "Nach Updates suchen",
   "Settings.UpdatesDesc": "GitHub fragen, ob eine neuere Version von dockdev erschienen ist. Standardmäßig aus – es ist das Einzige, was dockdev je über das Netzwerk sendet, und nichts wird für dich heruntergeladen oder installiert.",
   "Shortcuts.NoneAssigned": "Noch hat kein Element eine Tastenkombination. Klicken Sie mit der rechten Maustaste auf ein Symbol im Dock und wählen Sie „Tastenkombination“.",

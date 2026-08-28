@@ -281,8 +281,6 @@
   "Settings.Theme": "Theme",
   "Settings.ThemeDesc": "Choose a light or dark look, or follow your Windows setting.",
   "Settings.Title": "dockdev Settings",
-  "Settings.Transpose": "Transpose",
-  "Settings.TransposeDesc": "When the dock is snapped to the left or right edge, stack its icons vertically. Top, bottom and floating stay horizontal.",
   "Settings.Updates": "Check for updates",
   "Settings.UpdatesDesc": "Ask GitHub whether a newer dockdev has been released. Off by default — it is the only thing dockdev ever sends over the network, and nothing is downloaded or installed for you.",
   "Shortcuts.NoneAssigned": "No item has a shortcut yet. Right-click an icon on the dock and choose “Shortcut” to give it one.",

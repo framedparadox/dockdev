@@ -50,13 +50,6 @@ public sealed class DockProfile
     public bool AlwaysOnTop { get; set; } = true;
 
     /// <summary>
-    /// When the dock is snapped to the <b>left or right</b> edge, arrange its icons vertically
-    /// instead of horizontally. Top/bottom snapping and floating always stay horizontal. Off by
-    /// default (the dock is horizontal everywhere).
-    /// </summary>
-    public bool VerticalWhenSideSnapped { get; set; }
-
-    /// <summary>
     /// Puts the settings (gear) button and its divider at the leading edge of the strip instead of
     /// the trailing one. Off by default — the gear trails the tools, matching where the Windows 11
     /// taskbar's own overflow/system tray sits.

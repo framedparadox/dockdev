@@ -282,8 +282,6 @@
   "Settings.Theme": "テーマ",
   "Settings.ThemeDesc": "ライトまたはダークを選ぶか、Windows の設定に合わせます。",
   "Settings.Title": "dockdev の設定",
-  "Settings.Transpose": "縦横の入れ替え",
-  "Settings.TransposeDesc": "左端または右端に固定しているとき、アイコンを縦に並べます。上端・下端・フローティングでは横並びのままです。",
   "Settings.Updates": "更新を確認",
   "Settings.UpdatesDesc": "新しい dockdev が公開されているか GitHub に問い合わせます。既定ではオフ — dockdev がネットワークに送信するのはこれだけで、ダウンロードやインストールが勝手に行われることはありません。",
   "Shortcuts.NoneAssigned": "ショートカットが割り当てられた項目はまだありません。ドックのアイコンを右クリックして「ショートカットキー」を選んでください。",

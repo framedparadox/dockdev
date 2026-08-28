@@ -14,8 +14,8 @@ namespace dockdev;
 
 /// <summary>
 /// One dock strip: the always-on, borderless glass window that holds the tool icons plus the
-/// settings gear. Owns window chrome and theming, the acrylic backdrop, the item layout
-/// (horizontal or, when side-snapped, vertical), drag-to-move / drag-to-reorder gestures, the
+/// settings gear, arranged around a circle (see <see cref="LayoutRing"/>). Owns window chrome and
+/// theming, the acrylic backdrop, the ring layout, drag-to-move / drag-to-reorder gestures, the
 /// per-item and background context menus, and its own placement. Snap + auto-hide behavior lives
 /// in the <see cref="DockWindow"/> partial in <c>DockWindow.AutoHide.cs</c>.
 /// <para>
@@ -399,11 +399,10 @@ public sealed partial class DockWindow : Window
     // constants, so a density change moves the gear cell and the divider with the items instead
     // of leaving the window sized for the old geometry.
     internal static double CellSize => DockMetrics.Cell;          // gear cell (taskbar-ish)
-    internal static double DividerLength => DockMetrics.DividerLength; // Divider long side
-    internal const double CellSpacing = 4;    // StackLayout + Strip Spacing
-    internal const double DividerWidth = 1;   // Divider Rectangle thickness (short side)
-    internal const double StripPadX = 8;      // DockStrip Padding (left/right)
-    internal const double StripPadY = 6;      // DockStrip Padding (top/bottom)
+    internal const double CellSpacing = 4;    // gap between adjacent slots on the ring
+    internal const double StripPadX = 8;      // DockStrip Padding (left/right) — empty-state pill
+    internal const double StripPadY = 6;      // DockStrip Padding (top/bottom) — empty-state pill
+    internal const double RingPad = 8;        // DockStrip Padding, uniform, once the dock is a ring
     internal const double AddNewWidth = 116;  // "+ Add New" empty-state pill: minimum width
 
     /// <summary>
@@ -432,26 +431,13 @@ public sealed partial class DockWindow : Window
     }
 
     /// <summary>
-    /// Moves the settings gear (and its divider) to the leading or trailing end of the strip per
-    /// <see cref="DockProfile.SettingsButtonAtStart"/>. The pair always travels together — a
-    /// divider with nothing on its far side would just be a stray line — and total strip length is
-    /// unchanged either way, so this never needs a relayout of its own.
+    /// Puts the settings gear (and its divider dot) at the leading or trailing end of the dock per
+    /// <see cref="DockProfile.SettingsButtonAtStart"/>. On the ring this is just which end of the
+    /// circumference the gear's slot claims — a number <see cref="LayoutRing"/> reads off the
+    /// profile directly on every relayout — rather than a Canvas child order to reshuffle the way
+    /// the old StackPanel's was, so all this needs to do is ask for one.
     /// </summary>
-    private void ApplySettingsButtonPosition()
-    {
-        Strip.Children.Remove(Divider);
-        Strip.Children.Remove(SettingsButton);
-        if (_profile.SettingsButtonAtStart)
-        {
-            Strip.Children.Insert(0, Divider);
-            Strip.Children.Insert(0, SettingsButton);
-        }
-        else
-        {
-            Strip.Children.Add(Divider);
-            Strip.Children.Add(SettingsButton);
-        }
-    }
+    private void ApplySettingsButtonPosition() => QueueRelayout();
 
     /// <summary>Flips the gear's position and persists the choice. Used by the dock's own
     /// right-click menu and by Settings ▸ Dock.</summary>
@@ -468,38 +454,6 @@ public sealed partial class DockWindow : Window
     // translated, and "Hinzufügen" or "डॉक में जोड़ें" is wider than the English "Add New" that
     // constant was sized for — a fixed width would clip them.
     private double _addNewWidth = AddNewWidth;
-
-    /// <summary>
-    /// True when the dock should lay out vertically: the "vertical when side-snapped" option is
-    /// on, the dock is snapped to the left or right edge, and it has at least one item (the
-    /// empty-state "+ Add New" pill is always horizontal). Top/bottom and floating stay horizontal.
-    /// </summary>
-    private bool IsVertical =>
-        _profile.VerticalWhenSideSnapped &&
-        _profile.Snapped &&
-        _profile.Edge is DockEdge.Left or DockEdge.Right &&
-        Items.Count > 0;
-
-    /// <summary>Flips the strip, the item layout and the divider between horizontal and vertical.</summary>
-    private void ApplyOrientation(bool vertical)
-    {
-        Strip.Orientation = vertical ? Orientation.Vertical : Orientation.Horizontal;
-        if (ItemsHost.Layout is StackLayout stack)
-            stack.Orientation = vertical ? Orientation.Vertical : Orientation.Horizontal;
-
-        // Cell sizes are per-item template bindings (a separator's slot is narrow along the flow
-        // and full-width across it), so the orientation has to reach the items themselves.
-        foreach (var item in Items)
-            item.SetFlowVertical(vertical);
-
-        // The divider is a thin line laid across the strip's flow, so its long/short sides swap
-        // with the orientation (a vertical bar between horizontal items, a horizontal bar between
-        // vertical items), and it's centered on the cross axis.
-        Divider.Width = vertical ? DividerLength : DividerWidth;
-        Divider.Height = vertical ? DividerWidth : DividerLength;
-        Divider.HorizontalAlignment = vertical ? HorizontalAlignment.Center : HorizontalAlignment.Stretch;
-        Divider.VerticalAlignment = vertical ? VerticalAlignment.Stretch : VerticalAlignment.Center;
-    }
 
     /// <summary>Shows the "+ Add New" pill (and hides the item strip) when the dock is empty.</summary>
     private void UpdateEmptyState()
@@ -528,17 +482,23 @@ public sealed partial class DockWindow : Window
         // that plagues "auto-size window to content" via ActualWidth.
         int n = Items.Count; // visible items
         bool empty = n == 0;
-        bool vertical = IsVertical; // false when empty
-        ApplyOrientation(vertical);
 
-        // Along the strip's flow: [items OR add-new] [gap] [divider] [gap] [gear cell].
-        // Across it: a single cell. Which of these is the window's width vs. height depends on
-        // whether the dock is laid out vertically. Cells are summed rather than multiplied out:
-        // they are not all the same size (a separator takes a narrow slot).
-        double coreMain = empty ? _addNewWidth : ItemsExtent() + (n - 1) * CellSpacing;
-        double contentMain = coreMain + CellSpacing + DividerWidth + CellSpacing + CellSize;
-        double dipW = vertical ? CellSize + 2 * StripPadX : contentMain + 2 * StripPadX;
-        double dipH = vertical ? contentMain + 2 * StripPadY : CellSize + 2 * StripPadY;
+        double dipW, dipH;
+        if (empty)
+        {
+            // Nothing to put on a ring yet: the empty-state pill stays the plain rounded bar the
+            // dock always showed here — [add-new pill] [gap] [divider] [gap] [gear cell] — since
+            // there is nothing to arrange around a circle until there is at least one item on it.
+            double contentMain = _addNewWidth + CellSpacing + DockMetrics.Dot + CellSpacing + CellSize;
+            dipW = contentMain + 2 * StripPadX;
+            dipH = CellSize + 2 * StripPadY;
+            LayoutEmptyStrip(contentMain);
+        }
+        else
+        {
+            // The ring is square: its bounding box is the same size on both axes.
+            dipW = dipH = LayoutRing(n);
+        }
 
         double scale = NativeMethods.GetDpiForWindow(_hwnd) / 96.0;
         int w = (int)Math.Ceiling(dipW * scale);
@@ -591,6 +551,145 @@ public sealed partial class DockWindow : Window
         foreach (var item in Items)
             total += item.CellExtent;
         return total;
+    }
+
+    // ---- Ring (circular) layout --------------------------------------------
+    //
+    // The straight bar this dock used to be summed every cell's extent along one axis into a
+    // "contentMain" length and sized the window to it. The ring uses exactly that same length,
+    // just bent into a circle: contentMain becomes the circumference, so items keep the same
+    // spacing they had on the bar instead of crowding together or spreading out. Items claim
+    // [0, coreItems) of it; the gap-dot-gap-gear group claims the rest, at the leading end when the
+    // gear is pinned to the start of the dock and the trailing end otherwise — matching the bar's
+    // own default of "the gear trails the tools".
+    //
+    // These four fields are the ring's geometry as of the last relayout, in DIPs, Strip-local (the
+    // Canvas's own top-left is (0,0)). Pointer tracking (DockWindow.Magnify.cs) and drag-reorder
+    // (UpdateItemReorder below) both read them back to turn a cursor position into the same
+    // circumference coordinate this method used to place the items in the first place, so hovering
+    // and dragging can never disagree with what is actually drawn.
+    private double _ringRadius;
+    private double _ringCircumference;
+    private double _ringItemsStart;
+    private Windows.Foundation.Point _ringCenter;
+
+    /// <summary>
+    /// Lays the visible items, the divider dot and the settings gear out around a circle sized so
+    /// adjacent cells keep the bar's own spacing, and returns the window's required diameter
+    /// (DIPs, square).
+    /// </summary>
+    private double LayoutRing(int n)
+    {
+        double coreItems = ItemsExtent() + (n - 1) * CellSpacing;
+        double gearGroup = CellSpacing + DockMetrics.Dot + CellSpacing + CellSize;
+        _ringCircumference = coreItems + gearGroup;
+        _ringRadius = _ringCircumference / (2 * Math.PI);
+        _ringItemsStart = _profile.SettingsButtonAtStart ? gearGroup : 0;
+
+        // The ring's outer edge has to clear the largest cell bleeding past the centre-line the
+        // items sit on (the gear/icon cells; a separator's dot sits well inside it), plus the
+        // dock's own padding.
+        double diameter = 2 * (_ringRadius + CellSize / 2) + 2 * RingPad;
+        double stripDiameter = diameter - 2 * RingPad;
+        _ringCenter = new Windows.Foundation.Point(stripDiameter / 2, stripDiameter / 2);
+
+        Strip.Width = stripDiameter;
+        Strip.Height = stripDiameter;
+        DockStrip.Padding = new Thickness(RingPad);
+        DockStrip.CornerRadius = new CornerRadius(diameter / 2);
+
+        // ItemsHost spans the whole ring square so its own centre is the ring's centre — the
+        // RadialLayout positions each cell straight in that coordinate space.
+        Canvas.SetLeft(ItemsHost, 0);
+        Canvas.SetTop(ItemsHost, 0);
+        ItemsHost.Width = stripDiameter;
+        ItemsHost.Height = stripDiameter;
+
+        var positions = new List<Windows.Foundation.Point>(n);
+        double edge = 0;
+        foreach (var item in Items)
+        {
+            var (x, y) = RingPoint(_ringItemsStart + edge + item.CellExtent / 2);
+            positions.Add(new Windows.Foundation.Point(x - item.CellWidth / 2, y - item.CellHeight / 2));
+            edge += item.CellExtent + CellSpacing;
+        }
+        ItemsRadialLayout.SetGeometry(positions, new Windows.Foundation.Size(stripDiameter, stripDiameter));
+
+        double gearCenter = _profile.SettingsButtonAtStart ? CellSize / 2 : _ringCircumference - CellSize / 2;
+        double dividerCenter = _profile.SettingsButtonAtStart
+            ? CellSize + CellSpacing + DockMetrics.Dot / 2
+            : coreItems + CellSpacing + DockMetrics.Dot / 2;
+        PlaceOnRing(SettingsButton, gearCenter, CellSize, CellSize);
+        PlaceOnRing(Divider, dividerCenter, DockMetrics.Dot, DockMetrics.Dot);
+
+        return diameter;
+    }
+
+    /// <summary>
+    /// Lays the empty-state "+ Add New" pill, the divider dot and the gear out in the plain
+    /// rounded bar the dock always showed here — there is nothing yet to arrange around a ring.
+    /// </summary>
+    private void LayoutEmptyStrip(double contentMain)
+    {
+        Strip.Width = contentMain;
+        Strip.Height = CellSize;
+        DockStrip.Padding = new Thickness(StripPadX, StripPadY, StripPadX, StripPadY);
+        DockStrip.CornerRadius = new CornerRadius(10);
+
+        double x = 0;
+        void Place(FrameworkElement el, double width, double height)
+        {
+            el.Width = width;
+            el.Height = height;
+            Canvas.SetLeft(el, x);
+            Canvas.SetTop(el, (CellSize - height) / 2);
+            x += width + CellSpacing;
+        }
+
+        if (_profile.SettingsButtonAtStart)
+        {
+            Place(SettingsButton, CellSize, CellSize);
+            Place(Divider, DockMetrics.Dot, DockMetrics.Dot);
+            Place(AddNewButton, _addNewWidth, CellSize);
+        }
+        else
+        {
+            Place(AddNewButton, _addNewWidth, CellSize);
+            Place(Divider, DockMetrics.Dot, DockMetrics.Dot);
+            Place(SettingsButton, CellSize, CellSize);
+        }
+    }
+
+    /// <summary>The point on the ring (Strip-local DIPs) at <paramref name="circumferenceOffset"/>
+    /// along it, measured clockwise from the top — the same convention <see cref="RingOffsetAt"/>
+    /// inverts for pointer tracking and drag-reorder.</summary>
+    private (double X, double Y) RingPoint(double circumferenceOffset)
+    {
+        double theta = circumferenceOffset / _ringCircumference * 2 * Math.PI;
+        return (
+            _ringCenter.X + _ringRadius * Math.Sin(theta),
+            _ringCenter.Y - _ringRadius * Math.Cos(theta));
+    }
+
+    /// <summary>The circumference coordinate of the point at <paramref name="localX"/>/
+    /// <paramref name="localY"/> (Strip-local DIPs) — the angle from the ring's centre, clockwise
+    /// from the top, scaled back into the same units <see cref="RingPoint"/> placed everything
+    /// in.</summary>
+    private double RingOffsetAt(double localX, double localY)
+    {
+        double theta = Math.Atan2(localX - _ringCenter.X, _ringCenter.Y - localY);
+        if (theta < 0)
+            theta += 2 * Math.PI;
+        return theta / (2 * Math.PI) * _ringCircumference;
+    }
+
+    private void PlaceOnRing(FrameworkElement el, double circumferenceOffset, double width, double height)
+    {
+        var (x, y) = RingPoint(circumferenceOffset);
+        el.Width = width;
+        el.Height = height;
+        Canvas.SetLeft(el, x - width / 2);
+        Canvas.SetTop(el, y - height / 2);
     }
 
     // Along-edge coordinates derived from the stored placement, clamped to the work area.
@@ -876,13 +975,6 @@ public sealed partial class DockWindow : Window
         ApplyTopmost();
     }
 
-    public void SetVerticalWhenSideSnapped(bool on)
-    {
-        _profile.VerticalWhenSideSnapped = on;
-        SaveConfig();
-        QueueRelayout(); // re-orient (and re-size) if the dock is currently snapped to a side
-    }
-
     // ---- Theme ------------------------------------------------------------
 
     /// <summary>
@@ -1036,9 +1128,10 @@ public sealed partial class DockWindow : Window
     private NativeMethods.POINT _dragStartCursor;
     private PointInt32 _dragStartWindow;
     private ToolDockItem? _reorderItem; // non-null while a press started on an item
-    private double _reorderOriginPx; // screen px of the item host's leading edge along the flow axis
-    private double _reorderScale;    // physical px per DIP, captured at gesture start
-    private bool _reorderVertical;   // captured at gesture start so mid-drag stays consistent
+    private Windows.Foundation.Point _reorderCenterPx; // screen px of the ring's centre, captured at gesture start
+    private double _reorderScale;         // physical px per DIP, captured at gesture start
+    private double _reorderCircumference; // ring circumference (DIPs), captured at gesture start
+    private double _reorderItemsStart;    // where the item group begins on it, captured at gesture start
     private const int DragThreshold = 12;
 
     private void Dock_PointerPressed(object sender, PointerRoutedEventArgs e)
@@ -1150,16 +1243,18 @@ public sealed partial class DockWindow : Window
 
     private void BeginItemReorder()
     {
-        // The window is stationary during a reorder, so the strip's screen geometry is fixed:
-        // capture the item host's leading edge and the DPI scale once. When the dock is vertical
-        // the items flow down the Y axis, so track Y instead of X.
-        _reorderVertical = IsVertical;
+        // The window is stationary during a reorder, so the ring's screen geometry is fixed:
+        // capture its centre and the DPI scale once, alongside the same circumference numbers
+        // LayoutRing last placed everything with.
         _reorderScale = NativeMethods.GetDpiForWindow(_hwnd) / 96.0;
-        var origin = ItemsHost.TransformToVisual(RootGrid)
-            .TransformPoint(new Windows.Foundation.Point(0, 0));
-        _reorderOriginPx = _reorderVertical
-            ? _appWindow.Position.Y + origin.Y * _reorderScale
-            : _appWindow.Position.X + origin.X * _reorderScale;
+        _reorderCircumference = _ringCircumference;
+        _reorderItemsStart = _ringItemsStart;
+
+        var centerInRoot = Strip.TransformToVisual(RootGrid)
+            .TransformPoint(_ringCenter);
+        _reorderCenterPx = new Windows.Foundation.Point(
+            _appWindow.Position.X + centerInRoot.X * _reorderScale,
+            _appWindow.Position.Y + centerInRoot.Y * _reorderScale);
     }
 
     /// <summary>
@@ -1173,15 +1268,22 @@ public sealed partial class DockWindow : Window
     private void UpdateItemReorder(int cursorScreenX, int cursorScreenY)
     {
         int count = Items.Count;
-        if (count < 2 || _reorderItem is null || _reorderScale <= 0)
+        if (count < 2 || _reorderItem is null || _reorderScale <= 0 || _reorderCircumference <= 0)
             return;
 
         int from = Items.IndexOf(_reorderItem);
         if (from < 0)
             return;
 
-        double coord = _reorderVertical ? cursorScreenY : cursorScreenX;
-        double rel = (coord - _reorderOriginPx) / _reorderScale; // back into DIPs
+        // The cursor's angle around the ring's centre, back into a circumference coordinate and
+        // then into the item group's own — the same transform LayoutRing used to place the items
+        // in the first place, so a slot found here is the slot the cursor actually looks to be over.
+        double dx = (cursorScreenX - _reorderCenterPx.X) / _reorderScale;
+        double dy = (cursorScreenY - _reorderCenterPx.Y) / _reorderScale;
+        double theta = Math.Atan2(dx, -dy);
+        if (theta < 0)
+            theta += 2 * Math.PI;
+        double rel = theta / (2 * Math.PI) * _reorderCircumference - _reorderItemsStart;
 
         int target = 0;
         double edge = 0;

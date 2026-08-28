@@ -5,6 +5,7 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:models="using:dockdev.Models"
     xmlns:loc="using:dockdev.Localization"
+    xmlns:controls="using:dockdev.Controls"
     xmlns:muxc="using:Microsoft.UI.Xaml.Controls">
 
     <!-- The window itself is the glass: the acrylic backdrop paints this whole surface
@@ -79,15 +80,18 @@
         <Border x:Name="DockStrip"
                 HorizontalAlignment="Center"
                 VerticalAlignment="Center"
-                Background="Transparent"
-                CornerRadius="10"
-                Padding="8,6">
+                Background="Transparent">
 
-            <StackPanel x:Name="Strip"
-                        Orientation="Horizontal"
-                        Spacing="4"
-                        VerticalAlignment="Center"
-                        XYFocusKeyboardNavigation="Enabled">
+            <!-- A plain Canvas rather than a StackPanel: the strip is a ring, not a bar, so every
+                 child (the items, the divider dot, the settings gear, the empty-state pill) sits
+                 at an absolute point on it instead of flowing left-to-right. DockWindow computes
+                 those points itself (see UpdateSizeAndPosition / LayoutRing) and sets this
+                 Canvas's own Width/Height alongside them, to whichever bounding square the current
+                 layout — the ring, or, empty, the "+ Add New" pill — needs. DockStrip's
+                 CornerRadius and Padding are set in code for the same reason: a circle's radius is
+                 the whole point and depends on how many items are on it. -->
+            <Canvas x:Name="Strip"
+                    XYFocusKeyboardNavigation="Enabled">
 
                 <!-- Empty-state affordance: when the dock has no (visible) items this "+ Add New"
                      pill is shown in their place. Clicking it opens the Add-to-Dock window. -->
@@ -116,23 +120,27 @@
                 <muxc:ItemsRepeater x:Name="ItemsHost"
                                     AutomationProperties.AutomationId="dockdevDockItems">
                     <muxc:ItemsRepeater.Layout>
-                        <muxc:StackLayout Orientation="Horizontal" Spacing="4" />
+                        <!-- Places each cell at a point on the dock's ring instead of in a line —
+                             DockWindow computes every item's point (see LayoutRing) and hands them
+                             to this layout each time the ring's geometry changes. -->
+                        <controls:RadialLayout x:Name="ItemsRadialLayout" />
                     </muxc:ItemsRepeater.Layout>
 
                     <!-- One template for every kind. A launchable item renders as a real Button:
                          keyboard-focusable, Space/Enter invoke, focus visuals, hover/pressed
                          states, and an Invoke automation pattern come from the platform for free.
-                         A Separator renders the hairline instead and hides the button, rather than
+                         A Separator renders a small dot instead and hides the button, rather than
                          living in a second template — the cell Grid, its Tag (which is how the
                          drag/reorder and context-menu code finds the item) and the context-menu
                          wiring are then identical for both, and only the visual differs.
 
                          The cell's own size comes from the item (CellWidth / CellHeight) because a
-                         separator's slot is much narrower than an icon's, and which axis is the
-                         narrow one flips with the strip's orientation.
+                         separator's slot is much narrower than an icon's — both dimensions, since a
+                         point on a ring has no separate "along the flow" and "across it" axes the
+                         way the old straight bar did.
 
                          AutomationProperties.Name is what Narrator announces; the icon visuals and
-                         the (decorative) separator line are marked Raw so they are not announced
+                         the (decorative) separator dot are marked Raw so they are not announced
                          separately. -->
                     <muxc:ItemsRepeater.ItemTemplate>
                         <DataTemplate x:DataType="models:ToolDockItem">
@@ -222,30 +230,31 @@
                                         IsHitTestVisible="False"
                                         AutomationProperties.AccessibilityView="Raw" />
 
-                                <!-- Separator: the same hairline treatment as the gear divider
-                                     below, so a user-placed divider and the built-in one read as
-                                     one design rather than two. -->
-                                <Rectangle Visibility="{x:Bind SeparatorVisibility}"
-                                           Width="{x:Bind SeparatorLineWidth, Mode=OneWay}"
-                                           Height="{x:Bind SeparatorLineHeight, Mode=OneWay}"
-                                           HorizontalAlignment="Center"
-                                           VerticalAlignment="Center"
-                                           Fill="{ThemeResource TextFillColorPrimaryBrush}"
-                                           Opacity="0.15"
-                                           AutomationProperties.AccessibilityView="Raw" />
+                                <!-- Separator: a small dot — the same treatment as the gear
+                                     divider below, so a user-placed divider and the built-in one
+                                     read as one design rather than two. Round rather than a
+                                     hairline because a point on the ring has no "across the flow"
+                                     direction for a line to lie across. -->
+                                <Ellipse Visibility="{x:Bind SeparatorVisibility}"
+                                         Width="{x:Bind DotSize, Mode=OneWay}"
+                                         Height="{x:Bind DotSize, Mode=OneWay}"
+                                         HorizontalAlignment="Center"
+                                         VerticalAlignment="Center"
+                                         Fill="{ThemeResource TextFillColorPrimaryBrush}"
+                                         Opacity="0.35"
+                                         AutomationProperties.AccessibilityView="Raw" />
                             </Grid>
                         </DataTemplate>
                     </muxc:ItemsRepeater.ItemTemplate>
                 </muxc:ItemsRepeater>
 
-                <!-- Divider between user items and the settings button (decorative:
-                     hidden from assistive technology). -->
-                <Rectangle x:Name="Divider"
-                           Width="1"
-                           Height="24"
-                           Fill="{ThemeResource TextFillColorPrimaryBrush}"
-                           Opacity="0.15"
-                           AutomationProperties.AccessibilityView="Raw" />
+                <!-- Divider between user items and the settings button (decorative: hidden from
+                     assistive technology). A dot, like a user-placed separator — its Width/Height
+                     and its position on the ring are set in code (see LayoutRing / LayoutEmptyStrip). -->
+                <Ellipse x:Name="Divider"
+                         Fill="{ThemeResource TextFillColorPrimaryBrush}"
+                         Opacity="0.35"
+                         AutomationProperties.AccessibilityView="Raw" />
 
                 <!-- Settings (gear) button -->
                 <!-- Width/Height/FontSize are set from DockMetrics in code (see ApplyMetrics):
@@ -267,7 +276,7 @@
                               Foreground="{ThemeResource TextFillColorPrimaryBrush}"
                               AutomationProperties.AccessibilityView="Raw" />
                 </Button>
-            </StackPanel>
+            </Canvas>
         </Border>
 
         <!-- Hidden-state notch. When the dock is snapped and auto-hidden it slides off the

@@ -198,14 +198,24 @@ public sealed class ToolDockItem : INotifyPropertyChanged
          !string.Equals(DisplayName, ToolCatalog.Get(Kind)?.DisplayName, StringComparison.Ordinal));
 
     /// <summary>
-    /// How much room this item takes along the strip's flow, in DIPs. A separator is a thin
-    /// divider rather than a launchable cell, so it gets a much narrower slot than the
+    /// How much room this item takes along the ring's circumference, in DIPs. A separator is a
+    /// thin divider rather than a launchable cell, so it gets a much narrower arc than the
     /// taskbar-sized icons around it. Used both to size the dock window and to map a drag
     /// position onto a slot while reordering, so the two can never disagree about where a cell
     /// starts.
     /// </summary>
     [JsonIgnore]
     public double CellExtent => IsSeparator ? DockMetrics.SeparatorExtent : DockMetrics.Cell;
+
+    /// <summary>
+    /// This item's square slot on the ring — the arc it consumes, in both directions, since a
+    /// ring has no separate "along the flow" and "across it" axes the way a straight bar did.
+    /// </summary>
+    [JsonIgnore]
+    public double CellWidth => CellExtent;
+
+    [JsonIgnore]
+    public double CellHeight => CellExtent;
 
     /// <summary>The rounded corner on this cell's hover/press chrome.</summary>
     [JsonIgnore]
@@ -288,51 +298,21 @@ public sealed class ToolDockItem : INotifyPropertyChanged
         OnPropertyChanged(nameof(RenderGlyphSize));
         OnPropertyChanged(nameof(RenderGlyphSizeScaled));
         OnPropertyChanged(nameof(IndicatorLength));
-        OnPropertyChanged(nameof(SeparatorLineWidth));
-        OnPropertyChanged(nameof(SeparatorLineHeight));
+        OnPropertyChanged(nameof(DotSize));
     }
 
     /// <summary>The launch button is shown for everything except a separator.</summary>
     [JsonIgnore]
     public Visibility ButtonVisibility => IsSeparator ? Visibility.Collapsed : Visibility.Visible;
 
-    /// <summary>The thin divider line is shown only for a separator.</summary>
+    /// <summary>The divider dot is shown only for a separator.</summary>
     [JsonIgnore]
     public Visibility SeparatorVisibility => IsSeparator ? Visibility.Visible : Visibility.Collapsed;
 
-    // Whether the strip currently flows top-to-bottom rather than left-to-right. Orientation is
-    // a dock-wide property, but the cell sizes below are per-item template bindings, so the dock
-    // pushes it down onto every item rather than the template reaching back up for it.
-    private bool _flowVertical;
-
-    /// <summary>Re-orients this item's cell. No-op when the orientation is unchanged.</summary>
-    public void SetFlowVertical(bool vertical)
-    {
-        if (_flowVertical == vertical)
-            return;
-        _flowVertical = vertical;
-        OnPropertyChanged(nameof(CellWidth));
-        OnPropertyChanged(nameof(CellHeight));
-        OnPropertyChanged(nameof(SeparatorLineWidth));
-        OnPropertyChanged(nameof(SeparatorLineHeight));
-    }
-
-    /// <summary>Cell width: the narrow side only when a separator sits in a horizontal strip.</summary>
+    /// <summary>The dot drawn for a separator on the ring — round rather than a hairline, since a
+    /// ring position has no "across the flow" direction for a line to lie across.</summary>
     [JsonIgnore]
-    public double CellWidth =>
-        IsSeparator && !_flowVertical ? DockMetrics.SeparatorExtent : DockMetrics.Cell;
-
-    /// <summary>Cell height: the narrow side only when a separator sits in a vertical strip.</summary>
-    [JsonIgnore]
-    public double CellHeight =>
-        IsSeparator && _flowVertical ? DockMetrics.SeparatorExtent : DockMetrics.Cell;
-
-    /// <summary>A separator's hairline lies across the flow, so its sides swap with orientation.</summary>
-    [JsonIgnore]
-    public double SeparatorLineWidth => _flowVertical ? DockMetrics.DividerLength : 1;
-
-    [JsonIgnore]
-    public double SeparatorLineHeight => _flowVertical ? 1 : DockMetrics.DividerLength;
+    public double DotSize => DockMetrics.Dot;
 
     public event PropertyChangedEventHandler? PropertyChanged;
 

@@ -282,8 +282,6 @@
   "Settings.Theme": "主题",
   "Settings.ThemeDesc": "选择浅色或深色外观，或跟随 Windows 设置。",
   "Settings.Title": "dockdev 设置",
-  "Settings.Transpose": "转置",
-  "Settings.TransposeDesc": "贴靠到左边缘或右边缘时，图标改为纵向排列。上、下和浮动时仍为横向。",
   "Settings.Updates": "检查更新",
   "Settings.UpdatesDesc": "向 GitHub 查询是否发布了更新版本的 dockdev。默认关闭——这是 dockdev 唯一一处联网行为，而且从不替你下载或安装任何东西。",
   "Shortcuts.NoneAssigned": "还没有项目设置快捷键。右键点击程序坞上的图标并选择“键盘快捷键”即可设置。",

@@ -855,11 +855,6 @@ public sealed partial class SettingsWindow : Window
         panel.Children.Add(Row(Loc.Get("Settings.Position"), Loc.Get("Settings.PositionDesc"), edges));
 
         panel.Children.Add(Row(
-            Loc.Get("Settings.Transpose"), Loc.Get("Settings.TransposeDesc"),
-            Switch(profile.VerticalWhenSideSnapped, Loc.Get("Settings.Transpose"),
-                on => dock?.SetVerticalWhenSideSnapped(on))));
-
-        panel.Children.Add(Row(
             Loc.Get("Settings.AutoHide"), Loc.Get("Settings.AutoHideDesc"),
             Switch(profile.AutoHide, Loc.Get("Settings.AutoHide"), on => dock?.SetAutoHide(on))));
 

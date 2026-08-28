@@ -70,12 +70,14 @@ public static class DockMetrics
         _ => 13,
     };
 
-    /// <summary>The length of a hairline drawn across the strip (a separator, or the gear divider).</summary>
-    public static double DividerLength => Density switch
+    /// <summary>The small dot drawn on the ring for a user-placed separator or for the built-in
+    /// divider ahead of the settings gear — the circular dock's equivalent of the straight bar's
+    /// hairline, sized so it reads as a divider rather than a stray dot at every density.</summary>
+    public static double Dot => Density switch
     {
-        DockDensity.Small => 18,
-        DockDensity.Large => 32,
-        _ => 24,
+        DockDensity.Small => 5,
+        DockDensity.Large => 8,
+        _ => 6,
     };
 
     /// <summary>The running-app indicator under an open app's icon.</summary>
