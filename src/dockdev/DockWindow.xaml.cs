@@ -401,8 +401,8 @@ public sealed partial class DockWindow : Window
     internal static double CellSize => DockMetrics.Cell;          // gear cell (taskbar-ish)
     internal const double CellSpacing = 4;    // gap between adjacent slots on the ring
     internal const double StripPadX = 8;      // DockStrip Padding (left/right) — empty-state pill
-    internal const double StripPadY = 6;      // DockStrip Padding (top/bottom) — empty-state pill
-    internal const double RingPad = 8;        // DockStrip Padding, uniform, once the dock is a ring
+    internal const double StripPadY = 6;      // DockStrip Padding (top/bottom) — empty-state pill;
+                                               // also half the ring's radial thickness (see LayoutRing)
     internal const double AddNewWidth = 116;  // "+ Add New" empty-state pill: minimum width
 
     /// <summary>
@@ -540,6 +540,16 @@ public sealed partial class DockWindow : Window
         _shownRect = new RectInt32(x, y, w, h);
         _work = work;
         _appWindow.MoveAndResize(_shownRect);
+
+        // Cut the window down to the ring's actual silhouette (or back to the plain rectangle for
+        // the empty-state pill) now that it is sized and placed. w is the physical diameter in the
+        // ring case (dipW == dipH there), and _ringInnerRadius is DIPs from the same LayoutRing
+        // call that produced it, so the two are always in step.
+        if (empty)
+            WindowChrome.ClearCustomRegion(_hwnd);
+        else
+            WindowChrome.SetAnnularRegion(_hwnd, w, (int)Math.Round(_ringInnerRadius * scale));
+
         ApplyTopmost();
         OnRelayoutApplied();
     }
@@ -555,20 +565,27 @@ public sealed partial class DockWindow : Window
 
     // ---- Ring (circular) layout --------------------------------------------
     //
-    // The straight bar this dock used to be summed every cell's extent along one axis into a
-    // "contentMain" length and sized the window to it. The ring uses exactly that same length,
-    // just bent into a circle: contentMain becomes the circumference, so items keep the same
-    // spacing they had on the bar instead of crowding together or spreading out. Items claim
-    // [0, coreItems) of it; the gap-dot-gap-gear group claims the rest, at the leading end when the
-    // gear is pinned to the start of the dock and the trailing end otherwise — matching the bar's
-    // own default of "the gear trails the tools".
+    // Literally the straight bar bent into a circle, not a disc with icons scattered on it. The
+    // bar's own height — CellSize plus its top/bottom padding, exactly what the floating dock is
+    // tall (see the empty-state dipH below) — becomes the ring's radial thickness: a point that
+    // used to sit somewhere between the bar's top and bottom edge now sits the same distance
+    // between the ring's inner and outer edge. And the bar summed every cell's extent along its
+    // one axis into a "contentMain" length to size the window; the ring uses exactly that same
+    // length, bent into a circumference, so items keep the same spacing they had on the bar
+    // instead of crowding together or spreading out. Items claim [0, coreItems) of it; the
+    // gap-dot-gap-gear group claims the rest, at the leading end when the gear is pinned to the
+    // start of the dock and the trailing end otherwise — matching the bar's own default of "the
+    // gear trails the tools".
     //
-    // These four fields are the ring's geometry as of the last relayout, in DIPs, Strip-local (the
+    // These fields are the ring's geometry as of the last relayout, in DIPs, Strip-local (the
     // Canvas's own top-left is (0,0)). Pointer tracking (DockWindow.Magnify.cs) and drag-reorder
     // (UpdateItemReorder below) both read them back to turn a cursor position into the same
     // circumference coordinate this method used to place the items in the first place, so hovering
-    // and dragging can never disagree with what is actually drawn.
-    private double _ringRadius;
+    // and dragging can never disagree with what is actually drawn; UpdateSizeAndPosition reads
+    // _ringInnerRadius to cut the window down to the ring's actual silhouette (see
+    // WindowChrome.SetAnnularRegion) once it has resized to this method's returned diameter.
+    private double _ringRadius;       // where item/gear/divider CENTRES sit — the bar's old centreline
+    private double _ringInnerRadius;  // the hole's edge
     private double _ringCircumference;
     private double _ringItemsStart;
     private Windows.Foundation.Point _ringCenter;
@@ -576,7 +593,7 @@ public sealed partial class DockWindow : Window
     /// <summary>
     /// Lays the visible items, the divider dot and the settings gear out around a circle sized so
     /// adjacent cells keep the bar's own spacing, and returns the window's required diameter
-    /// (DIPs, square).
+    /// (DIPs, square) — the ring's outer edge, touching all four sides of that square.
     /// </summary>
     private double LayoutRing(int n)
     {
@@ -586,24 +603,33 @@ public sealed partial class DockWindow : Window
         _ringRadius = _ringCircumference / (2 * Math.PI);
         _ringItemsStart = _profile.SettingsButtonAtStart ? gearGroup : 0;
 
-        // The ring's outer edge has to clear the largest cell bleeding past the centre-line the
-        // items sit on (the gear/icon cells; a separator's dot sits well inside it), plus the
-        // dock's own padding.
-        double diameter = 2 * (_ringRadius + CellSize / 2) + 2 * RingPad;
-        double stripDiameter = diameter - 2 * RingPad;
-        _ringCenter = new Windows.Foundation.Point(stripDiameter / 2, stripDiameter / 2);
+        // The bar's own height, unbent: the cell plus its top/bottom padding. Half of it sits
+        // outside the centreline, half inside — the ring's radial thickness is exactly this, same
+        // as the bar's was vertically. Clamped so a ring too small to hold a real hole (very few
+        // items) degrades to a filled disc rather than an inner radius going negative.
+        double barHeight = CellSize + 2 * StripPadY;
+        double outerRadius = _ringRadius + barHeight / 2;
+        _ringInnerRadius = Math.Max(0, _ringRadius - barHeight / 2);
+        double diameter = 2 * outerRadius;
 
-        Strip.Width = stripDiameter;
-        Strip.Height = stripDiameter;
-        DockStrip.Padding = new Thickness(RingPad);
-        DockStrip.CornerRadius = new CornerRadius(diameter / 2);
+        _ringCenter = new Windows.Foundation.Point(diameter / 2, diameter / 2);
+
+        Strip.Width = diameter;
+        Strip.Height = diameter;
+        // Undo LayoutEmptyStrip's padding/corner-radius, which is otherwise still sitting on
+        // DockStrip from the last time the dock was empty: unlike the ring, whose shape comes from
+        // WindowChrome.SetAnnularRegion, DockStrip here is just a plain container the size of the
+        // ring square, and stale padding would puff it out larger than the window that now fits it
+        // exactly, clipping or off-centring everything inside.
+        DockStrip.Padding = new Thickness(0);
+        DockStrip.CornerRadius = new CornerRadius(0);
 
         // ItemsHost spans the whole ring square so its own centre is the ring's centre — the
         // RadialLayout positions each cell straight in that coordinate space.
         Canvas.SetLeft(ItemsHost, 0);
         Canvas.SetTop(ItemsHost, 0);
-        ItemsHost.Width = stripDiameter;
-        ItemsHost.Height = stripDiameter;
+        ItemsHost.Width = diameter;
+        ItemsHost.Height = diameter;
 
         var positions = new List<Windows.Foundation.Point>(n);
         double edge = 0;
@@ -613,7 +639,7 @@ public sealed partial class DockWindow : Window
             positions.Add(new Windows.Foundation.Point(x - item.CellWidth / 2, y - item.CellHeight / 2));
             edge += item.CellExtent + CellSpacing;
         }
-        ItemsRadialLayout.SetGeometry(positions, new Windows.Foundation.Size(stripDiameter, stripDiameter));
+        ItemsRadialLayout.SetGeometry(positions, new Windows.Foundation.Size(diameter, diameter));
 
         double gearCenter = _profile.SettingsButtonAtStart ? CellSize / 2 : _ringCircumference - CellSize / 2;
         double dividerCenter = _profile.SettingsButtonAtStart

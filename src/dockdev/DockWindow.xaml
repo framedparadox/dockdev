@@ -87,9 +87,15 @@
                  at an absolute point on it instead of flowing left-to-right. DockWindow computes
                  those points itself (see UpdateSizeAndPosition / LayoutRing) and sets this
                  Canvas's own Width/Height alongside them, to whichever bounding square the current
-                 layout — the ring, or, empty, the "+ Add New" pill — needs. DockStrip's
-                 CornerRadius and Padding are set in code for the same reason: a circle's radius is
-                 the whole point and depends on how many items are on it. -->
+                 layout — the ring, or, empty, the "+ Add New" pill — needs.
+
+                 The ring's actual silhouette — the hole in its middle — is NOT drawn here: a
+                 Border can only clip to a rounded rectangle, not a shape with a hole in it. It
+                 comes instead from clipping the WINDOW itself to an annulus region
+                 (WindowChrome.SetAnnularRegion), which is also why hovering or clicking in that
+                 hole reaches whatever is behind the dock rather than the dock. DockStrip's own
+                 CornerRadius/Padding only matter for the empty-state pill, which is a plain
+                 rounded bar with no hole to cut. -->
             <Canvas x:Name="Strip"
                     XYFocusKeyboardNavigation="Enabled">
 

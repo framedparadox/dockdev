@@ -247,6 +247,39 @@ public static class WindowChrome
             NativeMethods.SWP_FRAMECHANGED);
     }
 
+    /// <summary>
+    /// Shapes the window to a ring: physical pixels, a circle of <paramref name="diameterPx"/>
+    /// (exactly the window's own size, so the outer edge touches all four sides) with a
+    /// concentric hole of <paramref name="innerRadiusPx"/> cut out of its centre. Called on every
+    /// relayout while the dock has at least one item; <see cref="ClearCustomRegion"/> undoes it
+    /// for the empty-state pill.
+    /// <para>
+    /// The two elliptic regions used to build the difference are temporaries and always freed:
+    /// <paramref name="innerRadiusPx"/>'s region unconditionally, and the outer/result one only if
+    /// <c>SetWindowRgn</c> itself fails — on success the window takes ownership of it and frees it
+    /// itself (the next call, or window destruction), so deleting it here too would be a
+    /// use-after-free on a handle Windows may already have reassigned.
+    /// </para>
+    /// </summary>
+    public static void SetAnnularRegion(nint hwnd, int diameterPx, int innerRadiusPx)
+    {
+        nint outer = NativeMethods.CreateEllipticRgn(0, 0, diameterPx, diameterPx);
+        int center = diameterPx / 2;
+        nint inner = NativeMethods.CreateEllipticRgn(
+            center - innerRadiusPx, center - innerRadiusPx,
+            center + innerRadiusPx, center + innerRadiusPx);
+
+        NativeMethods.CombineRgn(outer, outer, inner, NativeMethods.RGN_DIFF);
+        NativeMethods.DeleteObject(inner);
+
+        if (NativeMethods.SetWindowRgn(hwnd, outer, true) == 0)
+            NativeMethods.DeleteObject(outer);
+    }
+
+    /// <summary>Undoes <see cref="SetAnnularRegion"/>: the window goes back to its plain
+    /// rectangular shape (with <see cref="SetRoundedCorners"/>'s small DWM corner rounding).</summary>
+    public static void ClearCustomRegion(nint hwnd) => NativeMethods.SetWindowRgn(hwnd, 0, true);
+
     /// <summary>Re-asserts top-most Z-order without stealing activation.</summary>
     public static void EnsureTopmost(nint hwnd)
     {

@@ -90,6 +90,30 @@ internal static partial class NativeMethods
     [LibraryImport("user32.dll")]
     public static partial short GetAsyncKeyState(int vKey);
 
+    // ---- Window region shaping (circular dock) -----------------------------
+    //
+    // The ring isn't a round background painted inside a square window — the window itself is
+    // clipped to the ring's silhouette, with a classic GDI region. That's what makes the hole in
+    // the middle (and the square's four corners) genuinely absent rather than merely transparent:
+    // DWM neither paints nor hit-tests outside a window's region, so a click there falls straight
+    // through to whatever is underneath, same as clicking bare desktop.
+
+    [LibraryImport("gdi32.dll")]
+    public static partial nint CreateEllipticRgn(int left, int top, int right, int bottom);
+
+    /// <summary>CombineRgn mode: destination = (first source) minus (second source).</summary>
+    public const int RGN_DIFF = 4;
+
+    [LibraryImport("gdi32.dll")]
+    public static partial int CombineRgn(nint dest, nint src1, nint src2, int mode);
+
+    [LibraryImport("user32.dll")]
+    public static partial int SetWindowRgn(nint hwnd, nint region, [MarshalAs(UnmanagedType.Bool)] bool redraw);
+
+    [LibraryImport("gdi32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static partial bool DeleteObject(nint gdiObject);
+
     // ---- Icon handle cleanup ----------------------------------------------
     //
     // dockdev extracts no shell icons: every tool's look is a bundled Segoe Fluent glyph resolved
