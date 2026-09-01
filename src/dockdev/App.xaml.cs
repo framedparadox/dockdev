@@ -6,9 +6,10 @@ namespace dockdev;
 
 /// <summary>
 /// Application entry point. Creates the <see cref="dockdevManager"/> (which in turn creates a window
-/// per configured dock), enforces one dockdev per config (a second launch exits quietly), and
-/// routes otherwise-unhandled exceptions to the diagnostic log so a crash leaves a trace instead
-/// of vanishing silently.
+/// per configured dock), enforces one dockdev per config (a second launch exits quietly), owns the
+/// process lifetime (see the constructor: the event loop outlives every window, and only
+/// <see cref="dockdevManager.Quit"/> ends it), and routes otherwise-unhandled exceptions to the
+/// diagnostic log so a fault leaves a trace instead of taking the app down.
 /// </summary>
 public partial class App : Application
 {
@@ -24,12 +25,27 @@ public partial class App : Application
     public App()
     {
         InitializeComponent();
+
         UnhandledException += (_, e) =>
         {
-            // A dock is an always-on utility, so record what went wrong (to %Temp%\dockdev.log) for
-            // diagnosis. Handled is deliberately left false: swallowing every fault could leave the
-            // dock running in a corrupt state, so a genuinely unhandled exception still surfaces.
+            // A dock is always-on: a fault in one window — a flyout, a theme change, one tool page
+            // — must not take the other windows, the tray icon and the shortcuts with it. This
+            // used to leave Handled false, on the reasoning that a genuinely unhandled fault
+            // should surface; what it actually surfaced as, in a windowless process with no
+            // console and no crash dialog, was the app disappearing. So it is recorded (to
+            // %Temp%\dockdev.log) and handled. The individual throw sites are guarded at source
+            // too — this is the net under them, not the plan.
             Diag.Log($"UNHANDLED: {e.Message}\n{e.Exception}");
+            e.Handled = true;
+        };
+
+        // A faulted fire-and-forget Task never reaches the handler above, and .NET does not
+        // rethrow unobserved exceptions by default, so today they are silent. Logging them is what
+        // makes a failed update check or a failed icon decode visible in the log at all.
+        TaskScheduler.UnobservedTaskException += (_, e) =>
+        {
+            Diag.Log($"UNOBSERVED TASK: {e.Exception}");
+            e.SetObserved();
         };
     }
 
@@ -41,6 +57,26 @@ public partial class App : Application
             Exit();
             return;
         }
+
+        // The one line that decides whether dockdev can be a notification-area utility at all, and
+        // the fix for "the app closes by itself".
+        //
+        // Application.Start sets DispatcherShutdownMode to OnLastWindowClose for this thread, so
+        // the XAML runtime calls PostQuitMessage the moment the last XAML window on it closes.
+        // dockdev normally has exactly one — the dock — so ANYTHING that closed it ended the whole
+        // process, tray icon and global shortcuts with it, and with no window left there was
+        // nothing on screen to say why. Alt+F4 while the dock has focus did it (the dock is
+        // borderless, but it is still an ordinary top-level window, and DefWindowProc turns Alt+F4
+        // into WM_CLOSE whether or not a caption is drawn); so did a fault in the dock's content;
+        // so did the close-then-recreate a language change and a backup import both perform.
+        //
+        // A tray app has to outlive its windows, so the event loop becomes ours to end:
+        // dockdevManager.Quit is the only thing that ends it, via Application.Exit.
+        //
+        // Set here rather than in the constructor because Application.Start assigns the default
+        // itself and this is unambiguously afterwards — and below the instance check, so the
+        // second-launch path above still exits through the default it has always used.
+        DispatcherShutdownMode = Microsoft.UI.Xaml.DispatcherShutdownMode.OnExplicitShutdown;
 
         // Load the string table before any window is constructed: XAML resolves its
         // {loc:Localize} bindings as it loads, so the language has to be settled first. The

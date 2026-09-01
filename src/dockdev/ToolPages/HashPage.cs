@@ -85,24 +85,38 @@ public sealed class HashPage : FormToolPage
     public override bool AcceptsClipboardText(string text) => text.Length > 0;
     public override void PasteClipboardText(string text) => _input.Text = text;
 
+    /// <summary>
+    /// Its one caller is a <c>Click</c> handler, i.e. <c>async void</c>: anything that escapes this
+    /// method is an unhandled exception on the UI thread with nothing above it to catch it. So the
+    /// whole body is guarded and a failure is reported in the file row, next to the button that
+    /// started it.
+    /// </summary>
     private async Task ChooseFileAsync()
     {
-        var path = await FilePickers.PickOpenFileAsync(HostHwnd);
-        if (path is null)
-            return;
-
-        // Bounded read (§21/§22): the whole file lands in a byte[] here, so an unbounded
-        // ReadAllBytesAsync on a picked path is an out-of-memory waiting for the wrong pick.
-        var read = await InputLimits.ReadBytesAsync(path);
-        if (!read.Ok)
+        try
         {
-            _fileStatus.Text = read.Error;
-            return;
-        }
+            var path = await FilePickers.PickOpenFileAsync(HostHwnd);
+            if (path is null)
+                return;
 
-        SetFile(read.Bytes, Path.GetFileName(path));
-        _isDirty = true;
-        Recompute();
+            // Bounded read (§21/§22): the whole file lands in a byte[] here, so an unbounded
+            // ReadAllBytesAsync on a picked path is an out-of-memory waiting for the wrong pick.
+            var read = await InputLimits.ReadBytesAsync(path);
+            if (!read.Ok)
+            {
+                _fileStatus.Text = read.Error;
+                return;
+            }
+
+            SetFile(read.Bytes, Path.GetFileName(path));
+            _isDirty = true;
+            Recompute();
+        }
+        catch (Exception ex)
+        {
+            Diag.Log("HashPage.ChooseFileAsync failed: " + ex);
+            _fileStatus.Text = Loc.Get("Tool.FileUnreadable");
+        }
     }
 
     /// <summary>Sets (or clears) the file being hashed and what the row says about it.</summary>

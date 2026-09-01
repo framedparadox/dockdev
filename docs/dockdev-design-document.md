@@ -1016,6 +1016,44 @@ No polling at all: every state change is an in-process event, because every wind
 No hard cap on open windows in v1. Past ten windows of one kind, a gentle info tip appears rather
 than silently degrading.
 
+### 17.1 Process lifetime — dockdev outlives its windows
+
+A WinUI desktop app does **not** run until told to stop. `Application.Start` sets
+`DispatcherShutdownMode` to `OnLastWindowClose` for the UI thread, so the XAML runtime calls
+`PostQuitMessage` the moment the last XAML window on that thread closes. dockdev normally has
+exactly one — the dock — which made every one of these an app-wide exit:
+
+* **Alt+F4 while the dock has focus.** The dock is borderless, but `WindowChrome.StripFrame` drops
+  the caption, not the system menu: `DefWindowProc` still turns the accelerator into `WM_CLOSE`.
+  The dock takes foreground whenever it is clicked, dragged or summoned, so this is an ordinary
+  thing for it to be holding when someone means to close whatever is on top.
+* **A fault in the dock's content.** `Application.UnhandledException` left `Handled` false, so any
+  exception reaching it ended the process — and in a windowless, console-less app that reads as the
+  app disappearing, not as a crash.
+* **The close-and-recreate** `dockdevManager.RebuildWindows` performs for a language change and a
+  backup import.
+
+Three rules, each asserted by `dockdev.Tests.Shell.ProcessLifetimeArchitectureTests`:
+
+1. **`App` owns the event loop.** `DispatcherShutdownMode = OnExplicitShutdown`, set at the top of
+   `OnLaunched` (after `Application.Start` has assigned its own default, and after the
+   single-instance check, so a second launch still exits the way it always has). Windows come and
+   go; the process does not.
+2. **`dockdevManager.Quit` is the only exit.** It releases the tray icon and the global shortcuts,
+   tells the dock it may close, and then calls `Application.Exit`. Nothing else calls it.
+3. **The dock refuses a close it did not ask for.** `AppWindow.Closing` is cancelled unless
+   `DockWindow.AllowClose` was called first, and the request is turned into the tray menu's
+   *Hide dock* — recoverable from the tray icon and the summon shortcut. Should a dock go anyway,
+   the manager puts a replacement up rather than leaving a tray icon with nothing behind it.
+
+The corollary is that a fault must never be fatal, since there is no longer a window whose closing
+would explain one. `Application.UnhandledException` logs and handles; the throw sites that reach it
+— `ToolCommand.Invoke`, `ToolWindowLauncher.Open`, `FilePickers`, and the `async void` handlers,
+whose exceptions have no caller left on the stack — are guarded at source, with the app-wide
+handler as the net under them rather than the plan. The one class of failure no handler can catch
+is a throw on a thread-pool thread, which ends the process outright; the callbacks dockdev takes off
+the UI thread (`PowerManager.EnergySaverStatusChanged`) guard themselves accordingly.
+
 ---
 
 ## 18. Discovery — dock, gallery, settings, search

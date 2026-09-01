@@ -40,15 +40,15 @@ public static class ToolIconProvider
 
     private static async Task<ImageSource?> DecodeAsync(byte[] bytes)
     {
+        var bmp = new BitmapImage();
+        var tcs = new TaskCompletionSource<bool>();
+        void OnOpened(object s, Microsoft.UI.Xaml.RoutedEventArgs e) => tcs.TrySetResult(true);
+        void OnFailed(object s, Microsoft.UI.Xaml.ExceptionRoutedEventArgs e) => tcs.TrySetResult(false);
+        bmp.ImageOpened += OnOpened;
+        bmp.ImageFailed += OnFailed;
+
         try
         {
-            var bmp = new BitmapImage();
-            var tcs = new TaskCompletionSource<bool>();
-            void OnOpened(object s, Microsoft.UI.Xaml.RoutedEventArgs e) => tcs.TrySetResult(true);
-            void OnFailed(object s, Microsoft.UI.Xaml.ExceptionRoutedEventArgs e) => tcs.TrySetResult(false);
-            bmp.ImageOpened += OnOpened;
-            bmp.ImageFailed += OnFailed;
-
             using (var ras = new InMemoryRandomAccessStream())
             {
                 using (var writer = new DataWriter(ras))
@@ -62,14 +62,26 @@ public static class ToolIconProvider
                 await bmp.SetSourceAsync(ras);
             }
 
-            bool ok = await tcs.Task;
+            // SetSourceAsync completes only once the decode has finished, so whichever of the two
+            // events was going to fire has fired by now. Resolving the source here is what keeps
+            // the await below bounded: a decoder that reported neither outcome left this task
+            // pending for the life of the process, holding the bitmap, the byte[] and both
+            // handlers — and the caller's await with them. TrySetResult cannot overwrite a failure
+            // OnFailed has already recorded.
+            tcs.TrySetResult(true);
+            return await tcs.Task ? bmp : null;
+        }
+        catch (Exception ex)
+        {
+            Diag.Log("ToolIconProvider: could not decode a custom icon: " + ex.Message);
+            return null;
+        }
+        finally
+        {
+            // Detached on every path. A BitmapImage that failed to decode is dropped here, and a
+            // handler left on it would keep this method's closure alive with it.
             bmp.ImageOpened -= OnOpened;
             bmp.ImageFailed -= OnFailed;
-            return ok ? bmp : null;
-        }
-        catch
-        {
-            return null;
         }
     }
 }
