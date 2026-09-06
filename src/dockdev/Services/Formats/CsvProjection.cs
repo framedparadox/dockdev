@@ -12,6 +12,22 @@ namespace dockdev.Services.Formats;
 public static class CsvProjection
 {
     /// <summary>
+    /// The deepest a single dotted header may expand into nested objects before <see cref="Rebuild"/>
+    /// keeps it as one flat key instead. Matches <see cref="JsonFormat"/>/<see cref="XmlFormat"/>'s
+    /// own 256-level cap (design doc §21) for the same reason those exist: <see cref="InsertPath"/>
+    /// and <see cref="ToDataNode"/> both recurse once per path segment, and — unlike JSON and XML,
+    /// whose depth comes from a document structure the format's own reader already bounds — a CSV
+    /// header is just a pasted cell with no limit of its own on how many dots it contains. Without
+    /// this, a header a few thousand dots deep (a sub-100 KB row, well inside the 50 MB text
+    /// ceiling) recurses the same call stack into oblivion: an uncatchable
+    /// <see cref="StackOverflowException"/> that ends the process, exactly the failure class XML's
+    /// nesting cap was added to close off. A header with a legitimately deep path is not a shape any
+    /// real CSV export produces; keeping it literal instead of expanding it is what keeps a
+    /// hand-crafted one from taking the process down instead of just converting oddly.
+    /// </summary>
+    private const int MaxDepth = 256;
+
+    /// <summary>
     /// Projects an arbitrary tree onto CSV's native shape: an <see cref="ArrayNode"/> of
     /// scalar-valued <see cref="ObjectNode"/> rows. A top-level object is treated as a single
     /// record; a top-level array is treated as one record per item.
@@ -73,7 +89,9 @@ public static class CsvProjection
                 if (value is not ScalarNode scalar)
                     continue;
                 var segments = key.Split('.');
-                InsertPath(root, segments, 0, scalar);
+                // See MaxDepth: a pathologically dotted header degrades to one flat key rather
+                // than recursing arbitrarily deep.
+                InsertPath(root, segments.Length > MaxDepth ? [key] : segments, 0, scalar);
             }
             rebuilt.Add(ToDataNode(root));
         }

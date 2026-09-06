@@ -176,48 +176,64 @@ public sealed class RegexPage : EditorToolPage
     /// </summary>
     private int _runId;
 
+    /// <summary>
+    /// Re-runs the match. <c>async void</c> because every caller is an event handler (a keystroke,
+    /// an option box) — which is also why the whole body is guarded: past the first <c>await</c>
+    /// there is no caller left on the stack, so anything thrown here is an unhandled exception,
+    /// and this method runs the .NET regex engine over a pattern the user is still halfway through
+    /// typing and then writes the result into a live document.
+    /// </summary>
     private async void Run()
     {
         int runId = ++_runId;
 
-        var pattern = _pattern.Text;
-        var subject = _subject.Text;
-        StatusBar.SetCounts(subject);
-
-        if (pattern.Length == 0 || subject.Length == 0)
+        try
         {
-            _matchView.SetContent(subject);
-            _groupsTable.ItemsSource = null;
-            _replacementPreview.Text = "";
+            var pattern = _pattern.Text;
+            var subject = _subject.Text;
+            StatusBar.SetCounts(subject);
+
+            if (pattern.Length == 0 || subject.Length == 0)
+            {
+                _matchView.SetContent(subject);
+                _groupsTable.ItemsSource = null;
+                _replacementPreview.Text = "";
+                _error.IsOpen = false;
+                StatusBar.SetUntouched();
+                return;
+            }
+
+            var options = BuildOptions();
+            var replacement = _replacement.Text.Length > 0 ? _replacement.Text : null;
+            var result = await Task.Run(() => RegexRunner.Run(pattern, subject, options, replacement));
+
+            // Superseded while we were matching, or the window closed underneath us.
+            if (runId != _runId || PageClosing.IsCancellationRequested)
+                return;
+
+            if (!result.Success)
+            {
+                _error.IsOpen = true;
+                _error.Message = result.Error ?? "Invalid pattern.";
+                _matchView.SetContent(subject);
+                StatusBar.SetError(1, 1);
+                return;
+            }
+
             _error.IsOpen = false;
-            StatusBar.SetUntouched();
-            return;
+            _matchView.SetContent(subject, result.Tokens);
+            _groupsTable.ItemsSource = result.Groups
+                .Select(g => $"[{g.Index}] {(string.IsNullOrEmpty(g.Name) || g.Name == g.Index.ToString() ? "" : g.Name + " ")}@{g.Position}: {g.Value}")
+                .ToList();
+            _replacementPreview.Text = result.Replacement ?? "";
+            StatusBar.SetValid();
         }
-
-        var options = BuildOptions();
-        var replacement = _replacement.Text.Length > 0 ? _replacement.Text : null;
-        var result = await Task.Run(() => RegexRunner.Run(pattern, subject, options, replacement));
-
-        // Superseded while we were matching, or the window closed underneath us.
-        if (runId != _runId || PageClosing.IsCancellationRequested)
-            return;
-
-        if (!result.Success)
+        catch (Exception ex)
         {
-            _error.IsOpen = true;
-            _error.Message = result.Error ?? "Invalid pattern.";
-            _matchView.SetContent(subject);
-            StatusBar.SetError(1, 1);
-            return;
+            Diag.Log("RegexPage.Run failed: " + ex);
+            if (runId == _runId && !PageClosing.IsCancellationRequested)
+                StatusBar.SetError(1, 1);
         }
-
-        _error.IsOpen = false;
-        _matchView.SetContent(subject, result.Tokens);
-        _groupsTable.ItemsSource = result.Groups
-            .Select(g => $"[{g.Index}] {(string.IsNullOrEmpty(g.Name) || g.Name == g.Index.ToString() ? "" : g.Name + " ")}@{g.Position}: {g.Value}")
-            .ToList();
-        _replacementPreview.Text = result.Replacement ?? "";
-        StatusBar.SetValid();
     }
 
     private void Clear()

@@ -85,10 +85,34 @@ public sealed class AcrylicBackdropManager : IDisposable
 
     private void OnThemeChanged(FrameworkElement sender, object args) => UpdateTheme();
 
-    // PowerManager raises this off the UI thread; DispatcherQueueTimer/composition calls below
-    // are not thread-safe, so the actual update has to happen back on the window's own queue.
-    private void OnEnergySaverStatusChanged(object? sender, object e) =>
-        _window.DispatcherQueue.TryEnqueue(UpdateEnergySaverState);
+    /// <summary>
+    /// PowerManager raises this off the UI thread — a thread-pool thread — so the actual update is
+    /// marshalled back to the window's own queue, where the composition objects it touches are
+    /// safe to use.
+    /// <para>
+    /// Guarded, and that guard is load-bearing rather than defensive. An exception on a thread-pool
+    /// thread is not something <c>Application.UnhandledException</c> ever sees: it ends the
+    /// process, with no window left to say so. Everything needed for that is here — this fires
+    /// whenever the user's battery saver switches on or off, which on a laptop means every unplug,
+    /// and the window it reaches for can close (and this manager be disposed) in between, leaving
+    /// a <c>Window.DispatcherQueue</c> whose native side has gone. That is a machine-dependent,
+    /// once-in-a-while, nothing-in-the-log disappearance, which is the worst kind to chase.
+    /// </para>
+    /// </summary>
+    private void OnEnergySaverStatusChanged(object? sender, object e)
+    {
+        if (_disposed)
+            return;
+        try
+        {
+            _window.DispatcherQueue.TryEnqueue(UpdateEnergySaverState);
+        }
+        catch (Exception ex)
+        {
+            // The window is going or gone; the glass it would have re-tinted is going with it.
+            Diag.Log("AcrylicBackdropManager: energy-saver update dropped: " + ex.Message);
+        }
+    }
 
     /// <summary>
     /// Ties <c>IsInputActive</c> to Energy Saver rather than leaving it permanently on: active
