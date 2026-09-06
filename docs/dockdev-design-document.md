@@ -1147,6 +1147,15 @@ that is the attack surface that matters here. These are design rules, not aftert
   classic XXE (reading local files via an external entity) and billion-laughs expansion. Both are
   realistic against an app whose job is parsing XML from anywhere. **Enforced by a unit test**, not
   by convention — this is exactly the kind of setting that silently rots.
+- **Deep-nesting depth cap.** DTDs are not the only parse bomb: a document a few thousand elements
+  deep is a sub-100 KB string, well inside the 50 MB text ceiling, and every recursive consumer of
+  the parsed tree overflows the call stack on it — an *uncatchable* `StackOverflowException` that
+  ends the process, the same failure class §0 was hardened against. `System.Text.Json` caps JSON at
+  `MaxDepth = 256`; `XmlFormat` had no equivalent, so it now measures depth iteratively after load
+  and refuses anything past the same 256 with an ordinary diagnostic — which also heads off the
+  quadratic memory of an indented save of a very deep document. **Enforced by test:**
+  `XmlFormatSecurityTests` formats, minifies, validates and converts a 20,000-deep document and
+  asserts a clean refusal rather than a crash.
 - **No code execution, ever.** Parsing goes through `System.Text.Json` and `System.Xml.Linq` POCO
   APIs only. No `eval`, no dynamic compilation, no `BinaryFormatter`, no
   `Activator.CreateInstance` from untrusted data.
