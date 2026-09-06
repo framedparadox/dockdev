@@ -85,7 +85,12 @@ public static partial class LineOps
             return partsX.Count.CompareTo(partsY.Count);
         }
 
-        [GeneratedRegex(@"\d+|\D+")]
+        // Design doc §21: every Regex in the app carries an explicit MatchTimeout. This one is a
+        // simple alternation with no catastrophic-backtracking shape, but it still runs once per
+        // comparison over a user-supplied line during Sort() — see PiiDetector's GeneratedRegex
+        // fields for why a source-generated pattern needs the timeout spelled out explicitly
+        // rather than relying on RegexTimeoutTests to catch its absence after the fact.
+        [GeneratedRegex(@"\d+|\D+", RegexOptions.None, matchTimeoutMilliseconds: 1000)]
         private static partial Regex SplitNumeric();
     }
 }

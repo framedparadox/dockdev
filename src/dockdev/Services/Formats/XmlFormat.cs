@@ -98,8 +98,28 @@ public sealed class XmlFormat : IDataFormat
 
     // ---- Internals ----------------------------------------------------------------------
 
+    /// <summary>
+    /// The nesting depth past which a document is refused. Matches <c>System.Text.Json</c>'s
+    /// <c>MaxDepth</c> in <see cref="JsonFormat"/> (256), deliberately: the two formats convert into
+    /// one another, so a cap that let XML nest deeper than JSON can parse would be asymmetric — and
+    /// far more importantly, XML is the one format here with no built-in depth limit of its own.
+    /// <para>
+    /// Without this, deep nesting has three separate failure modes, none of them an
+    /// <see cref="XmlException"/> the callers catch: <see cref="ConvertElement"/> and
+    /// <c>StructureTree.Populate</c> recurse per level and blow the call stack — an uncatchable
+    /// <c>StackOverflowException</c> that ends the process outright, exactly the "closes by itself"
+    /// class this app was hardened against — and an indented <see cref="XDocument.Save"/> is
+    /// O(depth²) in output size and reaches <see cref="OutOfMemoryException"/> first. A document
+    /// several thousand elements deep is a sub-100 KB string, well inside the 50 MB text ceiling, so
+    /// this is reachable by a paste, not a theoretical bound. 256 leaves an ample margin below the
+    /// ~thousands-deep stack limit while admitting any realistic hand- or machine-authored XML.
+    /// </para>
+    /// </summary>
+    private const int MaxDepth = 256;
+
     /// <summary>The one place an <see cref="XmlReader"/> is constructed for untrusted text —
-    /// hardened against XXE and billion-laughs by refusing DTDs entirely.</summary>
+    /// hardened against XXE and billion-laughs by refusing DTDs entirely, and against deep-nesting
+    /// stack overflow / quadratic-Save OOM by capping depth (see <see cref="MaxDepth"/>).</summary>
     private static XDocument LoadSecure(string text)
     {
         using var stringReader = new StringReader(text);
@@ -109,7 +129,35 @@ public sealed class XmlFormat : IDataFormat
             XmlResolver = null,
             MaxCharactersFromEntities = 1024,
         });
-        return XDocument.Load(reader, LoadOptions.PreserveWhitespace);
+        var doc = XDocument.Load(reader, LoadOptions.PreserveWhitespace);
+        GuardDepth(doc);
+        return doc;
+    }
+
+    /// <summary>
+    /// Rejects a document nested deeper than <see cref="MaxDepth"/> before any recursive consumer of
+    /// the tree runs. Deliberately iterative, with an explicit heap stack rather than recursion:
+    /// a depth check that recursed could overflow on the very input it exists to reject.
+    /// <see cref="XDocument.Load"/> itself builds the tree without recursion, so it is safe to
+    /// measure the tree after the fact — the recursion this guards against is entirely in what reads
+    /// the tree next (<see cref="ConvertElement"/>, the writer's indented save, the structure view).
+    /// </summary>
+    private static void GuardDepth(XDocument doc)
+    {
+        if (doc.Root is not { } root)
+            return;
+
+        var stack = new Stack<(XElement Element, int Depth)>();
+        stack.Push((root, 1));
+        while (stack.Count > 0)
+        {
+            var (element, depth) = stack.Pop();
+            if (depth > MaxDepth)
+                throw new XmlException(
+                    $"XML nesting is deeper than the supported maximum of {MaxDepth} levels.");
+            foreach (var child in element.Elements())
+                stack.Push((child, depth + 1));
+        }
     }
 
     private static XmlWriterSettings WriterSettings(bool indent, int indentWidth) => new()

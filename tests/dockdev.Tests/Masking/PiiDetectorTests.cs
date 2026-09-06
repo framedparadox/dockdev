@@ -1,3 +1,4 @@
+using System.Text.RegularExpressions;
 using dockdev.Services.Masking;
 using Xunit;
 
@@ -96,5 +97,43 @@ public class PiiDetectorTests
     {
         var findings = Detect("The quick brown fox jumps over the lazy dog near the river bank.");
         Assert.Empty(findings);
+    }
+
+    // ---- Timeout resilience: a rule that legitimately times out must be skipped, not thrown ----
+
+    /// <summary>
+    /// Design doc §15.1: "a malformed rule degrades to 'this rule timed out, skipped', never a
+    /// hung window" — and, just as importantly, never an unhandled exception either. This used to
+    /// fail silently: <see cref="MatchCollection"/> is lazy, so
+    /// <c>rule.ValuePattern.Matches(text)</c> does no scanning at all — a timeout can only be
+    /// thrown once the collection is enumerated — which meant the try/catch guarding that call in
+    /// <c>PiiDetector.DetectValuePatterns</c> wrapped a call that could never throw, and a genuine
+    /// timeout escaped uncaught from the unguarded <c>foreach</c> below it instead. Since
+    /// <c>Analyze()</c> in <c>MaskerPage</c> calls <c>Detect</c> synchronously on the UI thread from
+    /// a plain (non-<c>async void</c>) event handler, that exception would have reached the app-wide
+    /// net rather than degrading gracefully as the rule is supposed to.
+    /// <para>
+    /// <c>^(\w+\s?)*$</c> against a subject that cannot match is Microsoft's own documented example
+    /// for <see cref="RegexMatchTimeoutException"/> (see <c>RegexTimeoutTests</c> for why it is
+    /// used over a textbook <c>(a+)+</c>).
+    /// </para>
+    /// </summary>
+    [Fact]
+    public void RuleWithATimingOutValuePattern_IsSkippedRatherThanThrown()
+    {
+        var catastrophic = new PiiRule(
+            "test-catastrophic-value-pattern",
+            PiiCategory.Secret,
+            KeyPattern: null,
+            ValuePattern: new Regex(@"^(\w+\s?)*$", RegexOptions.None, TimeSpan.FromMilliseconds(50)),
+            Validator: null,
+            Confidence.High,
+            MaskStrategy.Redact);
+
+        var subject = new string('a', 30) + "!";
+
+        var findings = PiiDetector.Detect(subject, [catastrophic], Confidence.Low);
+
+        Assert.DoesNotContain(findings, f => f.RuleId == "test-catastrophic-value-pattern");
     }
 }

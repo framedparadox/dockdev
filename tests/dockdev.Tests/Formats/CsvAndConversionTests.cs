@@ -103,6 +103,30 @@ public class CsvAndConversionTests
         Assert.Equal("Bengaluru", ((ScalarNode)address.Members.Single(m => m.Key == "city").Value).Raw);
     }
 
+    /// <summary>
+    /// A CSV header is pasted text with no limit of its own on how many dots it contains — unlike
+    /// JSON and XML, whose nesting depth comes from a document structure their own reader already
+    /// bounds (JSON's <c>MaxDepth</c>, XML's <c>XmlFormat.GuardDepth</c>). Before
+    /// <c>CsvProjection.MaxDepth</c>, a header a few thousand dots deep made <c>Rebuild</c> recurse
+    /// once per dot with no cap at all — an uncatchable <see cref="StackOverflowException"/> that
+    /// ends the process, exactly the failure class XML's own nesting cap exists to prevent. This is
+    /// the CSV-side regression test for it: a header dotted well past the 256-level cap must
+    /// convert (as one flat, literal key) rather than crash.
+    /// </summary>
+    [Fact]
+    public void CsvProjection_Rebuild_PathologicallyDottedHeader_DegradesToFlatKey_InsteadOfOverflowingTheStack()
+    {
+        var deepHeader = string.Join('.', Enumerable.Repeat("a", 5_000));
+        var flat = new ArrayNode([new ObjectNode([(deepHeader, new ScalarNode("value", ScalarKind.String))])]);
+
+        var rebuilt = CsvProjection.Rebuild(flat);
+
+        var record = Assert.IsType<ObjectNode>(Assert.IsType<ArrayNode>(rebuilt).Items[0]);
+        var member = Assert.Single(record.Members);
+        Assert.Equal(deepHeader, member.Key);
+        Assert.Equal("value", Assert.IsType<ScalarNode>(member.Value).Raw);
+    }
+
     [Fact]
     public void JsonToXmlToJson_RoundTripsLosslessly()
     {
