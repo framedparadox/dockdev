@@ -19,6 +19,19 @@ namespace dockdev.Services.Masking;
 /// </summary>
 public static partial class PiiDetector
 {
+    /// <summary>
+    /// Design doc §21: every <see cref="Regex"/> in the app carries an explicit
+    /// <see cref="Regex.MatchTimeout"/>. The four patterns below are compiled by the
+    /// <c>[GeneratedRegex]</c> source generator rather than held in a plain <c>Regex</c> field, and
+    /// that turned out to be exactly the kind of place the rule quietly lapses: the generator emits
+    /// each one as a private <em>subclass</em> of <see cref="Regex"/>, so
+    /// <c>RegexTimeoutTests</c>' reflective sweep — which only recognises fields declared as
+    /// <c>Regex</c> itself — walked straight past them, and they carried no timeout at all. Passed
+    /// explicitly here (and the sweep widened to recognise any <see cref="Regex"/>-derived field,
+    /// not just an exact match) so a hang here fails the same way every other regex in the app does.
+    /// </summary>
+    private const int KeyScanTimeoutMs = 500;
+
     public static List<Finding> Detect(string text, IReadOnlyList<PiiRule> rules, Confidence threshold)
     {
         if (text.Length == 0)
@@ -45,10 +58,15 @@ public static partial class PiiDetector
             if (rule.ValuePattern is null)
                 continue;
 
-            MatchCollection matches;
+            List<Match> matches;
             try
             {
-                matches = rule.ValuePattern.Matches(text);
+                // `Matches()` itself never throws — a MatchCollection is lazy, so it does no
+                // scanning at all until enumerated, and a timeout can only fire during that
+                // enumeration. Materializing it here, inside the try, is what actually makes this
+                // catch reachable; leaving it as `matches = rule.ValuePattern.Matches(text)` looks
+                // guarded but lets a real timeout escape from the `foreach` below instead.
+                matches = rule.ValuePattern.Matches(text).Cast<Match>().ToList();
             }
             catch (RegexMatchTimeoutException)
             {
@@ -92,10 +110,10 @@ public static partial class PiiDetector
         return attrKey.Success && keyPattern.IsMatch(attrKey.Groups[1].Value);
     }
 
-    [GeneratedRegex("\"([A-Za-z0-9_\\-]+)\"\\s*:\\s*\"?$")]
+    [GeneratedRegex("\"([A-Za-z0-9_\\-]+)\"\\s*:\\s*\"?$", RegexOptions.None, KeyScanTimeoutMs)]
     private static partial Regex JsonKeyBefore();
 
-    [GeneratedRegex("([A-Za-z0-9_\\-]+)\\s*=\\s*\"?$")]
+    [GeneratedRegex("([A-Za-z0-9_\\-]+)\\s*=\\s*\"?$", RegexOptions.None, KeyScanTimeoutMs)]
     private static partial Regex AttrKeyBefore();
 
     // ---- Key-only rules (names, addresses, dob, secrets — no value shape to key off) --------
@@ -106,7 +124,22 @@ public static partial class PiiDetector
         if (keyOnlyRules.Count == 0)
             yield break;
 
-        foreach (Match m in JsonKeyValue().Matches(text))
+        // Unlike JsonKeyBefore/AttrKeyBefore (a ~48-char window), these two scan the whole
+        // document, so a timeout is a real possibility on a large paste — materialized inside the
+        // try for the same reason as DetectValuePatterns above: a MatchCollection is lazy, and
+        // only enumerating it can actually throw.
+        List<Match> jsonMatches;
+        try
+        {
+            jsonMatches = JsonKeyValue().Matches(text).Cast<Match>().ToList();
+        }
+        catch (RegexMatchTimeoutException)
+        {
+            Diag.Log("PiiDetector: JSON key/value scan timed out — skipped.");
+            jsonMatches = [];
+        }
+
+        foreach (Match m in jsonMatches)
         {
             var key = m.Groups[1].Value;
             var rule = keyOnlyRules.FirstOrDefault(r => r.KeyPattern!.IsMatch(key));
@@ -118,7 +151,18 @@ public static partial class PiiDetector
             yield return new Finding(rule.Id, rule.Category, "$." + key, valueGroup.Index, valueGroup.Length, Confidence.Medium, rule.DefaultStrategy, Included: true);
         }
 
-        foreach (Match m in XmlAttrKeyValue().Matches(text))
+        List<Match> xmlMatches;
+        try
+        {
+            xmlMatches = XmlAttrKeyValue().Matches(text).Cast<Match>().ToList();
+        }
+        catch (RegexMatchTimeoutException)
+        {
+            Diag.Log("PiiDetector: XML attribute key/value scan timed out — skipped.");
+            xmlMatches = [];
+        }
+
+        foreach (Match m in xmlMatches)
         {
             var key = m.Groups[1].Value;
             var rule = keyOnlyRules.FirstOrDefault(r => r.KeyPattern!.IsMatch(key));
@@ -131,10 +175,10 @@ public static partial class PiiDetector
         }
     }
 
-    [GeneratedRegex("\"([A-Za-z0-9_\\-]+)\"\\s*:\\s*\"([^\"]*)\"")]
+    [GeneratedRegex("\"([A-Za-z0-9_\\-]+)\"\\s*:\\s*\"([^\"]*)\"", RegexOptions.None, KeyScanTimeoutMs)]
     private static partial Regex JsonKeyValue();
 
-    [GeneratedRegex("([A-Za-z0-9_\\-]+)\\s*=\\s*\"([^\"]*)\"")]
+    [GeneratedRegex("([A-Za-z0-9_\\-]+)\\s*=\\s*\"([^\"]*)\"", RegexOptions.None, KeyScanTimeoutMs)]
     private static partial Regex XmlAttrKeyValue();
 
     /// <summary>Per-column CSV classification (design doc §15.1) for key-only rules: the header

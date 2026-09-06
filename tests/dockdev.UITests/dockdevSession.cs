@@ -36,6 +36,28 @@ public sealed class dockdevSession : IDisposable
     public Application Application { get; }
     public string DataDirectory { get; }
 
+    /// <summary>Process liveness, the diagnostic log and the resource counters this app is holding
+    /// — the crash oracle the soak suite asserts on. See <see cref="AppHealth"/>.</summary>
+    public AppHealth Health { get; }
+
+    /// <summary>
+    /// Machine-wide turnstile: one UI test process drives the desktop at a time.
+    /// <para>
+    /// Within a process xUnit already serializes the collection, which was enough while the suite
+    /// was only ever run one way. It is not enough now that a soak run can be split across several
+    /// <c>dotnet test</c> invocations (one per tool, to keep a failure attributable to one tool
+    /// rather than to "the run"). Those are separate processes, so xUnit knows nothing about each
+    /// other's turn — and two of them typing into two windows share one keyboard focus and one
+    /// clipboard. The failures that produces look like app bugs and are not.
+    /// </para>
+    /// <para>
+    /// Held for the fixture's lifetime and released in <see cref="Dispose"/>. An abandoned mutex —
+    /// a test host killed mid-run — is caught and treated as acquired, because the process that
+    /// held it is gone and its desktop with it.
+    /// </para>
+    /// </summary>
+    private readonly Mutex _desktopLock;
+
     /// <summary>
     /// The dock, re-resolved on every access rather than captured once.
     /// <para>
@@ -56,6 +78,22 @@ public sealed class dockdevSession : IDisposable
     {
         var executable = ResolveExecutable();
 
+        // Before anything is launched: waiting for our turn at the desktop is not something to do
+        // with a half-started app on screen.
+        _desktopLock = new Mutex(initiallyOwned: false, @"Local\dockdev.UITests.Desktop");
+        try
+        {
+            if (!_desktopLock.WaitOne(DesktopLockTimeout))
+                throw new TimeoutException(
+                    $"Another dockdev UI test run has held the desktop for {DesktopLockTimeout.TotalMinutes:0} " +
+                    "minutes. If nothing is running, a previous host was killed mid-test — the mutex " +
+                    "is released when its process exits, so this means one is genuinely still alive.");
+        }
+        catch (AbandonedMutexException)
+        {
+            // The holder died without releasing. We now own it, and its desktop is free.
+        }
+
         DataDirectory = Path.Combine(
             Path.GetTempPath(), "dockdev-uitests", Guid.NewGuid().ToString("N")[..8]);
         Directory.CreateDirectory(DataDirectory);
@@ -71,7 +109,14 @@ public sealed class dockdevSession : IDisposable
         // about startup rather than leaving every later test to fail with a message about the dock.
         _ = Retry(FindDock) ?? throw new InvalidOperationException(
             "The dock window never appeared. " + Describe() + " Check %TEMP%\\dockdev.log.");
+
+        Health = new AppHealth(Application.ProcessId);
     }
+
+    /// <summary>How long to wait for another UI test process to finish with the desktop. A full
+    /// soak pass over every tool is minutes, not seconds, so this is generous — the point of the
+    /// timeout is to fail with an explanation rather than hang a CI job forever.</summary>
+    private static readonly TimeSpan DesktopLockTimeout = TimeSpan.FromMinutes(30);
 
     /// <summary>
     /// Every top-level window this dockdev owns.
@@ -477,6 +522,18 @@ public sealed class dockdevSession : IDisposable
 
         Automation.Dispose();
         try { Directory.Delete(DataDirectory, recursive: true); } catch { /* best effort */ }
+
+        // Last, and unconditionally: everything above is best-effort cleanup, and a throw in any of
+        // it must not leave the next run waiting for a turn that is already over.
+        //
+        // A Mutex may only be released by the thread that took it, and xUnit does not promise that
+        // a fixture is disposed on the thread that built it — so this can legitimately fail with
+        // ApplicationException. That is not a leak: a mutex is released when its owning thread
+        // ends, and at the very latest when this test host exits, which is precisely the moment the
+        // desktop actually becomes free. The call is still worth making, because when it does
+        // succeed a queued run starts seconds earlier.
+        try { _desktopLock.ReleaseMutex(); } catch (ApplicationException) { /* disposed off-thread */ }
+        _desktopLock.Dispose();
     }
 }
 

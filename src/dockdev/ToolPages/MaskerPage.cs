@@ -39,6 +39,18 @@ public sealed class MaskerPage : EditorToolPage
     private List<Finding> _findings = [];
     private bool _isDirty;
 
+    /// <summary>
+    /// The most per-finding rows the list will build. Detection is the whole point of a privacy tool,
+    /// so the realistic input is a file that is <em>mostly</em> PII — a contacts export, a leaked-key
+    /// dump — and that yields findings in the hundreds of thousands. <see cref="_findingsList"/> is a
+    /// plain, non-virtualizing <see cref="ItemsControl"/>, so without a ceiling
+    /// <see cref="RenderFindingsList"/> would build roughly eight XAML elements per finding on the UI
+    /// thread — millions of them — which freezes the window for minutes and can exhaust memory. Every
+    /// finding is still masked in the output (<see cref="Remask"/> reads them all); this bounds only
+    /// how many get an individual tuning row, which no one adjusts by hand past a few hundred anyway.
+    /// </summary>
+    private const int MaxRenderedFindingRows = 500;
+
     /// <summary>The text as the user last typed or pasted it. Every mask is computed from here,
     /// never from the editor, whose content is already masked. In-memory only — never written to
     /// disk, never copied out (§15.4).</summary>
@@ -200,7 +212,8 @@ public sealed class MaskerPage : EditorToolPage
     {
         _findingCount.Text = Loc.Format("Masker.FindingCount", _findings.Count);
         var rows = new List<FrameworkElement>();
-        for (int i = 0; i < _findings.Count; i++)
+        int rendered = Math.Min(_findings.Count, MaxRenderedFindingRows);
+        for (int i = 0; i < rendered; i++)
         {
             int idx = i;
             var f = _findings[i];
@@ -243,6 +256,20 @@ public sealed class MaskerPage : EditorToolPage
             row.Children.Add(strategyBox);
             rows.Add(new Border { Child = row, BorderThickness = new Thickness(0, 0, 0, 1), BorderBrush = (Microsoft.UI.Xaml.Media.Brush)Application.Current.Resources["CardStrokeColorDefaultBrush"] });
         }
+
+        // Past the ceiling the remaining findings are masked but not listed individually; say so
+        // rather than silently showing a partial list against a much larger count.
+        if (_findings.Count > rendered)
+        {
+            rows.Add(new TextBlock
+            {
+                Text = Loc.Format("Masker.MoreFindings", _findings.Count - rendered, rendered),
+                Margin = new Thickness(8, 8, 8, 8),
+                Opacity = 0.75,
+                TextWrapping = TextWrapping.Wrap,
+            });
+        }
+
         _findingsList.ItemsSource = rows;
     }
 

@@ -46,8 +46,23 @@ public sealed class ToolCommand(
 
     public void Invoke()
     {
-        if (CanExecute())
+        if (!CanExecute())
+            return;
+        try
+        {
             execute();
+        }
+        catch (Exception ex)
+        {
+            // Every caller of this is an event handler with no caller of its own — a command-bar
+            // button's Click, a KeyboardAccelerator's Invoked, EditorToolPage's tunnelling key
+            // handler — so a throw out of a tool's action is an unhandled exception on the UI
+            // thread. The actions run over whatever the user pasted, which is exactly the input a
+            // parser is most likely to be surprised by. Failing here leaves the pane the command
+            // was going to write as it was: a tool that did nothing, rather than an app that shut
+            // itself down mid-keystroke.
+            Diag.Log($"ToolCommand '{(Id.Length > 0 ? Id : Label)}' failed: {ex}");
+        }
     }
 
     // ---- The shared actions -----------------------------------------------------------------

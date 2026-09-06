@@ -93,10 +93,51 @@ public sealed class dockdevManager
         // behind that the tray and Settings still think is live.
         window.Closed += (_, _) =>
         {
-            if (ReferenceEquals(_dock, window))
-                _dock = null;
+            if (!ReferenceEquals(_dock, window))
+                return; // already replaced (RebuildWindows clears the field before it closes one)
+            _dock = null;
+            RecreateAfterUnexpectedClose();
         };
         return window;
+    }
+
+    /// <summary>How many times a dock that went down on its own has been put back. Bounded so a
+    /// window that cannot survive its own construction fails visibly rather than in a loop.</summary>
+    private int _unexpectedRebuilds;
+
+    private const int MaxUnexpectedRebuilds = 3;
+
+    /// <summary>
+    /// Puts the dock back after it closed without dockdev asking it to.
+    /// <para>
+    /// The process no longer ends with its last window (see <c>App.OnLaunched</c>, which is what
+    /// stopped a closed dock taking the whole app with it) — so the failure mode on this path
+    /// changed from "dockdev disappears" to "dockdev is running with a tray icon and nothing to
+    /// summon", which is not much better. The dock is the app's only durable surface; if one goes,
+    /// another takes its place.
+    /// </para>
+    /// </summary>
+    private void RecreateAfterUnexpectedClose()
+    {
+        if (_shuttingDown || _unexpectedRebuilds >= MaxUnexpectedRebuilds)
+            return;
+        _unexpectedRebuilds++;
+
+        try
+        {
+            Diag.Log("dockdevManager: the dock closed unexpectedly — putting it back.");
+            _dock = CreateWindow(Config.Dock, seedDefaults: false);
+            _dock.Activate();
+            // It was hidden when it went, and the tray menu still says so — come back the same way.
+            if (_hiddenByUser)
+                _dock.HideByUser();
+            DockChanged?.Invoke();
+        }
+        catch (Exception ex)
+        {
+            // Leaves _dock null: the tray menu still works, so Quit and Settings remain reachable.
+            Diag.Log("dockdevManager: could not put the dock back: " + ex);
+        }
     }
 
     public void Save() => DockStore.Save(Config);
@@ -120,6 +161,9 @@ public sealed class dockdevManager
     {
         _shuttingDown = true;
         ReleaseShellIntegration();
+        // A dock refuses any close request that did not come from dockdev (see
+        // DockWindow.AllowClose), and would otherwise cancel Application.Exit's teardown.
+        _dock?.AllowClose();
         Application.Current.Exit();
     }
 
@@ -255,6 +299,21 @@ public sealed class dockdevManager
             return;
         }
 
+        _hiddenByUser = true;
+        _dock?.HideByUser();
+    }
+
+    /// <summary>
+    /// What a close request the dock refused means instead: hide it, exactly as the tray menu's
+    /// "Hide dock" does, so the tray entry and the summon shortcut both describe and undo it
+    /// correctly. Alt+F4 reaches the dock like any other top-level window, and destroying the
+    /// app's only durable surface — or, before <c>App</c> set an explicit shutdown mode, the whole
+    /// process — was never what it meant. Quitting stays the tray menu's Quit, which says so.
+    /// </summary>
+    public void HideDockOnCloseRequest()
+    {
+        if (_shuttingDown || _hiddenByUser)
+            return;
         _hiddenByUser = true;
         _dock?.HideByUser();
     }
@@ -466,6 +525,8 @@ public sealed class dockdevManager
     {
         var old = _dock;
         _dock = null;
+        // A deliberate teardown, so this one really may close (a dock refuses otherwise).
+        old?.AllowClose();
         old?.Close();
 
         _dock = CreateWindow(Config.Dock, seedDefaults: false);

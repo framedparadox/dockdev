@@ -167,6 +167,7 @@
   "Lorem.UnitLabel": "Generate",
   "Masker.Disclaimer": "Best-effort detection — always review the output before sharing. This is not a compliance control.",
   "Masker.FindingCount": "{0} item(s) found",
+  "Masker.MoreFindings": "{0} more are masked but not listed; the first {1} are shown for tuning.",
   "Masker.IncludeFor": "Include {0}",
   "Masker.InputPlaceholder": "Paste data that might contain personal information…",
   "Masker.MaskAll": "Mask all",

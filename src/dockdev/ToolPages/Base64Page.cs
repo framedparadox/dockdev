@@ -109,26 +109,39 @@ public sealed class Base64Page : EditorToolPage
         _input.Text = text;
     }
 
+    /// <summary>
+    /// Its one caller is a <c>Click</c> handler, i.e. <c>async void</c>: anything that escapes this
+    /// method is an unhandled exception on the UI thread with nothing above it to catch it. So the
+    /// whole body is guarded and a failure is reported on the status bar.
+    /// </summary>
     private async Task ChooseFileAsync()
     {
-        var path = await FilePickers.PickOpenFileAsync(HostHwnd);
-        if (path is null)
-            return;
-
-        // Bounded read (§21/§22). Base64 is the worst case for an unbounded one: the bytes are held
-        // whole and then turned into a string a third larger again.
-        var read = await InputLimits.ReadBytesAsync(path);
-        if (!read.Ok)
+        try
         {
-            StatusBar.SetMessage(read.Error, isError: true);
-            return;
-        }
+            var path = await FilePickers.PickOpenFileAsync(HostHwnd);
+            if (path is null)
+                return;
 
-        _fileBytes = read.Bytes;
-        _encode.IsChecked = true;
-        _input.Text = $"[{Path.GetFileName(path)} — {_fileBytes.Length:N0} bytes]";
-        _isDirty = true;
-        Run();
+            // Bounded read (§21/§22). Base64 is the worst case for an unbounded one: the bytes are
+            // held whole and then turned into a string a third larger again.
+            var read = await InputLimits.ReadBytesAsync(path);
+            if (!read.Ok)
+            {
+                StatusBar.SetMessage(read.Error, isError: true);
+                return;
+            }
+
+            _fileBytes = read.Bytes;
+            _encode.IsChecked = true;
+            _input.Text = $"[{Path.GetFileName(path)} — {_fileBytes.Length:N0} bytes]";
+            _isDirty = true;
+            Run();
+        }
+        catch (Exception ex)
+        {
+            Diag.Log("Base64Page.ChooseFileAsync failed: " + ex);
+            StatusBar.SetMessage(Loc.Get("Tool.FileUnreadable"), isError: true);
+        }
     }
 
     private void Run()

@@ -133,12 +133,22 @@ public sealed partial class DockWindow : Window
             new PointerEventHandler(Dock_PointerPressed), handledEventsToo: true);
         RootGrid.Loaded += (_, _) => QueueRelayout();
 
+        // Alt+F4 reaches a borderless window like any other: StripFrame drops the caption, not the
+        // system menu, so DefWindowProc still turns the accelerator into WM_CLOSE — and the dock
+        // takes foreground whenever it is clicked or summoned, so it is a realistic thing to have
+        // focus when someone means to close whatever is on top. Destroying it is never what that
+        // means: there is exactly one dock and no way to ask for another. So an external close
+        // request is refused and treated as the tray's "Hide dock", which both the tray icon and
+        // the summon shortcut undo. dockdev's own teardown paths call AllowClose first.
+        _appWindow.Closing += OnAppWindowClosing;
+
         Closed += (_, _) =>
         {
             _pollTimer?.Stop();
             _slideTimer?.Stop();
             _dragTimer?.Stop();
             _backdrop?.Dispose();
+            ReleaseItems();
         };
 
         // Modest initial size so the first frame isn't full-screen before relayout.
@@ -169,6 +179,64 @@ public sealed partial class DockWindow : Window
         for (int i = 0; i < _profile.Items.Count && q.Count > 0; i++)
             if (!_profile.Items[i].Hidden)
                 _profile.Items[i] = q.Dequeue();
+    }
+
+    // ---- Lifetime ----------------------------------------------------------
+
+    /// <summary>True once dockdev itself has decided this window may go — quitting, or the
+    /// close-and-recreate that a language change and a backup import both perform. Until then a
+    /// close request is a hide, not a destroy.</summary>
+    private bool _allowClose;
+
+    /// <summary>Lets the next <c>Close</c> actually close this window. Called by
+    /// <see cref="dockdevManager"/> on the paths that legitimately dispose of a dock.</summary>
+    internal void AllowClose() => _allowClose = true;
+
+    private void OnAppWindowClosing(AppWindow sender, AppWindowClosingEventArgs args)
+    {
+        if (_allowClose)
+            return;
+
+        args.Cancel = true;
+        // Queued rather than run from inside the notification: the cancel only takes effect once
+        // this handler returns, and hiding a window part-way through its own close is the kind of
+        // re-entrancy that is fine until the one build where it isn't.
+        DispatcherQueue.TryEnqueue(_manager.HideDockOnCloseRequest);
+    }
+
+    /// <summary>
+    /// Drops the strip's hold on the dock items as the window goes.
+    /// <para>
+    /// The items are <em>config</em>: they live as long as the process. The cells bound to them
+    /// are this window's, and the item template's compiled bindings subscribe to each item's
+    /// <c>PropertyChanged</c>. Clearing the source recycles every realized cell, and recycling is
+    /// what detaches those subscriptions — so without this a dock replaced by a language change or
+    /// a backup import stays reachable from the config for the rest of the session, with its whole
+    /// visual tree behind it.
+    /// </para>
+    /// </summary>
+    private void ReleaseItems()
+    {
+        try
+        {
+            ItemsHost.ItemsSource = null;
+            Items.Clear();
+
+            // Runtime-only visual state the strip set on process-lifetime objects. A replacement
+            // dock reads these at construction, so an icon left swelled or highlighted under the
+            // cursor when this window went would come back that way on the next one.
+            foreach (var item in _profile.Items)
+            {
+                item.SetHovered(false);
+                item.SetMagnification(1);
+            }
+        }
+        catch (Exception ex)
+        {
+            // Closed runs after the content island has gone; the worst case here is the detach
+            // this method exists for, and it must not throw out of a Closed handler.
+            Diag.Log("DockWindow.ReleaseItems: " + ex.Message);
+        }
     }
 
     // ---- Public API (used by the Settings / Add windows) ------------------
@@ -325,6 +393,10 @@ public sealed partial class DockWindow : Window
         {
             Title = title,
             Subtitle = subtitle,
+            // Light dismiss is what makes it self-dismissing, which is what this is documented to
+            // be: without it the tip waits for its close button, and one that is never pressed
+            // stays in RootGrid.Children — a drop of an unopenable file adds another every time.
+            IsLightDismissEnabled = true,
             IsOpen = true,
             XamlRoot = RootGrid.XamlRoot,
         };

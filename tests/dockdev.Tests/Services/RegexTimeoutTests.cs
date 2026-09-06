@@ -92,6 +92,15 @@ public class RegexTimeoutTests
     /// Every <see cref="Regex"/> held in a static field anywhere in the app assembly. Static fields
     /// are where a pre-built pattern lives; an instance field would mean a regex compiled per
     /// object, which nothing here does.
+    /// <para>
+    /// Matches any field whose type <em>is</em> or <em>derives from</em> <see cref="Regex"/>, not
+    /// just an exact <c>typeof(Regex)</c> field — the <c>[GeneratedRegex]</c> source generator
+    /// compiles each pattern into a private singleton of a generated <see cref="Regex"/> subclass,
+    /// and an exact-type check walks straight past those, which is exactly how
+    /// <c>PiiDetector</c>'s four generated patterns went unnoticed with no timeout at all. See its
+    /// <c>KeyScanTimeoutMs</c> for the fix; this is what keeps the next one from slipping through
+    /// the same gap.
+    /// </para>
     /// </summary>
     private static IEnumerable<(string Name, Regex Regex)> StaticRegexFields()
     {
@@ -126,7 +135,7 @@ public class RegexTimeoutTests
 
             foreach (var field in fields)
             {
-                if (field.FieldType != typeof(Regex))
+                if (!typeof(Regex).IsAssignableFrom(field.FieldType))
                     continue;
 
                 Regex? value;
