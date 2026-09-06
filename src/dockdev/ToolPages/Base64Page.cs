@@ -260,6 +260,12 @@ public sealed class Base64Page : EditorToolPage
     {
         if (_output.Text.Length == 0)
             return;
+<<<<<<< HEAD
+=======
+        var package = new Windows.ApplicationModel.DataTransfer.DataPackage();
+        package.SetText(_output.Text);
+        Windows.ApplicationModel.DataTransfer.Clipboard.SetContent(package);
+>>>>>>> 7203e6b12c66d9a2bf1e4a30b756d88612412177
         ClipboardService.TrySetText(_output.Text);
     }
 

@@ -149,6 +149,11 @@ public sealed class MaskerPage : EditorToolPage
         SetSource(read.Text);
     }
 
+<<<<<<< HEAD
+=======
+    private MaskProfile CurrentProfile => MaskProfile.BuiltIn[_profile.SelectedIndex];
+    private Confidence CurrentThreshold => Thresholds[_threshold.SelectedIndex];
+>>>>>>> 7203e6b12c66d9a2bf1e4a30b756d88612412177
     private MaskProfile CurrentProfile => _profile.SelectedIndex >= 0 && _profile.SelectedIndex < MaskProfile.BuiltIn.Count
         ? MaskProfile.BuiltIn[_profile.SelectedIndex]
         : MaskProfile.BuiltIn[0];
@@ -202,12 +207,22 @@ public sealed class MaskerPage : EditorToolPage
 
     private void RenderFindingsList()
     {
+<<<<<<< HEAD
         // A document full of matches (thousands of findings) would build thousands of ComboBox/
         // CheckBox rows and freeze the UI; render at most the first 200 and say so.
         _findingCount.Text = _findings.Count > 200
             ? $"{Loc.Format("Masker.FindingCount", _findings.Count)} (showing first 200)"
             : Loc.Format("Masker.FindingCount", _findings.Count);
         var rows = new List<FrameworkElement>();
+=======
+        _findingCount.Text = Loc.Format("Masker.FindingCount", _findings.Count);
+        _findingCount.Text = _findings.Count > 200
+            ? $"{Loc.Format("Masker.FindingCount", _findings.Count)} (showing first 200)"
+            : Loc.Format("Masker.FindingCount", _findings.Count);
+
+        var rows = new List<FrameworkElement>();
+        for (int i = 0; i < _findings.Count; i++)
+>>>>>>> 7203e6b12c66d9a2bf1e4a30b756d88612412177
         int renderLimit = Math.Min(_findings.Count, 200);
         for (int i = 0; i < renderLimit; i++)
         {
@@ -236,6 +251,11 @@ public sealed class MaskerPage : EditorToolPage
             strategyBox.SelectedIndex = (int)f.Strategy;
             strategyBox.SelectionChanged += (_, _) =>
             {
+<<<<<<< HEAD
+=======
+                _findings[idx] = _findings[idx] with { Strategy = (MaskStrategy)strategyBox.SelectedIndex };
+                Remask();
+>>>>>>> 7203e6b12c66d9a2bf1e4a30b756d88612412177
                 if (strategyBox.SelectedIndex >= 0)
                 {
                     _findings[idx] = _findings[idx] with { Strategy = (MaskStrategy)strategyBox.SelectedIndex };
@@ -294,6 +314,12 @@ public sealed class MaskerPage : EditorToolPage
         // in _source and has no route out of the process.
         if (_editor.Text.Length == 0)
             return;
+<<<<<<< HEAD
+=======
+        var package = new Windows.ApplicationModel.DataTransfer.DataPackage();
+        package.SetText(_editor.Text);
+        Windows.ApplicationModel.DataTransfer.Clipboard.SetContent(package);
+>>>>>>> 7203e6b12c66d9a2bf1e4a30b756d88612412177
         ClipboardService.TrySetText(_editor.Text);
     }
 

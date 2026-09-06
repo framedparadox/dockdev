@@ -105,6 +105,10 @@ public sealed class AcrylicBackdropManager : IDisposable
             return;
         try
         {
+<<<<<<< HEAD
+=======
+            _window.DispatcherQueue.TryEnqueue(UpdateEnergySaverState);
+>>>>>>> 7203e6b12c66d9a2bf1e4a30b756d88612412177
             _window.DispatcherQueue?.TryEnqueue(UpdateEnergySaverState);
         }
         catch (Exception ex)
@@ -123,6 +127,7 @@ public sealed class AcrylicBackdropManager : IDisposable
     /// </summary>
     private void UpdateEnergySaverState()
     {
+<<<<<<< HEAD
         if (_disposed || _config is null)
             return;
         try
@@ -135,6 +140,32 @@ public sealed class AcrylicBackdropManager : IDisposable
             // cosmetic, so log and leave the last-known state in place.
             Diag.Log("AcrylicBackdropManager: energy-saver probe failed: " + ex.Message);
         }
+=======
+        if (_config is null)
+        if (_disposed || _config is null)
+            return;
+        _config.IsInputActive = PowerManager.EnergySaverStatus != EnergySaverStatus.On;
+        try
+        {
+            _config.IsInputActive =
+                PowerManager.EnergySaverStatus != EnergySaverStatus.On;
+        }
+        catch (Exception ex)
+        {
+            Diag.Log("AcrylicBackdropManager: energy-saver probe failed: " + ex.Message);
+        }
+    }
+
+    /// <summary>Pushes <paramref name="r"/> onto the live controller.</summary>
+    private void SetRecipe(AcrylicRecipe r)
+    {
+        if (_controller is null)
+            return;
+        _controller.TintColor = r.Tint;
+        _controller.TintOpacity = (float)r.TintOpacity;
+        _controller.LuminosityOpacity = (float)r.LuminosityOpacity;
+        _controller.FallbackColor = r.Fallback;
+>>>>>>> 7203e6b12c66d9a2bf1e4a30b756d88612412177
     }
 
     /// <summary>
@@ -212,18 +243,30 @@ public sealed class AcrylicBackdropManager : IDisposable
             _themeRoot.ActualThemeChanged -= OnThemeChanged;
         PowerManager.EnergySaverStatusChanged -= OnEnergySaverStatusChanged;
 
+<<<<<<< HEAD
+=======
+        _controller?.Dispose();
+        _controller = null;
+>>>>>>> 7203e6b12c66d9a2bf1e4a30b756d88612412177
         if (_controller is not null)
         {
             try
             {
+<<<<<<< HEAD
                 // Detach the backdrop target and reset before disposing: dropping the controller
                 // without releasing its target has been seen to leave a dangling composition
                 // reference and fault DWM on teardown.
+=======
+>>>>>>> 7203e6b12c66d9a2bf1e4a30b756d88612412177
                 _controller.RemoveAllSystemBackdropTargets();
                 _controller.ResetProperties();
                 _controller.Dispose();
             }
+<<<<<<< HEAD
             catch { /* ignore teardown races */ }
+=======
+            catch { /* ignore */ }
+>>>>>>> 7203e6b12c66d9a2bf1e4a30b756d88612412177
             _controller = null;
         }
         _config = null;

@@ -97,8 +97,11 @@ public sealed class DiffPage : EditorToolPage
     public override ToolKind Kind => ToolKind.TextDiff;
     public override bool IsDirty => _isDirty;
 
+<<<<<<< HEAD
     // Bumped each time a compute starts; a stale background result checks this before touching the
     // UI so a slow diff cannot overwrite a newer one.
+=======
+>>>>>>> 7203e6b12c66d9a2bf1e4a30b756d88612412177
     private int _runId;
 
     public override IReadOnlyList<ToolCommand> Commands =>
@@ -116,6 +119,7 @@ public sealed class DiffPage : EditorToolPage
         _recomputeTimer.Start();
     }
 
+<<<<<<< HEAD
     private async void Compute()
     {
         _recomputeTimer.Stop();
@@ -123,6 +127,17 @@ public sealed class DiffPage : EditorToolPage
 
         // Snapshot the inputs on the UI thread, then run the (potentially heavy) diff off it so a
         // large comparison never freezes the dock.
+=======
+    private void Compute()
+    private async void Compute()
+    {
+        _recomputeTimer.Stop();
+        _diff.Compute(_left.Text, _right.Text, _ignoreWhitespace.IsChecked == true, _ignoreCase.IsChecked == true, _ignoreBlankLines.IsChecked == true);
+        StatusBar.SetCounts(_left.Text + _right.Text);
+        StatusBar.SetValid();
+        int runId = ++_runId;
+
+>>>>>>> 7203e6b12c66d9a2bf1e4a30b756d88612412177
         string left = _left.Text;
         string right = _right.Text;
         bool ws = _ignoreWhitespace.IsChecked == true;
@@ -133,7 +148,10 @@ public sealed class DiffPage : EditorToolPage
         {
             var result = await Task.Run(() => DiffView.Calculate(left, right, ws, ic, bl));
 
+<<<<<<< HEAD
             // A newer keystroke started another compute, or the page closed, while we were away.
+=======
+>>>>>>> 7203e6b12c66d9a2bf1e4a30b756d88612412177
             if (runId != _runId || PageClosing.IsCancellationRequested)
                 return;
 

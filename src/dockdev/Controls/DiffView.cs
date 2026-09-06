@@ -47,12 +47,17 @@ public sealed class DiffView : Grid
         Children.Add(_codeView);
     }
 
+<<<<<<< HEAD
     /// <summary>The product of a diff computation, carried from the (thread-safe) <see cref="Calculate"/>
     /// step to the (UI-thread-only) <see cref="Apply"/> step so the heavy work can run off the UI thread.</summary>
     public sealed record DiffComputationResult(string FormattedText, List<Token> Tokens, int ChangeCount, bool IsMinimal);
 
     /// <summary>Computes and renders in one call, on the current thread. Kept for callers that do not
     /// need the off-thread split.</summary>
+=======
+    public sealed record DiffComputationResult(string FormattedText, List<Token> Tokens, int ChangeCount, bool IsMinimal);
+
+>>>>>>> 7203e6b12c66d9a2bf1e4a30b756d88612412177
     public void Compute(string leftText, string rightText, bool ignoreWhitespace, bool ignoreCase, bool ignoreBlankLines)
         => Apply(Calculate(leftText, rightText, ignoreWhitespace, ignoreCase, ignoreBlankLines));
 
@@ -73,10 +78,32 @@ public sealed class DiffView : Grid
     /// background thread and never freeze the dock. Touches no instance state.</summary>
     public static DiffComputationResult Calculate(string leftText, string rightText, bool ignoreWhitespace, bool ignoreCase, bool ignoreBlankLines)
     {
+        var result = Calculate(leftText, rightText, ignoreWhitespace, ignoreCase, ignoreBlankLines);
+        Apply(result);
+    }
+
+    public void Apply(DiffComputationResult result)
+    {
+        ChangeCount = result.ChangeCount;
+        IsMinimal = result.IsMinimal;
+        _summary.Text = !result.IsMinimal
+            ? Loc.Get("Diff.TooDifferent")
+            : result.ChangeCount == 0
+                ? Loc.Get("Diff.NoChanges")
+                : Loc.Format("Diff.ChangeCount", result.ChangeCount);
+        _codeView.SetContent(result.FormattedText, result.Tokens);
+    }
+
+    public static DiffComputationResult Calculate(string leftText, string rightText, bool ignoreWhitespace, bool ignoreCase, bool ignoreBlankLines)
+    {
         var linesA = NormalizeLines(leftText);
         var linesB = NormalizeLines(rightText);
         var comparer = new LineComparer(ignoreWhitespace, ignoreCase, ignoreBlankLines);
         var lineDiff = MyersDiff.DiffBounded(linesA, linesB, comparer);
+<<<<<<< HEAD
+=======
+        IsMinimal = lineDiff.Minimal;
+>>>>>>> 7203e6b12c66d9a2bf1e4a30b756d88612412177
         var isMinimal = lineDiff.Minimal;
         var blocks = GroupConsecutive(lineDiff.Ops);
 
@@ -146,6 +173,16 @@ public sealed class DiffView : Grid
             }
         }
 
+<<<<<<< HEAD
+=======
+        ChangeCount = changeCount;
+        _summary.Text = !IsMinimal
+            ? Loc.Get("Diff.TooDifferent")
+            : changeCount == 0
+                ? Loc.Get("Diff.NoChanges")
+                : Loc.Format("Diff.ChangeCount", changeCount);
+        _codeView.SetContent(text.ToString(), tokens);
+>>>>>>> 7203e6b12c66d9a2bf1e4a30b756d88612412177
         return new DiffComputationResult(text.ToString(), tokens, changeCount, isMinimal);
     }
 

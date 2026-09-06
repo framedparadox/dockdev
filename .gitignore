@@ -38,4 +38,8 @@ artifacts/
 # Misc
 *.log
 
-docs/devdock-design-document.md
+.dockdev-debug/dock.json
+.vscode/*
+*.gitignore
+CLAUDE.md
+docs/*

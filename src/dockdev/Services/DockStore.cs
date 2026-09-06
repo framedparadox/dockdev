@@ -7,8 +7,11 @@ namespace dockdev.Services;
 /// <summary>Loads and saves the dock configuration as JSON under %AppData%\dockdev.</summary>
 public static class DockStore
 {
+<<<<<<< HEAD
     // Serializes Load against Save (and Save against Save): the config is saved from the UI thread
     // and from OS shutdown handling, so two writers could otherwise interleave on the same file.
+=======
+>>>>>>> 7203e6b12c66d9a2bf1e4a30b756d88612412177
     private static readonly object SaveLock = new();
 
     /// <summary>
@@ -59,17 +62,30 @@ public static class DockStore
         Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
     };
 
+<<<<<<< HEAD
+=======
+    public static bool Exists => File.Exists(FilePath);
+>>>>>>> 7203e6b12c66d9a2bf1e4a30b756d88612412177
     public static bool Exists => File.Exists(FilePath) || File.Exists(BackupFilePath);
 
     /// <summary>
     /// Reads the config, always returning something usable: a file that is missing, unreadable or
     /// corrupt yields defaults rather than an exception, because the alternative is an app that
     /// won't start. The result is always validated, so callers can rely on
+<<<<<<< HEAD
     /// <see cref="DockConfig.Dock"/> being populated. If the primary file is unreadable the backup
     /// is tried, and a genuinely corrupt file is preserved for recovery rather than silently lost.
     /// </summary>
     public static DockConfig Load()
     {
+=======
+    /// <see cref="DockConfig.Dock"/> being populated.
+    /// won't start. If corruption occurs, the broken file is preserved and backup is tried.
+    /// </summary>
+    public static DockConfig Load()
+    {
+        try
+>>>>>>> 7203e6b12c66d9a2bf1e4a30b756d88612412177
         lock (SaveLock)
         {
             if (File.Exists(FilePath))
@@ -124,6 +140,7 @@ public static class DockStore
                 var json = File.ReadAllText(path);
                 var cfg = JsonSerializer.Deserialize<DockConfig>(json, Options);
                 if (cfg is not null)
+<<<<<<< HEAD
                     return (true, cfg);
                 return (false, null);
             }
@@ -142,23 +159,109 @@ public static class DockStore
             {
                 Diag.Log($"DockStore: unexpected error reading '{path}': {ex.Message}");
                 return (false, null);
+=======
+                var (ok, cfg) = TryReadAndDeserialize(FilePath);
+                if (ok && cfg is not null)
+                    return cfg.EnsureValid();
+
+                Diag.Log("DockStore.Load: primary dock.json failed to load. Attempting backup restore...");
+>>>>>>> 7203e6b12c66d9a2bf1e4a30b756d88612412177
+            }
+
+            if (File.Exists(BackupFilePath))
+            {
+                var (bakOk, bakCfg) = TryReadAndDeserialize(BackupFilePath);
+                if (bakOk && bakCfg is not null)
+                {
+                    Diag.Log("DockStore.Load: successfully recovered settings from dock.json.bak");
+                    return bakCfg.EnsureValid();
+                }
+            }
+
+            if (File.Exists(FilePath))
+            {
+                // Preserve damaged file for user recovery rather than losing it
+                try
+                {
+                    var corruptCopy = $"{FilePath}.corrupt.{DateTime.UtcNow:yyyyMMddHHmmss}";
+                    File.Copy(FilePath, corruptCopy, overwrite: true);
+                    Diag.Log($"DockStore.Load: preserved corrupt configuration at '{corruptCopy}'");
+                }
+                catch { /* ignore */ }
+
+                // Mark Seeded=true so dockdevManager.Start() does NOT treat this as a first-run and wipe the file
+                return new DockConfig { Seeded = true }.EnsureValid();
+            }
+
+            return new DockConfig().EnsureValid();
+        }
+<<<<<<< HEAD
+=======
+        catch (Exception ex)
+    }
+
+    private static (bool Success, DockConfig? Config) TryReadAndDeserialize(string path)
+    {
+        for (int attempt = 0; attempt < 3; attempt++)
+        {
+            Diag.Log("DockStore.Load failed: " + ex.Message);
+            try
+            {
+                var json = File.ReadAllText(path);
+                var cfg = JsonSerializer.Deserialize<DockConfig>(json, Options);
+                if (cfg is not null)
+                    return (true, cfg);
+            }
+            catch (JsonException ex)
+            {
+                Diag.Log($"DockStore: JSON parse error in '{path}': {ex.Message}");
+                return (false, null);
+            }
+            catch (IOException ex)
+            {
+                Diag.Log($"DockStore: I/O error reading '{path}' (attempt {attempt + 1}): {ex.Message}");
+                if (attempt < 2)
+                    Thread.Sleep(25 * (attempt + 1));
+            }
+            catch (Exception ex)
+            {
+                Diag.Log($"DockStore: Unexpected error reading '{path}': {ex.Message}");
+                return (false, null);
             }
         }
+        return new DockConfig().EnsureValid();
+>>>>>>> 7203e6b12c66d9a2bf1e4a30b756d88612412177
         return (false, null);
     }
 
     public static void Save(DockConfig config)
     {
+<<<<<<< HEAD
         lock (SaveLock)
         {
+=======
+        try
+        lock (SaveLock)
+        {
+            Directory.CreateDirectory(Dir);
+            var json = JsonSerializer.Serialize(config, Options);
+            // Write-then-rename for crash safety.
+            var tmp = FilePath + ".tmp";
+            File.WriteAllText(tmp, json);
+            File.Move(tmp, FilePath, overwrite: true);
+>>>>>>> 7203e6b12c66d9a2bf1e4a30b756d88612412177
             var tmp = $"{FilePath}.{Guid.NewGuid():N}.tmp";
             try
             {
                 Directory.CreateDirectory(Dir);
                 var json = JsonSerializer.Serialize(config, Options);
 
+<<<<<<< HEAD
                 // Write to a temp file with a forced disk flush, so a crash mid-write cannot leave
                 // a half-written or zero-length dock.json.
+=======
+                // Write with forced disk flush for crash safety
+>>>>>>> 7203e6b12c66d9a2bf1e4a30b756d88612412177
                 using (var stream = new FileStream(tmp, FileMode.Create, FileAccess.Write, FileShare.None, 4096, FileOptions.WriteThrough))
                 using (var writer = new StreamWriter(stream, System.Text.Encoding.UTF8))
                 {
@@ -167,6 +270,7 @@ public static class DockStore
                     stream.Flush(flushToDisk: true);
                 }
 
+<<<<<<< HEAD
                 // Keep the last known-good file as a backup before replacing it, so Load has
                 // something to fall back to if the new file is later found corrupt.
                 if (File.Exists(FilePath))
@@ -176,6 +280,16 @@ public static class DockStore
                 }
 
                 // Replace via rename, retrying transient locks (antivirus, search indexer).
+=======
+                // Maintain backup of previous valid file
+                if (File.Exists(FilePath))
+                {
+                    try { File.Copy(FilePath, BackupFilePath, overwrite: true); }
+                    catch { /* ignore backup creation failures */ }
+                }
+
+                // Replace target with retry loop for transient locks (antivirus, search indexer)
+>>>>>>> 7203e6b12c66d9a2bf1e4a30b756d88612412177
                 bool moved = false;
                 for (int attempt = 0; attempt < 4; attempt++)
                 {
@@ -207,6 +321,13 @@ public static class DockStore
                 }
                 catch { /* ignore */ }
             }
+<<<<<<< HEAD
+=======
+        }
+        catch (Exception ex)
+        {
+            Diag.Log("DockStore.Save failed: " + ex.Message);
+>>>>>>> 7203e6b12c66d9a2bf1e4a30b756d88612412177
         }
     }
 
@@ -221,15 +342,31 @@ public static class DockStore
     /// caller is a button in the Settings window.</returns>
     public static bool ExportTo(DockConfig config, string path)
     {
+<<<<<<< HEAD
         lock (SaveLock)
         {
+=======
+        try
+        lock (SaveLock)
+        {
+            var directory = Path.GetDirectoryName(path);
+            if (!string.IsNullOrEmpty(directory))
+                Directory.CreateDirectory(directory);
+            File.WriteAllText(path, JsonSerializer.Serialize(config, Options));
+            return true;
+>>>>>>> 7203e6b12c66d9a2bf1e4a30b756d88612412177
             try
             {
                 var directory = Path.GetDirectoryName(path);
                 if (!string.IsNullOrEmpty(directory))
                     Directory.CreateDirectory(directory);
 
+<<<<<<< HEAD
                 File.WriteAllText(path, JsonSerializer.Serialize(config, Options));
+=======
+                var json = JsonSerializer.Serialize(config, Options);
+                File.WriteAllText(path, json);
+>>>>>>> 7203e6b12c66d9a2bf1e4a30b756d88612412177
                 return true;
             }
             catch (Exception ex)
@@ -237,6 +374,14 @@ public static class DockStore
                 Diag.Log($"DockStore.ExportTo('{path}') failed: {ex.Message}");
                 return false;
             }
+<<<<<<< HEAD
+=======
+        }
+        catch (Exception ex)
+        {
+            Diag.Log($"DockStore.ExportTo('{path}') failed: {ex.Message}");
+            return false;
+>>>>>>> 7203e6b12c66d9a2bf1e4a30b756d88612412177
         }
     }
 
@@ -266,6 +411,9 @@ public static class DockStore
 
             var config = JsonSerializer.Deserialize<DockConfig>(File.ReadAllText(path), Options);
             if (config is null)
+            var json = File.ReadAllText(path);
+            var config = JsonSerializer.Deserialize<DockConfig>(json, Options);
+            if (config is null || !config.HasDock)
                 return null;
 
             // Checked before EnsureValid: any JSON object deserializes happily into a DockConfig

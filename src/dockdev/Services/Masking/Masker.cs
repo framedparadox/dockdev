@@ -91,9 +91,14 @@ public sealed class Masker
     private static string FormatPreservingFake(Finding finding, string original) => finding.RuleId switch
     {
         "payment-card" => FakeCard(),
+<<<<<<< HEAD
         // (uint) cast, not Math.Abs: Math.Abs(int.MinValue) throws OverflowException, and GetHashCode
         // can legitimately return int.MinValue.
         "email" => $"user{(uint)original.GetHashCode() % 10_000}@example.com",
+=======
+        "email" => $"user{Math.Abs(original.GetHashCode()) % 10_000}@example.com",
+        "email" => $"user{((uint)original.GetHashCode()) % 10_000}@example.com",
+>>>>>>> 7203e6b12c66d9a2bf1e4a30b756d88612412177
         _ => new string('*', original.Length),
     };
 

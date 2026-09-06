@@ -61,6 +61,11 @@ public static partial class LineOps
         {
             x ??= "";
             y ??= "";
+<<<<<<< HEAD
+=======
+            var partsX = SplitNumeric().Matches(x).Select(m => m.Value).ToList();
+            var partsY = SplitNumeric().Matches(y).Select(m => m.Value).ToList();
+>>>>>>> 7203e6b12c66d9a2bf1e4a30b756d88612412177
             List<string> partsX;
             List<string> partsY;
             try
@@ -70,8 +75,11 @@ public static partial class LineOps
             }
             catch (RegexMatchTimeoutException)
             {
+<<<<<<< HEAD
                 // A pathological input tripped the regex timeout; fall back to an ordinal compare
                 // rather than throwing out of a sort comparer (which would abort the whole sort).
+=======
+>>>>>>> 7203e6b12c66d9a2bf1e4a30b756d88612412177
                 return string.CompareOrdinal(x, y);
             }
 
@@ -83,8 +91,14 @@ public static partial class LineOps
                 int cmp;
                 if (numX && numY)
                 {
+<<<<<<< HEAD
                     // TryParse, not Parse: a numeric run can be longer than BigInteger will parse in
                     // one gulp only in absurd cases, but a non-throwing path keeps the sort alive.
+=======
+                    var bigX = System.Numerics.BigInteger.Parse(partsX[i]);
+                    var bigY = System.Numerics.BigInteger.Parse(partsY[i]);
+                    cmp = bigX.CompareTo(bigY);
+>>>>>>> 7203e6b12c66d9a2bf1e4a30b756d88612412177
                     if (System.Numerics.BigInteger.TryParse(partsX[i], out var bigX) &&
                         System.Numerics.BigInteger.TryParse(partsY[i], out var bigY))
                     {
@@ -105,6 +119,10 @@ public static partial class LineOps
             return partsX.Count.CompareTo(partsY.Count);
         }
 
+<<<<<<< HEAD
+=======
+        [GeneratedRegex(@"\d+|\D+")]
+>>>>>>> 7203e6b12c66d9a2bf1e4a30b756d88612412177
         [GeneratedRegex(@"\d+|\D+", RegexOptions.None, matchTimeoutMilliseconds: 500)]
         private static partial Regex SplitNumeric();
     }

@@ -158,6 +158,13 @@ internal static partial class NativeMethods
     public static extern uint RegisterWindowMessage(string message);
 
     public const uint WM_APP = 0x8000;
+    public const uint WM_NULL = 0x0000;
+    public const uint WM_DESTROY = 0x0002;
+    public const uint WM_SETTINGCHANGE = 0x001A;
+    public const uint WM_QUERYENDSESSION = 0x0011;
+    public const uint WM_ENDSESSION = 0x0016;
+    public const uint WM_DISPLAYCHANGE = 0x007E;
+    public const uint WM_CONTEXTMENU = 0x007B;
     public const uint WM_COMMAND = 0x0111;
     public const uint WM_DESTROY = 0x0002;
     public const uint WM_HOTKEY = 0x0312;
@@ -166,10 +173,15 @@ internal static partial class NativeMethods
     public const uint WM_LBUTTONDBLCLK = 0x0203;
     public const uint WM_RBUTTONUP = 0x0205;
     public const uint WM_CONTEXTMENU = 0x007B;
+<<<<<<< HEAD
     public const uint WM_QUERYENDSESSION = 0x0011;
     public const uint WM_ENDSESSION = 0x0016;
     public const uint WM_SETTINGCHANGE = 0x001A;
     public const uint WM_DISPLAYCHANGE = 0x007E;
+=======
+    public const uint WM_HOTKEY = 0x0312;
+    public const uint WM_APP = 0x8000;
+>>>>>>> 7203e6b12c66d9a2bf1e4a30b756d88612412177
 
     // ---- Notification-area (tray) icon -------------------------------------
 
@@ -219,6 +231,7 @@ internal static partial class NativeMethods
 
     /// <summary>Resource id the .NET SDK gives an <c>&lt;ApplicationIcon&gt;</c> (IDI_APPLICATION).</summary>
     public static readonly nint IDI_APPLICATION = 32512;
+    public static readonly nint IDI_APP_ICON = 1;
 
     /// <summary>The app's own embedded icon (first icon resource, id 1) so the tray shows the
     /// dockdev icon rather than the generic Windows application icon; callers fall back if absent.</summary>

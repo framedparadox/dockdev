@@ -122,8 +122,11 @@ public sealed class XmlFormat : IDataFormat
 
     private static Diagnostic ToDiagnostic(XmlException ex) => new(ex.LineNumber, ex.LinePosition, ex.Message);
 
+<<<<<<< HEAD
     // A JSON key can be anything; an XML element/attribute name cannot. Encode it so building XML
     // from arbitrary JSON never throws an XmlException on an illegal name.
+=======
+>>>>>>> 7203e6b12c66d9a2bf1e4a30b756d88612412177
     private static string SafeXmlName(string name)
     {
         if (string.IsNullOrWhiteSpace(name))
@@ -139,19 +142,29 @@ public sealed class XmlFormat : IDataFormat
         }
     }
 
+<<<<<<< HEAD
     // Depth cap for both directions: a deeply nested document would otherwise recurse until the
     // stack overflows (an uncatchable crash).
     private const int MaxXmlDepth = 128;
 
+=======
+>>>>>>> 7203e6b12c66d9a2bf1e4a30b756d88612412177
     /// <summary>
     /// Repeated sibling elements collapse into an <see cref="ArrayNode"/> (the conventional
     /// XML→JSON shape); a leaf with no attributes becomes a bare <see cref="ScalarNode"/> so a
     /// simple <c>&lt;name&gt;Ada&lt;/name&gt;</c> round-trips as the string <c>"Ada"</c> rather
     /// than an object wrapper.
     /// </summary>
+<<<<<<< HEAD
     private static DataNode ConvertElement(XElement element, int depth = 0)
     {
         if (depth > MaxXmlDepth)
+=======
+    private static DataNode ConvertElement(XElement element)
+    private static DataNode ConvertElement(XElement element, int depth = 0)
+    {
+        if (depth > 128)
+>>>>>>> 7203e6b12c66d9a2bf1e4a30b756d88612412177
             return new ScalarNode(element.Value, ScalarKind.String);
 
         var members = new List<(string Key, DataNode Value)>();
@@ -181,6 +194,10 @@ public sealed class XmlFormat : IDataFormat
                 groups[name] = list;
                 order.Add(name);
             }
+<<<<<<< HEAD
+=======
+            list.Add(ConvertElement(child));
+>>>>>>> 7203e6b12c66d9a2bf1e4a30b756d88612412177
             list.Add(ConvertElement(child, depth + 1));
         }
         foreach (var name in order)
@@ -191,10 +208,20 @@ public sealed class XmlFormat : IDataFormat
         return new ObjectNode(members);
     }
 
+<<<<<<< HEAD
     private static XElement BuildElement(string name, DataNode node, int depth = 0)
     {
         var el = new XElement(SafeXmlName(name));
         if (depth > MaxXmlDepth)
+=======
+    private static XElement BuildElement(string name, DataNode node)
+    private static XElement BuildElement(string name, DataNode node, int depth = 0)
+    {
+        var el = new XElement(name);
+        var safeName = SafeXmlName(name);
+        var el = new XElement(safeName);
+        if (depth > 128)
+>>>>>>> 7203e6b12c66d9a2bf1e4a30b756d88612412177
         {
             el.Value = (node as ScalarNode)?.Raw ?? "";
             return el;
@@ -209,18 +236,31 @@ public sealed class XmlFormat : IDataFormat
                 // Reached only for an array with no member name of its own (e.g. the canonical
                 // root is itself an array); "item" is the least-surprising synthetic tag.
                 foreach (var item in arr.Items)
+<<<<<<< HEAD
+=======
+                    el.Add(BuildElement("item", item));
+>>>>>>> 7203e6b12c66d9a2bf1e4a30b756d88612412177
                     el.Add(BuildElement("item", item, depth + 1));
                 break;
             case ObjectNode obj:
                 foreach (var (key, value) in obj.Members)
                 {
                     if (key.StartsWith('@'))
+<<<<<<< HEAD
                     {
                         // An attribute name from arbitrary JSON may be illegal XML; encode it and
                         // swallow the rare residual XmlException rather than failing the format.
                         try
                         {
                             el.SetAttributeValue(SafeXmlName(key[1..]), (value as ScalarNode)?.Raw ?? "");
+=======
+                        el.SetAttributeValue(key[1..], (value as ScalarNode)?.Raw ?? "");
+                    {
+                        var attrName = SafeXmlName(key[1..]);
+                        try
+                        {
+                            el.SetAttributeValue(attrName, (value as ScalarNode)?.Raw ?? "");
+>>>>>>> 7203e6b12c66d9a2bf1e4a30b756d88612412177
                         }
                         catch (XmlException) { }
                     }
@@ -228,8 +268,15 @@ public sealed class XmlFormat : IDataFormat
                         el.Value = (value as ScalarNode)?.Raw ?? "";
                     else if (value is ArrayNode valueArray)
                         foreach (var item in valueArray.Items)
+<<<<<<< HEAD
                             el.Add(BuildElement(key, item, depth + 1));
                     else
+=======
+                            el.Add(BuildElement(key, item));
+                            el.Add(BuildElement(key, item, depth + 1));
+                    else
+                        el.Add(BuildElement(key, value));
+>>>>>>> 7203e6b12c66d9a2bf1e4a30b756d88612412177
                         el.Add(BuildElement(key, value, depth + 1));
                 }
                 break;

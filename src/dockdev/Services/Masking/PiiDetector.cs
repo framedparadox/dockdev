@@ -81,29 +81,56 @@ public static partial class PiiDetector
     /// <c>key="</c> attribute whose name satisfies <paramref name="keyPattern"/>.</summary>
     private static bool HasNearbyKey(string text, int matchStart, Regex keyPattern)
     {
+<<<<<<< HEAD
+=======
+        int windowStart = Math.Max(0, matchStart - 48);
+        var window = text[windowStart..matchStart];
+>>>>>>> 7203e6b12c66d9a2bf1e4a30b756d88612412177
         try
         {
             int windowStart = Math.Max(0, matchStart - 48);
             var window = text[windowStart..matchStart];
 
+<<<<<<< HEAD
+=======
+        var jsonKey = JsonKeyBefore().Match(window);
+        if (jsonKey.Success && keyPattern.IsMatch(jsonKey.Groups[1].Value))
+            return true;
+>>>>>>> 7203e6b12c66d9a2bf1e4a30b756d88612412177
             var jsonKey = JsonKeyBefore().Match(window);
             if (jsonKey.Success && keyPattern.IsMatch(jsonKey.Groups[1].Value))
                 return true;
 
+<<<<<<< HEAD
+=======
+        var attrKey = AttrKeyBefore().Match(window);
+        return attrKey.Success && keyPattern.IsMatch(attrKey.Groups[1].Value);
+>>>>>>> 7203e6b12c66d9a2bf1e4a30b756d88612412177
             var attrKey = AttrKeyBefore().Match(window);
             return attrKey.Success && keyPattern.IsMatch(attrKey.Groups[1].Value);
         }
         catch (RegexMatchTimeoutException)
         {
+<<<<<<< HEAD
             // A user-supplied rule pattern hit the timeout; treat "can't tell" as "no nearby key"
             // rather than throwing out of detection.
+=======
+>>>>>>> 7203e6b12c66d9a2bf1e4a30b756d88612412177
             return false;
         }
     }
 
+<<<<<<< HEAD
     [GeneratedRegex("\"([A-Za-z0-9_\\-]+)\"\\s*:\\s*\"?$", RegexOptions.None, matchTimeoutMilliseconds: 500)]
     private static partial Regex JsonKeyBefore();
 
+=======
+    [GeneratedRegex("\"([A-Za-z0-9_\\-]+)\"\\s*:\\s*\"?$")]
+    [GeneratedRegex("\"([A-Za-z0-9_\\-]+)\"\\s*:\\s*\"?$", RegexOptions.None, matchTimeoutMilliseconds: 500)]
+    private static partial Regex JsonKeyBefore();
+
+    [GeneratedRegex("([A-Za-z0-9_\\-]+)\\s*=\\s*\"?$")]
+>>>>>>> 7203e6b12c66d9a2bf1e4a30b756d88612412177
     [GeneratedRegex("([A-Za-z0-9_\\-]+)\\s*=\\s*\"?$", RegexOptions.None, matchTimeoutMilliseconds: 500)]
     private static partial Regex AttrKeyBefore();
 
@@ -115,14 +142,31 @@ public static partial class PiiDetector
         if (keyOnlyRules.Count == 0)
             yield break;
 
+<<<<<<< HEAD
         // Materialize inside the try (Matches evaluates lazily) so a regex timeout during matching
         // is caught here rather than escaping mid-enumeration, which a yield loop cannot guard.
         List<Match>? jsonMatches = null;
         try { jsonMatches = JsonKeyValue().Matches(text).ToList(); }
+=======
+        foreach (Match m in JsonKeyValue().Matches(text))
+        MatchCollection? jsonMatches = null;
+        try { jsonMatches = JsonKeyValue().Matches(text); }
+>>>>>>> 7203e6b12c66d9a2bf1e4a30b756d88612412177
         catch (RegexMatchTimeoutException) { }
 
         if (jsonMatches is not null)
         {
+<<<<<<< HEAD
+=======
+            var key = m.Groups[1].Value;
+            var rule = keyOnlyRules.FirstOrDefault(r => r.KeyPattern!.IsMatch(key));
+            if (rule is null)
+                continue;
+            var valueGroup = m.Groups[2];
+            if (valueGroup.Length == 0)
+                continue;
+            yield return new Finding(rule.Id, rule.Category, "$." + key, valueGroup.Index, valueGroup.Length, Confidence.Medium, rule.DefaultStrategy, Included: true);
+>>>>>>> 7203e6b12c66d9a2bf1e4a30b756d88612412177
             foreach (Match m in jsonMatches)
             {
                 var key = m.Groups[1].Value;
@@ -138,12 +182,29 @@ public static partial class PiiDetector
             }
         }
 
+<<<<<<< HEAD
         List<Match>? xmlMatches = null;
         try { xmlMatches = XmlAttrKeyValue().Matches(text).ToList(); }
+=======
+        foreach (Match m in XmlAttrKeyValue().Matches(text))
+        MatchCollection? xmlMatches = null;
+        try { xmlMatches = XmlAttrKeyValue().Matches(text); }
+>>>>>>> 7203e6b12c66d9a2bf1e4a30b756d88612412177
         catch (RegexMatchTimeoutException) { }
 
         if (xmlMatches is not null)
         {
+<<<<<<< HEAD
+=======
+            var key = m.Groups[1].Value;
+            var rule = keyOnlyRules.FirstOrDefault(r => r.KeyPattern!.IsMatch(key));
+            if (rule is null)
+                continue;
+            var valueGroup = m.Groups[2];
+            if (valueGroup.Length == 0)
+                continue;
+            yield return new Finding(rule.Id, rule.Category, "@" + key, valueGroup.Index, valueGroup.Length, Confidence.Medium, rule.DefaultStrategy, Included: true);
+>>>>>>> 7203e6b12c66d9a2bf1e4a30b756d88612412177
             foreach (Match m in xmlMatches)
             {
                 var key = m.Groups[1].Value;
@@ -160,9 +221,17 @@ public static partial class PiiDetector
         }
     }
 
+<<<<<<< HEAD
     [GeneratedRegex("\"([A-Za-z0-9_\\-]+)\"\\s*:\\s*\"([^\"]*)\"", RegexOptions.None, matchTimeoutMilliseconds: 500)]
     private static partial Regex JsonKeyValue();
 
+=======
+    [GeneratedRegex("\"([A-Za-z0-9_\\-]+)\"\\s*:\\s*\"([^\"]*)\"")]
+    [GeneratedRegex("\"([A-Za-z0-9_\\-]+)\"\\s*:\\s*\"([^\"]*)\"", RegexOptions.None, matchTimeoutMilliseconds: 500)]
+    private static partial Regex JsonKeyValue();
+
+    [GeneratedRegex("([A-Za-z0-9_\\-]+)\\s*=\\s*\"([^\"]*)\"")]
+>>>>>>> 7203e6b12c66d9a2bf1e4a30b756d88612412177
     [GeneratedRegex("([A-Za-z0-9_\\-]+)\\s*=\\s*\"([^\"]*)\"", RegexOptions.None, matchTimeoutMilliseconds: 500)]
     private static partial Regex XmlAttrKeyValue();
 
@@ -181,6 +250,10 @@ public static partial class PiiDetector
         for (int col = 0; col < header.Count; col++)
         {
             var headerText = text.Substring(header[col].Start, header[col].Length);
+<<<<<<< HEAD
+=======
+            var rule = keyOnlyRules.FirstOrDefault(r => r.KeyPattern!.IsMatch(headerText));
+>>>>>>> 7203e6b12c66d9a2bf1e4a30b756d88612412177
             PiiRule? rule = null;
             try { rule = keyOnlyRules.FirstOrDefault(r => r.KeyPattern!.IsMatch(headerText)); }
             catch (RegexMatchTimeoutException) { }

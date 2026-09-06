@@ -82,9 +82,14 @@ public static class JwtTools
     private static DateTimeOffset? ReadUnixSeconds(JsonElement root, string property)
     {
         if (root.TryGetProperty(property, out var el) && el.TryGetInt64(out var seconds))
+<<<<<<< HEAD
         {
             // FromUnixTimeSeconds throws outside DateTimeOffset's range; a malicious/garbage token
             // can carry any int64, so range-check before converting.
+=======
+            return DateTimeOffset.FromUnixTimeSeconds(seconds);
+        {
+>>>>>>> 7203e6b12c66d9a2bf1e4a30b756d88612412177
             if (seconds is >= -62_135_596_800L and <= 253_402_300_799L)
             {
                 try

@@ -160,10 +160,15 @@ public sealed class dockdevManager
     public void Quit()
     {
         _shuttingDown = true;
+<<<<<<< HEAD
         // Persist first: a quit that then hits a teardown fault should not also cost the user their
         // latest settings.
         try { Save(); }
         catch { /* Save already logs; never let a save failure block shutdown */ }
+=======
+        try { Save(); }
+        catch { /* ignore */ }
+>>>>>>> 7203e6b12c66d9a2bf1e4a30b756d88612412177
         ReleaseShellIntegration();
         // A dock refuses any close request that did not come from dockdev (see
         // DockWindow.AllowClose), and would otherwise cancel Application.Exit's teardown.
@@ -176,12 +181,21 @@ public sealed class dockdevManager
         try
         {
             _messageWindow = new MessageWindow();
+<<<<<<< HEAD
             // A display resolution/arrangement change or a system settings change (DPI, taskbar
             // size) can strand the dock off-screen; re-run its edge layout when either arrives.
             _messageWindow.MessageReceived += (msg, _, _) =>
             {
                 if (msg is NativeMethods.WM_DISPLAYCHANGE or NativeMethods.WM_SETTINGCHANGE)
                     _dock?.DispatcherQueue.TryEnqueue(() => _dock?.RelayoutAfterExternalMove());
+=======
+            _messageWindow.MessageReceived += (msg, _, _) =>
+            {
+                if (msg is NativeMethods.WM_DISPLAYCHANGE or NativeMethods.WM_SETTINGCHANGE)
+                {
+                    _dock?.DispatcherQueue.TryEnqueue(() => _dock?.RelayoutAfterExternalMove());
+                }
+>>>>>>> 7203e6b12c66d9a2bf1e4a30b756d88612412177
             };
 
             _tray = new TrayIconService(_messageWindow)
@@ -553,9 +567,20 @@ public sealed class dockdevManager
         var window = _settingsWindow;
         if (window is null)
             return;
+        _settingsWindow = null;
+        window?.Close();
 
+<<<<<<< HEAD
         _settingsWindow = null;
         window.Close();
+=======
+        window.DispatcherQueue.TryEnqueue(() =>
+        var dq = _dock?.DispatcherQueue ?? Microsoft.UI.Dispatching.DispatcherQueue.GetForCurrentThread();
+        dq?.TryEnqueue(() =>
+        {
+            _settingsWindow = null;
+            window.Close();
+>>>>>>> 7203e6b12c66d9a2bf1e4a30b756d88612412177
 
         // The just-closed window's own DispatcherQueue may already be tearing down, so recreate on
         // the dock's (process-lifetime) queue, falling back to the current thread's.
@@ -649,10 +674,17 @@ public sealed class dockdevManager
 
     public bool SetHotkey(HotkeyGesture? gesture)
     {
+<<<<<<< HEAD
         // Apply before persisting: RegisterHotKey can be refused (the combo is already owned by
         // another app), and persisting a gesture that never took effect would be a stored lie.
         var previous = Config.Hotkey;
         Config.Hotkey = gesture?.ToString() ?? string.Empty;
+=======
+        var previous = Config.Hotkey;
+        Config.Hotkey = gesture?.ToString() ?? string.Empty;
+        Save();
+        return ApplyHotkey();
+>>>>>>> 7203e6b12c66d9a2bf1e4a30b756d88612412177
         if (ApplyHotkey())
         {
             Save();
@@ -674,6 +706,11 @@ public sealed class dockdevManager
     {
         var previous = Config.SearchHotkey;
         Config.SearchHotkey = gesture?.ToString() ?? string.Empty;
+<<<<<<< HEAD
+=======
+        Save();
+        return ApplySearchHotkey();
+>>>>>>> 7203e6b12c66d9a2bf1e4a30b756d88612412177
         if (ApplySearchHotkey())
         {
             Save();
@@ -695,6 +732,17 @@ public sealed class dockdevManager
     {
         var previous = item.Hotkey;
         item.Hotkey = gesture?.ToString();
+<<<<<<< HEAD
+=======
+        var refused = ApplyItemHotkeys();
+        if (refused.Contains(item))
+        {
+            item.Hotkey = previous;
+            ApplyItemHotkeys();
+            return false;
+        }
+        Save();
+>>>>>>> 7203e6b12c66d9a2bf1e4a30b756d88612412177
         var refused = ApplyItemHotkeys();
         if (refused.Contains(item))
         {
@@ -705,6 +753,10 @@ public sealed class dockdevManager
         }
         Save();
         ItemsChanged?.Invoke();
+<<<<<<< HEAD
+=======
+        return !refused.Contains(item);
+>>>>>>> 7203e6b12c66d9a2bf1e4a30b756d88612412177
         return true;
     }
 

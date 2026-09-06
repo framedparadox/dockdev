@@ -58,12 +58,17 @@ public sealed class StructureTree : Grid
         };
     }
 
+<<<<<<< HEAD
     // Guards against structures that would otherwise stack-overflow (deep nesting) or hang the UI
     // thread building tens of thousands of TreeViewNodes (very wide or very large documents). The
     // tree is a navigation aid, not a full renderer, so a truncated view beats a frozen dock.
     private const int MaxDepth = 64;
     private const int MaxChildrenPerNode = 200;
     private const int MaxTotalNodes = 1000;
+=======
+    private const int MaxDepth = 64;
+    private const int MaxChildrenPerNode = 200;
+>>>>>>> 7203e6b12c66d9a2bf1e4a30b756d88612412177
 
     public void SetRoot(DataNode? root)
     {
@@ -72,15 +77,26 @@ public sealed class StructureTree : Grid
         if (root is null)
             return;
         var node = new TreeViewNode { Content = new PathTag("$", Label("$", root)) };
+<<<<<<< HEAD
+=======
+        Populate(node, root, "$");
+>>>>>>> 7203e6b12c66d9a2bf1e4a30b756d88612412177
         int totalNodes = 0;
         Populate(node, root, "$", 0, ref totalNodes);
         _tree.RootNodes.Add(node);
         node.IsExpanded = true;
     }
 
+<<<<<<< HEAD
     private static void Populate(TreeViewNode node, DataNode value, string path, int depth, ref int totalNodes)
     {
         if (depth > MaxDepth || totalNodes > MaxTotalNodes)
+=======
+    private static void Populate(TreeViewNode node, DataNode value, string path)
+    private static void Populate(TreeViewNode node, DataNode value, string path, int depth, ref int totalNodes)
+    {
+        if (depth > MaxDepth || totalNodes > 1000)
+>>>>>>> 7203e6b12c66d9a2bf1e4a30b756d88612412177
             return;
 
         switch (value)
@@ -89,13 +105,23 @@ public sealed class StructureTree : Grid
                 int objCount = 0;
                 foreach (var (key, child) in obj.Members)
                 {
+<<<<<<< HEAD
                     if (objCount++ >= MaxChildrenPerNode || totalNodes++ > MaxTotalNodes)
                     {
                         node.Children.Add(new TreeViewNode { Content = new PathTag(path, $"… ({obj.Members.Count - objCount + 1} more)") });
+=======
+                    if (objCount++ >= MaxChildrenPerNode || totalNodes++ > 1000)
+                    {
+                        node.Children.Add(new TreeViewNode { Content = new PathTag(path, $"... ({obj.Members.Count - MaxChildrenPerNode} more)") });
+>>>>>>> 7203e6b12c66d9a2bf1e4a30b756d88612412177
                         break;
                     }
                     var childPath = $"{path}.{key}";
                     var childNode = new TreeViewNode { Content = new PathTag(childPath, Label(key, child)) };
+<<<<<<< HEAD
+=======
+                    Populate(childNode, child, childPath);
+>>>>>>> 7203e6b12c66d9a2bf1e4a30b756d88612412177
                     Populate(childNode, child, childPath, depth + 1, ref totalNodes);
                     node.Children.Add(childNode);
                 }
@@ -104,13 +130,23 @@ public sealed class StructureTree : Grid
                 int arrCount = 0;
                 for (int i = 0; i < arr.Items.Count; i++)
                 {
+<<<<<<< HEAD
                     if (arrCount++ >= MaxChildrenPerNode || totalNodes++ > MaxTotalNodes)
                     {
                         node.Children.Add(new TreeViewNode { Content = new PathTag(path, $"… ({arr.Items.Count - i} more)") });
+=======
+                    if (arrCount++ >= MaxChildrenPerNode || totalNodes++ > 1000)
+                    {
+                        node.Children.Add(new TreeViewNode { Content = new PathTag(path, $"... ({arr.Items.Count - MaxChildrenPerNode} more)") });
+>>>>>>> 7203e6b12c66d9a2bf1e4a30b756d88612412177
                         break;
                     }
                     var childPath = $"{path}[{i}]";
                     var childNode = new TreeViewNode { Content = new PathTag(childPath, Label($"[{i}]", arr.Items[i])) };
+<<<<<<< HEAD
+=======
+                    Populate(childNode, arr.Items[i], childPath);
+>>>>>>> 7203e6b12c66d9a2bf1e4a30b756d88612412177
                     Populate(childNode, arr.Items[i], childPath, depth + 1, ref totalNodes);
                     node.Children.Add(childNode);
                 }

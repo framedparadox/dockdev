@@ -74,10 +74,17 @@ public sealed class LoremPage : FormToolPage
         ToolCommand.Run(Generate),
     ];
 
+<<<<<<< HEAD
     private void Generate()
     {
         // Guard the selection index and the NumberBox value: SelectedIndex is -1 while the combo
         // rebuilds, and _count.Value is NaN when the box is empty — both would otherwise throw.
+=======
+    private void Generate() =>
+        _results.Text = LoremTools.Generate(Units[_unit.SelectedIndex], (int)_count.Value, _classicOpening.IsChecked == true);
+    private void Generate()
+    {
+>>>>>>> 7203e6b12c66d9a2bf1e4a30b756d88612412177
         var unit = _unit.SelectedIndex >= 0 && _unit.SelectedIndex < Units.Length ? Units[_unit.SelectedIndex] : Units[0];
         int count = double.IsNaN(_count.Value) ? 3 : (int)Math.Clamp(_count.Value, 1, 500);
         _results.Text = LoremTools.Generate(unit, count, _classicOpening.IsChecked == true);

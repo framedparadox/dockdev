@@ -41,8 +41,11 @@ public sealed class CopyButton : Button
         ToolTipService.SetToolTip(this, name);
 
         Click += (_, _) => Copy();
+<<<<<<< HEAD
         // A tool page can be torn down while the confirmation timer is still armed; stop it on
         // unload so a Tick never fires against a detached visual tree.
+=======
+>>>>>>> 7203e6b12c66d9a2bf1e4a30b756d88612412177
         Unloaded += (_, _) => _resetTimer?.Stop();
     }
 
@@ -57,6 +60,9 @@ public sealed class CopyButton : Button
         if (!ClipboardService.TrySetText(text))
             return;
 
+        if (!ClipboardService.TrySetText(text))
+            return;
+
         _label.Text = Loc.Get("Tool.Copied");
         if (!_panel.Children.Contains(_label))
             _panel.Children.Add(_label);
@@ -65,6 +71,13 @@ public sealed class CopyButton : Button
         // method did — left one live Tick handler per copy, so the tenth copy ran ten resets.
         if (_resetTimer is null)
         {
+<<<<<<< HEAD
+=======
+            _resetTimer = DispatcherQueue.GetForCurrentThread().CreateTimer();
+            _resetTimer.IsRepeating = false;
+            _resetTimer.Interval = TimeSpan.FromSeconds(1.5);
+            _resetTimer.Tick += (_, _) => ResetLabel();
+>>>>>>> 7203e6b12c66d9a2bf1e4a30b756d88612412177
             var dq = DispatcherQueue ?? DispatcherQueue.GetForCurrentThread();
             _resetTimer = dq?.CreateTimer();
             if (_resetTimer is not null)
@@ -74,6 +87,11 @@ public sealed class CopyButton : Button
                 _resetTimer.Tick += (_, _) => ResetLabel();
             }
         }
+<<<<<<< HEAD
+=======
+        _resetTimer.Stop();
+        _resetTimer.Start();
+>>>>>>> 7203e6b12c66d9a2bf1e4a30b756d88612412177
         _resetTimer?.Stop();
         _resetTimer?.Start();
     }

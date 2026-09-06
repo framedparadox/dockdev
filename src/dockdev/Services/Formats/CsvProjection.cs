@@ -114,12 +114,20 @@ public static class CsvProjection
         if (node.Scalar is not null && node.Children.Count == 0)
             return node.Scalar;
 
+<<<<<<< HEAD
         // int.TryParse (not "all digits"): an all-digits key like "99999999999" passes the digit
         // test but overflows int.Parse below, throwing on otherwise-valid CSV.
+=======
+        bool looksLikeArray = node.Order.Count > 0 && node.Order.All(k => k.Length > 0 && k.All(char.IsAsciiDigit));
+>>>>>>> 7203e6b12c66d9a2bf1e4a30b756d88612412177
         bool looksLikeArray = node.Order.Count > 0 && node.Order.All(k => int.TryParse(k, System.Globalization.NumberStyles.None, System.Globalization.CultureInfo.InvariantCulture, out _));
         if (looksLikeArray)
         {
             var items = node.Order
+<<<<<<< HEAD
+=======
+                .Select(k => (Index: int.Parse(k), Node: node.Children[k]))
+>>>>>>> 7203e6b12c66d9a2bf1e4a30b756d88612412177
                 .Select(k => (Index: int.Parse(k, System.Globalization.CultureInfo.InvariantCulture), Node: node.Children[k]))
                 .OrderBy(x => x.Index)
                 .Select(x => ToDataNode(x.Node))

@@ -26,9 +26,12 @@ public partial class App : Application
     {
         InitializeComponent();
 
+<<<<<<< HEAD
         // Last-resort net for faults that never reach the XAML UnhandledException hook below —
         // a fault on a background thread, or during shutdown — so the log still records why the
         // process died instead of it vanishing silently.
+=======
+>>>>>>> 7203e6b12c66d9a2bf1e4a30b756d88612412177
         AppDomain.CurrentDomain.UnhandledException += (_, e) =>
         {
             Diag.Log($"FATAL APPDOMAIN UNHANDLED: {e.ExceptionObject}");

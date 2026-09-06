@@ -140,6 +140,10 @@ public sealed class TextToolkitPage : EditorToolPage
     {
         var text = _input.Text;
         StatusBar.SetCounts(text);
+<<<<<<< HEAD
+=======
+        if (text.Length == 0 || _operation.SelectedIndex < 0)
+>>>>>>> 7203e6b12c66d9a2bf1e4a30b756d88612412177
         if (text.Length == 0 || _operation.SelectedIndex < 0 || _operation.SelectedIndex >= Operations.Length)
         {
             _output.Clear();
@@ -168,6 +172,12 @@ public sealed class TextToolkitPage : EditorToolPage
     {
         if (_output.Text.Length == 0)
             return;
+<<<<<<< HEAD
+=======
+        var package = new Windows.ApplicationModel.DataTransfer.DataPackage();
+        package.SetText(_output.Text);
+        Windows.ApplicationModel.DataTransfer.Clipboard.SetContent(package);
+>>>>>>> 7203e6b12c66d9a2bf1e4a30b756d88612412177
         ClipboardService.TrySetText(_output.Text);
     }
 

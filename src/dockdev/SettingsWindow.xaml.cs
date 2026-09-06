@@ -72,6 +72,7 @@ public sealed partial class SettingsWindow : Window
     /// </para>
     /// </summary>
     private bool _initializing = true;
+    private bool _isClosed;
 
     // Set once the window has closed. Every deferred (DispatcherQueue) and awaited continuation
     // checks this before touching a control, so a callback that lands after the window is gone is a
@@ -171,6 +172,10 @@ public sealed partial class SettingsWindow : Window
     // Flipping a switch raises ItemsChanged, which lands back here and rebuilds the Tools list —
     // including the switch the user is standing on. Focus is captured before the rebuild and
     // restored after, on whichever card the same tool ended up on.
+<<<<<<< HEAD
+=======
+    private void OnDockItemsChanged() => DispatcherQueue.TryEnqueue(() =>
+>>>>>>> 7203e6b12c66d9a2bf1e4a30b756d88612412177
     private void OnDockItemsChanged() => DispatcherQueue?.TryEnqueue(() =>
     {
         if (_isClosed || RootGrid?.XamlRoot is null) return;
@@ -181,6 +186,10 @@ public sealed partial class SettingsWindow : Window
             RestoreToolFocus(kind);
     });
 
+<<<<<<< HEAD
+=======
+    private void OnDockChanged() => DispatcherQueue.TryEnqueue(() =>
+>>>>>>> 7203e6b12c66d9a2bf1e4a30b756d88612412177
     private void OnDockChanged() => DispatcherQueue?.TryEnqueue(() =>
     {
         if (_isClosed || RootGrid?.XamlRoot is null) return;
@@ -398,15 +407,35 @@ public sealed partial class SettingsWindow : Window
 
     private async void StartupSwitch_Toggled(object sender, RoutedEventArgs e)
     {
+<<<<<<< HEAD
         if (_initializing || _isClosed)
             return;
 
+=======
+        if (_initializing)
+        if (_initializing || _isClosed)
+            return;
+
+        var state = await _manager.SetLaunchAtStartupAsync(StartupSwitch.IsOn);
+>>>>>>> 7203e6b12c66d9a2bf1e4a30b756d88612412177
         try
         {
             var state = await _manager.SetLaunchAtStartupAsync(StartupSwitch.IsOn);
             if (_isClosed || RootGrid?.XamlRoot is null)
                 return;
 
+<<<<<<< HEAD
+=======
+        // Windows refuses to let an app re-enable a startup entry its user turned off, so a switch
+        // left showing "on" would be a lie. Put it back and name the place they can undo it.
+        bool blocked = state is StartupService.StartupState.BlockedByUser
+                            or StartupService.StartupState.BlockedByPolicy;
+        if (blocked)
+            StartupBlockedBar.Visibility = Visibility.Visible;
+        StartupBlockedBar.IsOpen = blocked;
+        if (blocked)
+            SetStartupSwitchSilently(false);
+>>>>>>> 7203e6b12c66d9a2bf1e4a30b756d88612412177
             // Windows refuses to let an app re-enable a startup entry its user turned off, so a switch
             // left showing "on" would be a lie. Put it back and name the place they can undo it.
             bool blocked = state is StartupService.StartupState.BlockedByUser
@@ -427,6 +456,11 @@ public sealed partial class SettingsWindow : Window
     /// that setting the switch would otherwise trigger.</summary>
     private async Task RefreshStartupSwitchAsync()
     {
+<<<<<<< HEAD
+=======
+        bool enabled = await StartupService.IsEnabledAsync();
+        SetStartupSwitchSilently(enabled);
+>>>>>>> 7203e6b12c66d9a2bf1e4a30b756d88612412177
         try
         {
             bool enabled = await StartupService.IsEnabledAsync();
@@ -681,6 +715,11 @@ public sealed partial class SettingsWindow : Window
         }
         finally
         {
+<<<<<<< HEAD
+=======
+            CheckNowButton.Content = originalContent;
+            CheckNowButton.IsEnabled = UpdateCheckSwitch.IsOn;
+>>>>>>> 7203e6b12c66d9a2bf1e4a30b756d88612412177
             if (!_isClosed && RootGrid?.XamlRoot is not null)
             {
                 CheckNowButton.Content = originalContent;
@@ -732,6 +771,10 @@ public sealed partial class SettingsWindow : Window
         try
         {
             var path = await FilePickers.PickSaveFileAsync(_hwnd, "dockdev", ".json", "JSON");
+<<<<<<< HEAD
+=======
+            if (path is null)
+>>>>>>> 7203e6b12c66d9a2bf1e4a30b756d88612412177
             if (path is null || _isClosed || RootGrid?.XamlRoot is null)
                 return;
 
@@ -743,6 +786,10 @@ public sealed partial class SettingsWindow : Window
         catch (Exception ex)
         {
             Diag.Log("Export failed: " + ex.Message);
+<<<<<<< HEAD
+=======
+            ShowBackupResult(Loc.Get("Backup.ExportFailed"), InfoBarSeverity.Error);
+>>>>>>> 7203e6b12c66d9a2bf1e4a30b756d88612412177
             if (!_isClosed && RootGrid?.XamlRoot is not null)
                 ShowBackupResult(Loc.Get("Backup.ExportFailed"), InfoBarSeverity.Error);
         }
@@ -758,6 +805,10 @@ public sealed partial class SettingsWindow : Window
         try
         {
             var path = await FilePickers.PickOpenFileAsync(_hwnd, [".json"]);
+<<<<<<< HEAD
+=======
+            if (path is null)
+>>>>>>> 7203e6b12c66d9a2bf1e4a30b756d88612412177
             if (path is null || _isClosed || RootGrid?.XamlRoot is null || Nav?.XamlRoot is null)
                 return;
 
@@ -778,6 +829,10 @@ public sealed partial class SettingsWindow : Window
 
             if (!_manager.Import(path))
             {
+<<<<<<< HEAD
+=======
+                ShowBackupResult(Loc.Get("Backup.ImportFailed"), InfoBarSeverity.Error);
+>>>>>>> 7203e6b12c66d9a2bf1e4a30b756d88612412177
                 if (!_isClosed && RootGrid?.XamlRoot is not null)
                     ShowBackupResult(Loc.Get("Backup.ImportFailed"), InfoBarSeverity.Error);
                 return;
@@ -790,6 +845,10 @@ public sealed partial class SettingsWindow : Window
         catch (Exception ex)
         {
             Diag.Log("Import failed: " + ex.Message);
+<<<<<<< HEAD
+=======
+            ShowBackupResult(Loc.Get("Backup.ImportFailed"), InfoBarSeverity.Error);
+>>>>>>> 7203e6b12c66d9a2bf1e4a30b756d88612412177
             if (!_isClosed && RootGrid?.XamlRoot is not null)
                 ShowBackupResult(Loc.Get("Backup.ImportFailed"), InfoBarSeverity.Error);
         }
@@ -809,11 +868,27 @@ public sealed partial class SettingsWindow : Window
     // accidental Enter doesn't wipe the dock.
     private async void Reset_Click(object sender, RoutedEventArgs e)
     {
+<<<<<<< HEAD
+=======
+        var dialog = new ContentDialog
+>>>>>>> 7203e6b12c66d9a2bf1e4a30b756d88612412177
         if (_isClosed || RootGrid?.XamlRoot is null || Nav?.XamlRoot is null)
             return;
 
         try
         {
+<<<<<<< HEAD
+=======
+            XamlRoot = Nav.XamlRoot,
+            Title = Loc.Get("Reset.Title"),
+            Content = Loc.Get("Reset.Body"),
+            PrimaryButtonText = Loc.Get("Reset.Confirm"),
+            CloseButtonText = Loc.Get("Common.Cancel"),
+            DefaultButton = ContentDialogButton.Close,
+        };
+        if (await dialog.ShowAsync() == ContentDialogResult.Primary)
+            _manager.ResetToDefaults();
+>>>>>>> 7203e6b12c66d9a2bf1e4a30b756d88612412177
             var dialog = new ContentDialog
             {
                 XamlRoot = Nav.XamlRoot,
@@ -823,8 +898,16 @@ public sealed partial class SettingsWindow : Window
                 CloseButtonText = Loc.Get("Common.Cancel"),
                 DefaultButton = ContentDialogButton.Close,
             };
+<<<<<<< HEAD
             if (await dialog.ShowAsync() == ContentDialogResult.Primary && !_isClosed)
                 _manager.ResetToDefaults();
+=======
+            if (await dialog.ShowAsync() == ContentDialogResult.Primary)
+            {
+                if (!_isClosed)
+                    _manager.ResetToDefaults();
+            }
+>>>>>>> 7203e6b12c66d9a2bf1e4a30b756d88612412177
         }
         catch (Exception ex)
         {

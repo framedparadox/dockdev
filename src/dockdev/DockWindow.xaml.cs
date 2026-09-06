@@ -111,12 +111,21 @@ public sealed partial class DockWindow : Window
             // The Windows 11 taskbar "glass". Follows RootGrid's theme via its own
             // ActualThemeChanged subscription, so a later SetTheme re-tints it automatically.
             _backdrop = new AcrylicBackdropManager(this);
+<<<<<<< HEAD
             if (!_backdrop.TryApply())
             {
                 // No acrylic (unsupported GPU / Remote Desktop): fall back to an opaque theme brush
                 // so the dock is not a transparent, unreadable strip.
                 if (Application.Current.Resources.TryGetValue(
                         "SolidBackgroundFillColorBaseBrush", out var bg) && bg is Microsoft.UI.Xaml.Media.Brush brush)
+=======
+            _backdrop.TryApply();
+            ApplyGlass(); // the user's frostiness / accent-tint choice on top of the base recipe
+            if (!_backdrop.TryApply())
+            {
+                if (Application.Current.Resources.TryGetValue(
+                        "SolidBackgroundFillColorBaseBrush", out var bg) && bg is Brush brush)
+>>>>>>> 7203e6b12c66d9a2bf1e4a30b756d88612412177
                     RootGrid.Background = brush;
             }
             else
@@ -1189,9 +1198,19 @@ public sealed partial class DockWindow : Window
                 // Clear the drag flag once the trailing click (the pointer-release that ended
                 // the drag) has been delivered and suppressed. Low priority runs after input
                 // delivery, so a later keyboard invoke (Enter/Space) is not blocked.
+<<<<<<< HEAD
                 if (!DispatcherQueue.TryEnqueue(
                         Microsoft.UI.Dispatching.DispatcherQueuePriority.Low, () => _dragOccurred = false))
                     _dragOccurred = false;
+=======
+                DispatcherQueue.TryEnqueue(
+                    Microsoft.UI.Dispatching.DispatcherQueuePriority.Low, () => _dragOccurred = false);
+                if (!DispatcherQueue.TryEnqueue(
+                    Microsoft.UI.Dispatching.DispatcherQueuePriority.Low, () => _dragOccurred = false))
+                {
+                    _dragOccurred = false;
+                }
+>>>>>>> 7203e6b12c66d9a2bf1e4a30b756d88612412177
             }
             return;
         }
@@ -1292,9 +1311,19 @@ public sealed partial class DockWindow : Window
         RaiseItemsChanged();
 
         ResumeAutoHideAfterDrag();
+<<<<<<< HEAD
         if (!DispatcherQueue.TryEnqueue(
                 Microsoft.UI.Dispatching.DispatcherQueuePriority.Low, () => _dragOccurred = false))
             _dragOccurred = false;
+=======
+        DispatcherQueue.TryEnqueue(
+            Microsoft.UI.Dispatching.DispatcherQueuePriority.Low, () => _dragOccurred = false);
+        if (!DispatcherQueue.TryEnqueue(
+            Microsoft.UI.Dispatching.DispatcherQueuePriority.Low, () => _dragOccurred = false))
+        {
+            _dragOccurred = false;
+        }
+>>>>>>> 7203e6b12c66d9a2bf1e4a30b756d88612412177
     }
 
     /// <summary>On drop, snap to the nearest work-area edge if close enough, else float free.</summary>

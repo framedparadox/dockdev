@@ -11,9 +11,16 @@ namespace dockdev.Services;
 /// </summary>
 public sealed class MessageWindow : IDisposable
 {
+<<<<<<< HEAD
     // Unique per instance (not just per process): a GUID means recreating the message window within
     // one process — which the manager does — cannot collide with a class the previous instance has
     // not finished unregistering, so RegisterClassEx never fails on a stale registration.
+=======
+    // Unique per process: two copies of dockdev in one session are already prevented by the instance mutex,
+    // but a stale class registration from a previous AppDomain would make RegisterClassEx fail.
+    private static readonly string ClassName = "dockdev.MessageWindow." + Environment.ProcessId;
+    // Unique per instance: prevents RegisterClassEx failure when recreated within the same process.
+>>>>>>> 7203e6b12c66d9a2bf1e4a30b756d88612412177
     private readonly string _className = $"dockdev.MessageWindow.{Environment.ProcessId}.{Guid.NewGuid():N}";
     private readonly nint _hInstance;
 
@@ -40,6 +47,11 @@ public sealed class MessageWindow : IDisposable
         {
             cbSize = (uint)Marshal.SizeOf<NativeMethods.WNDCLASSEX>(),
             lpfnWndProc = Marshal.GetFunctionPointerForDelegate(_wndProc),
+<<<<<<< HEAD
+=======
+            hInstance = instance,
+            lpszClassName = ClassName,
+>>>>>>> 7203e6b12c66d9a2bf1e4a30b756d88612412177
             hInstance = _hInstance,
             lpszClassName = _className,
         };
@@ -53,6 +65,11 @@ public sealed class MessageWindow : IDisposable
         // WS_EX_TOOLWINDOW and no WS_VISIBLE: never painted, never in the taskbar or Alt-Tab, but
         // still a top-level window, so it can be made foreground for the tray menu.
         Handle = NativeMethods.CreateWindowEx(
+<<<<<<< HEAD
+=======
+            (int)NativeMethods.WS_EX_TOOLWINDOW, ClassName, "dockdev", (uint)NativeMethods.WS_POPUP,
+            0, 0, 0, 0, nint.Zero, nint.Zero, instance, nint.Zero);
+>>>>>>> 7203e6b12c66d9a2bf1e4a30b756d88612412177
             (int)NativeMethods.WS_EX_TOOLWINDOW, _className, "dockdev", (uint)NativeMethods.WS_POPUP,
             0, 0, 0, 0, nint.Zero, nint.Zero, _hInstance, nint.Zero);
 
@@ -64,12 +81,18 @@ public sealed class MessageWindow : IDisposable
     {
         try
         {
+<<<<<<< HEAD
             // Windows is logging off / shutting down: persist settings and release the dock's
             // close-guard so the process can exit cleanly instead of being force-killed (which is
             // one of the ways dock.json ends up truncated).
             if (msg is NativeMethods.WM_QUERYENDSESSION or NativeMethods.WM_ENDSESSION)
             {
                 Diag.Log("MessageWindow: received OS shutdown/end-session message.");
+=======
+            if (msg is NativeMethods.WM_QUERYENDSESSION or NativeMethods.WM_ENDSESSION)
+            {
+                Diag.Log("MessageWindow: received OS shutdown/end-session query.");
+>>>>>>> 7203e6b12c66d9a2bf1e4a30b756d88612412177
                 try
                 {
                     App.Manager?.Save();
@@ -101,9 +124,15 @@ public sealed class MessageWindow : IDisposable
 
         if (Handle != nint.Zero)
             NativeMethods.DestroyWindow(Handle);
+<<<<<<< HEAD
 
         // The class is per-instance, so unlike a process-wide registration it is safe to release
         // here — this instance's window is already destroyed above.
+=======
+        // The window class is intentionally left registered: it is process-unique and unregisters
+        // itself when the process exits, and UnregisterClass would race any in-flight messages.
+
+>>>>>>> 7203e6b12c66d9a2bf1e4a30b756d88612412177
         NativeMethods.UnregisterClass(_className, _hInstance);
     }
 }

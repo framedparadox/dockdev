@@ -222,6 +222,12 @@ public sealed class FormatterPage : EditorToolPage
     {
         if (_editor.Text.Length == 0)
             return;
+<<<<<<< HEAD
+=======
+        var package = new Windows.ApplicationModel.DataTransfer.DataPackage();
+        package.SetText(_editor.Text);
+        Windows.ApplicationModel.DataTransfer.Clipboard.SetContent(package);
+>>>>>>> 7203e6b12c66d9a2bf1e4a30b756d88612412177
         ClipboardService.TrySetText(_editor.Text);
     }
 

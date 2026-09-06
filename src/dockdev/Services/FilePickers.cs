@@ -18,8 +18,11 @@ public static class FilePickers
 {
     public static async Task<string?> PickOpenFileAsync(nint hwnd, IEnumerable<string>? extensions = null)
     {
+<<<<<<< HEAD
         // A picker with no owner window throws inside InitializeWithWindow; a zero handle means the
         // owning window is gone, so there is nothing to pick into.
+=======
+>>>>>>> 7203e6b12c66d9a2bf1e4a30b756d88612412177
         if (hwnd == nint.Zero)
             return null;
 
@@ -31,8 +34,12 @@ public static class FilePickers
             bool any = false;
             foreach (var ext in extensions ?? [])
             {
+<<<<<<< HEAD
                 // FileTypeFilter rejects an entry that is neither "*" nor a leading-dot extension;
                 // normalize so a caller passing "json" instead of ".json" does not throw.
+=======
+                picker.FileTypeFilter.Add(ext);
+>>>>>>> 7203e6b12c66d9a2bf1e4a30b756d88612412177
                 if (string.IsNullOrWhiteSpace(ext))
                     continue;
                 var normalized = ext == "*" || ext.StartsWith('.') ? ext : "." + ext;
@@ -63,7 +70,11 @@ public static class FilePickers
             WinRT.Interop.InitializeWithWindow.Initialize(picker, hwnd);
             picker.SuggestedStartLocation = Windows.Storage.Pickers.PickerLocationId.ComputerFolder;
             picker.SuggestedFileName = suggestedName;
+<<<<<<< HEAD
             // FileTypeChoices requires a leading-dot extension or it throws.
+=======
+            picker.FileTypeChoices.Add(displayName, [extension]);
+>>>>>>> 7203e6b12c66d9a2bf1e4a30b756d88612412177
             var normalizedExt = extension.StartsWith('.') ? extension : "." + extension;
             picker.FileTypeChoices.Add(displayName, [normalizedExt]);
 
