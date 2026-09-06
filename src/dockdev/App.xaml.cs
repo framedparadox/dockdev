@@ -26,6 +26,11 @@ public partial class App : Application
     {
         InitializeComponent();
 
+        AppDomain.CurrentDomain.UnhandledException += (_, e) =>
+        {
+            Diag.Log($"FATAL APPDOMAIN UNHANDLED: {e.ExceptionObject}");
+        };
+
         UnhandledException += (_, e) =>
         {
             // A dock is always-on: a fault in one window — a flyout, a theme change, one tool page

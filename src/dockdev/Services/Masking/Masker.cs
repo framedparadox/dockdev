@@ -92,6 +92,7 @@ public sealed class Masker
     {
         "payment-card" => FakeCard(),
         "email" => $"user{Math.Abs(original.GetHashCode()) % 10_000}@example.com",
+        "email" => $"user{((uint)original.GetHashCode()) % 10_000}@example.com",
         _ => new string('*', original.Length),
     };
 

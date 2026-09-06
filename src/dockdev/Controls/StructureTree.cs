@@ -58,6 +58,9 @@ public sealed class StructureTree : Grid
         };
     }
 
+    private const int MaxDepth = 64;
+    private const int MaxChildrenPerNode = 200;
+
     public void SetRoot(DataNode? root)
     {
         _tree.RootNodes.Clear();
@@ -66,29 +69,49 @@ public sealed class StructureTree : Grid
             return;
         var node = new TreeViewNode { Content = new PathTag("$", Label("$", root)) };
         Populate(node, root, "$");
+        int totalNodes = 0;
+        Populate(node, root, "$", 0, ref totalNodes);
         _tree.RootNodes.Add(node);
         node.IsExpanded = true;
     }
 
     private static void Populate(TreeViewNode node, DataNode value, string path)
+    private static void Populate(TreeViewNode node, DataNode value, string path, int depth, ref int totalNodes)
     {
+        if (depth > MaxDepth || totalNodes > 1000)
+            return;
+
         switch (value)
         {
             case ObjectNode obj:
+                int objCount = 0;
                 foreach (var (key, child) in obj.Members)
                 {
+                    if (objCount++ >= MaxChildrenPerNode || totalNodes++ > 1000)
+                    {
+                        node.Children.Add(new TreeViewNode { Content = new PathTag(path, $"... ({obj.Members.Count - MaxChildrenPerNode} more)") });
+                        break;
+                    }
                     var childPath = $"{path}.{key}";
                     var childNode = new TreeViewNode { Content = new PathTag(childPath, Label(key, child)) };
                     Populate(childNode, child, childPath);
+                    Populate(childNode, child, childPath, depth + 1, ref totalNodes);
                     node.Children.Add(childNode);
                 }
                 break;
             case ArrayNode arr:
+                int arrCount = 0;
                 for (int i = 0; i < arr.Items.Count; i++)
                 {
+                    if (arrCount++ >= MaxChildrenPerNode || totalNodes++ > 1000)
+                    {
+                        node.Children.Add(new TreeViewNode { Content = new PathTag(path, $"... ({arr.Items.Count - MaxChildrenPerNode} more)") });
+                        break;
+                    }
                     var childPath = $"{path}[{i}]";
                     var childNode = new TreeViewNode { Content = new PathTag(childPath, Label($"[{i}]", arr.Items[i])) };
                     Populate(childNode, arr.Items[i], childPath);
+                    Populate(childNode, arr.Items[i], childPath, depth + 1, ref totalNodes);
                     node.Children.Add(childNode);
                 }
                 break;

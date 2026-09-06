@@ -14,6 +14,9 @@ public sealed class MessageWindow : IDisposable
     // Unique per process: two copies of dockdev in one session are already prevented by the instance mutex,
     // but a stale class registration from a previous AppDomain would make RegisterClassEx fail.
     private static readonly string ClassName = "dockdev.MessageWindow." + Environment.ProcessId;
+    // Unique per instance: prevents RegisterClassEx failure when recreated within the same process.
+    private readonly string _className = $"dockdev.MessageWindow.{Environment.ProcessId}.{Guid.NewGuid():N}";
+    private readonly nint _hInstance;
 
     // The delegate is handed to Win32 as a raw function pointer, so it must be rooted for as long
     // as the window lives or the GC will collect it out from under the message pump.
@@ -32,6 +35,7 @@ public sealed class MessageWindow : IDisposable
     public MessageWindow()
     {
         _wndProc = OnMessage;
+        _hInstance = NativeMethods.GetModuleHandle(null);
 
         var instance = NativeMethods.GetModuleHandle(null);
         var wc = new NativeMethods.WNDCLASSEX
@@ -40,6 +44,8 @@ public sealed class MessageWindow : IDisposable
             lpfnWndProc = Marshal.GetFunctionPointerForDelegate(_wndProc),
             hInstance = instance,
             lpszClassName = ClassName,
+            hInstance = _hInstance,
+            lpszClassName = _className,
         };
 
         if (NativeMethods.RegisterClassEx(ref wc) == 0)
@@ -53,6 +59,8 @@ public sealed class MessageWindow : IDisposable
         Handle = NativeMethods.CreateWindowEx(
             (int)NativeMethods.WS_EX_TOOLWINDOW, ClassName, "dockdev", (uint)NativeMethods.WS_POPUP,
             0, 0, 0, 0, nint.Zero, nint.Zero, instance, nint.Zero);
+            (int)NativeMethods.WS_EX_TOOLWINDOW, _className, "dockdev", (uint)NativeMethods.WS_POPUP,
+            0, 0, 0, 0, nint.Zero, nint.Zero, _hInstance, nint.Zero);
 
         if (Handle == nint.Zero)
             Diag.Log($"MessageWindow: CreateWindowEx failed ({Marshal.GetLastWin32Error()})");
@@ -62,6 +70,21 @@ public sealed class MessageWindow : IDisposable
     {
         try
         {
+            if (msg is NativeMethods.WM_QUERYENDSESSION or NativeMethods.WM_ENDSESSION)
+            {
+                Diag.Log("MessageWindow: received OS shutdown/end-session query.");
+                try
+                {
+                    App.Manager?.Save();
+                    App.Manager?.Dock?.AllowClose();
+                }
+                catch (Exception ex)
+                {
+                    Diag.Log("MessageWindow: shutdown save failed: " + ex.Message);
+                }
+                return (nint)1;
+            }
+
             MessageReceived?.Invoke(msg, wParam, lParam);
         }
         catch (Exception ex)
@@ -78,9 +101,12 @@ public sealed class MessageWindow : IDisposable
         if (_disposed)
             return;
         _disposed = true;
+
         if (Handle != nint.Zero)
             NativeMethods.DestroyWindow(Handle);
         // The window class is intentionally left registered: it is process-unique and unregisters
         // itself when the process exits, and UnregisterClass would race any in-flight messages.
+
+        NativeMethods.UnregisterClass(_className, _hInstance);
     }
 }

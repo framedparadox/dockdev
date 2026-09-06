@@ -115,10 +115,12 @@ public static class CsvProjection
             return node.Scalar;
 
         bool looksLikeArray = node.Order.Count > 0 && node.Order.All(k => k.Length > 0 && k.All(char.IsAsciiDigit));
+        bool looksLikeArray = node.Order.Count > 0 && node.Order.All(k => int.TryParse(k, System.Globalization.NumberStyles.None, System.Globalization.CultureInfo.InvariantCulture, out _));
         if (looksLikeArray)
         {
             var items = node.Order
                 .Select(k => (Index: int.Parse(k), Node: node.Children[k]))
+                .Select(k => (Index: int.Parse(k, System.Globalization.CultureInfo.InvariantCulture), Node: node.Children[k]))
                 .OrderBy(x => x.Index)
                 .Select(x => ToDataNode(x.Node))
                 .ToList();

@@ -151,6 +151,12 @@ public sealed class MaskerPage : EditorToolPage
 
     private MaskProfile CurrentProfile => MaskProfile.BuiltIn[_profile.SelectedIndex];
     private Confidence CurrentThreshold => Thresholds[_threshold.SelectedIndex];
+    private MaskProfile CurrentProfile => _profile.SelectedIndex >= 0 && _profile.SelectedIndex < MaskProfile.BuiltIn.Count
+        ? MaskProfile.BuiltIn[_profile.SelectedIndex]
+        : MaskProfile.BuiltIn[0];
+    private Confidence CurrentThreshold => _threshold.SelectedIndex >= 0 && _threshold.SelectedIndex < Thresholds.Length
+        ? Thresholds[_threshold.SelectedIndex]
+        : Confidence.Medium;
 
     /// <summary>Seeds the page from outside (a paste chip, a dropped file) and analyses it.</summary>
     private void SetSource(string text)
@@ -199,8 +205,14 @@ public sealed class MaskerPage : EditorToolPage
     private void RenderFindingsList()
     {
         _findingCount.Text = Loc.Format("Masker.FindingCount", _findings.Count);
+        _findingCount.Text = _findings.Count > 200
+            ? $"{Loc.Format("Masker.FindingCount", _findings.Count)} (showing first 200)"
+            : Loc.Format("Masker.FindingCount", _findings.Count);
+
         var rows = new List<FrameworkElement>();
         for (int i = 0; i < _findings.Count; i++)
+        int renderLimit = Math.Min(_findings.Count, 200);
+        for (int i = 0; i < renderLimit; i++)
         {
             int idx = i;
             var f = _findings[i];
@@ -229,6 +241,11 @@ public sealed class MaskerPage : EditorToolPage
             {
                 _findings[idx] = _findings[idx] with { Strategy = (MaskStrategy)strategyBox.SelectedIndex };
                 Remask();
+                if (strategyBox.SelectedIndex >= 0)
+                {
+                    _findings[idx] = _findings[idx] with { Strategy = (MaskStrategy)strategyBox.SelectedIndex };
+                    Remask();
+                }
             };
 
             var row = new Grid { Padding = new Thickness(8, 6, 8, 6) };
@@ -285,6 +302,7 @@ public sealed class MaskerPage : EditorToolPage
         var package = new Windows.ApplicationModel.DataTransfer.DataPackage();
         package.SetText(_editor.Text);
         Windows.ApplicationModel.DataTransfer.Clipboard.SetContent(package);
+        ClipboardService.TrySetText(_editor.Text);
     }
 
     private void Clear()

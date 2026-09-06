@@ -109,6 +109,7 @@ internal static partial class NativeMethods
     // (never-shown) popup rather than an HWND_MESSAGE child, because TrackPopupMenuEx needs an
     // owner that can be made the foreground window or the tray menu won't light-dismiss.
 
+    [UnmanagedFunctionPointer(CallingConvention.Winapi)]
     public delegate nint WndProc(nint hwnd, uint msg, nint wParam, nint lParam);
 
     [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
@@ -134,6 +135,10 @@ internal static partial class NativeMethods
     public static extern ushort RegisterClassEx(ref WNDCLASSEX wndClass);
 
     [DllImport("user32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static extern bool UnregisterClass(string className, nint hInstance);
+
+    [DllImport("user32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
     public static extern nint CreateWindowEx(
         int exStyle, string className, string? windowName, uint style,
         int x, int y, int width, int height,
@@ -153,6 +158,13 @@ internal static partial class NativeMethods
     public static extern uint RegisterWindowMessage(string message);
 
     public const uint WM_APP = 0x8000;
+    public const uint WM_NULL = 0x0000;
+    public const uint WM_DESTROY = 0x0002;
+    public const uint WM_SETTINGCHANGE = 0x001A;
+    public const uint WM_QUERYENDSESSION = 0x0011;
+    public const uint WM_ENDSESSION = 0x0016;
+    public const uint WM_DISPLAYCHANGE = 0x007E;
+    public const uint WM_CONTEXTMENU = 0x007B;
     public const uint WM_COMMAND = 0x0111;
     public const uint WM_DESTROY = 0x0002;
     public const uint WM_HOTKEY = 0x0312;
@@ -161,6 +173,8 @@ internal static partial class NativeMethods
     public const uint WM_LBUTTONDBLCLK = 0x0203;
     public const uint WM_RBUTTONUP = 0x0205;
     public const uint WM_CONTEXTMENU = 0x007B;
+    public const uint WM_HOTKEY = 0x0312;
+    public const uint WM_APP = 0x8000;
 
     // ---- Notification-area (tray) icon -------------------------------------
 
@@ -210,6 +224,7 @@ internal static partial class NativeMethods
 
     /// <summary>Resource id the .NET SDK gives an <c>&lt;ApplicationIcon&gt;</c> (IDI_APPLICATION).</summary>
     public static readonly nint IDI_APPLICATION = 32512;
+    public static readonly nint IDI_APP_ICON = 1;
 
     [DllImport("user32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
     public static extern nint LoadImage(nint instance, nint name, uint type, int cx, int cy, uint load);

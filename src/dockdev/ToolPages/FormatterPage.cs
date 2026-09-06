@@ -225,6 +225,7 @@ public sealed class FormatterPage : EditorToolPage
         var package = new Windows.ApplicationModel.DataTransfer.DataPackage();
         package.SetText(_editor.Text);
         Windows.ApplicationModel.DataTransfer.Clipboard.SetContent(package);
+        ClipboardService.TrySetText(_editor.Text);
     }
 
     private void SaveOutput()

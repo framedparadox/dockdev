@@ -113,6 +113,16 @@ public sealed partial class DockWindow : Window
             _backdrop = new AcrylicBackdropManager(this);
             _backdrop.TryApply();
             ApplyGlass(); // the user's frostiness / accent-tint choice on top of the base recipe
+            if (!_backdrop.TryApply())
+            {
+                if (Application.Current.Resources.TryGetValue(
+                        "SolidBackgroundFillColorBaseBrush", out var bg) && bg is Brush brush)
+                    RootGrid.Background = brush;
+            }
+            else
+            {
+                ApplyGlass(); // the user's frostiness / accent-tint choice on top of the base recipe
+            }
         }
 
         ItemsHost.ItemsSource = Items;
@@ -1181,6 +1191,11 @@ public sealed partial class DockWindow : Window
                 // delivery, so a later keyboard invoke (Enter/Space) is not blocked.
                 DispatcherQueue.TryEnqueue(
                     Microsoft.UI.Dispatching.DispatcherQueuePriority.Low, () => _dragOccurred = false);
+                if (!DispatcherQueue.TryEnqueue(
+                    Microsoft.UI.Dispatching.DispatcherQueuePriority.Low, () => _dragOccurred = false))
+                {
+                    _dragOccurred = false;
+                }
             }
             return;
         }
@@ -1283,6 +1298,11 @@ public sealed partial class DockWindow : Window
         ResumeAutoHideAfterDrag();
         DispatcherQueue.TryEnqueue(
             Microsoft.UI.Dispatching.DispatcherQueuePriority.Low, () => _dragOccurred = false);
+        if (!DispatcherQueue.TryEnqueue(
+            Microsoft.UI.Dispatching.DispatcherQueuePriority.Low, () => _dragOccurred = false))
+        {
+            _dragOccurred = false;
+        }
     }
 
     /// <summary>On drop, snap to the nearest work-area edge if close enough, else float free.</summary>

@@ -106,6 +106,7 @@ public sealed class AcrylicBackdropManager : IDisposable
         try
         {
             _window.DispatcherQueue.TryEnqueue(UpdateEnergySaverState);
+            _window.DispatcherQueue?.TryEnqueue(UpdateEnergySaverState);
         }
         catch (Exception ex)
         {
@@ -124,8 +125,29 @@ public sealed class AcrylicBackdropManager : IDisposable
     private void UpdateEnergySaverState()
     {
         if (_config is null)
+        if (_disposed || _config is null)
             return;
         _config.IsInputActive = PowerManager.EnergySaverStatus != EnergySaverStatus.On;
+        try
+        {
+            _config.IsInputActive =
+                PowerManager.EnergySaverStatus != EnergySaverStatus.On;
+        }
+        catch (Exception ex)
+        {
+            Diag.Log("AcrylicBackdropManager: energy-saver probe failed: " + ex.Message);
+        }
+    }
+
+    /// <summary>Pushes <paramref name="r"/> onto the live controller.</summary>
+    private void SetRecipe(AcrylicRecipe r)
+    {
+        if (_controller is null)
+            return;
+        _controller.TintColor = r.Tint;
+        _controller.TintOpacity = (float)r.TintOpacity;
+        _controller.LuminosityOpacity = (float)r.LuminosityOpacity;
+        _controller.FallbackColor = r.Fallback;
     }
 
     /// <summary>
@@ -205,6 +227,17 @@ public sealed class AcrylicBackdropManager : IDisposable
 
         _controller?.Dispose();
         _controller = null;
+        if (_controller is not null)
+        {
+            try
+            {
+                _controller.RemoveAllSystemBackdropTargets();
+                _controller.ResetProperties();
+                _controller.Dispose();
+            }
+            catch { /* ignore */ }
+            _controller = null;
+        }
         _config = null;
     }
 

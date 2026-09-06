@@ -140,6 +140,7 @@ public sealed class TrayIconService : IDisposable
         var instance = NativeMethods.GetModuleHandle(null);
         var icon = NativeMethods.LoadImage(
             instance, NativeMethods.IDI_APPLICATION, NativeMethods.IMAGE_ICON, cx, cy,
+            instance, NativeMethods.IDI_APP_ICON, NativeMethods.IMAGE_ICON, cx, cy,
             NativeMethods.LR_DEFAULTCOLOR);
         if (icon != nint.Zero)
             return (icon, false);

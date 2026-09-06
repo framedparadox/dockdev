@@ -97,6 +97,8 @@ public sealed class DiffPage : EditorToolPage
     public override ToolKind Kind => ToolKind.TextDiff;
     public override bool IsDirty => _isDirty;
 
+    private int _runId;
+
     public override IReadOnlyList<ToolCommand> Commands =>
     [
         ToolCommand.Clear(Clear),
@@ -113,11 +115,37 @@ public sealed class DiffPage : EditorToolPage
     }
 
     private void Compute()
+    private async void Compute()
     {
         _recomputeTimer.Stop();
         _diff.Compute(_left.Text, _right.Text, _ignoreWhitespace.IsChecked == true, _ignoreCase.IsChecked == true, _ignoreBlankLines.IsChecked == true);
         StatusBar.SetCounts(_left.Text + _right.Text);
         StatusBar.SetValid();
+        int runId = ++_runId;
+
+        string left = _left.Text;
+        string right = _right.Text;
+        bool ws = _ignoreWhitespace.IsChecked == true;
+        bool ic = _ignoreCase.IsChecked == true;
+        bool bl = _ignoreBlankLines.IsChecked == true;
+
+        try
+        {
+            var result = await Task.Run(() => DiffView.Calculate(left, right, ws, ic, bl));
+
+            if (runId != _runId || PageClosing.IsCancellationRequested)
+                return;
+
+            _diff.Apply(result);
+            StatusBar.SetCounts(left + right);
+            StatusBar.SetValid();
+        }
+        catch (Exception ex)
+        {
+            Diag.Log("DiffPage.Compute failed: " + ex.Message);
+            if (runId == _runId && !PageClosing.IsCancellationRequested)
+                StatusBar.SetError(1, 1);
+        }
     }
 
     private void Clear()

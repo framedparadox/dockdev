@@ -63,6 +63,18 @@ public static partial class LineOps
             y ??= "";
             var partsX = SplitNumeric().Matches(x).Select(m => m.Value).ToList();
             var partsY = SplitNumeric().Matches(y).Select(m => m.Value).ToList();
+            List<string> partsX;
+            List<string> partsY;
+            try
+            {
+                partsX = SplitNumeric().Matches(x).Select(m => m.Value).ToList();
+                partsY = SplitNumeric().Matches(y).Select(m => m.Value).ToList();
+            }
+            catch (RegexMatchTimeoutException)
+            {
+                return string.CompareOrdinal(x, y);
+            }
+
             int count = Math.Min(partsX.Count, partsY.Count);
             for (int i = 0; i < count; i++)
             {
@@ -74,6 +86,15 @@ public static partial class LineOps
                     var bigX = System.Numerics.BigInteger.Parse(partsX[i]);
                     var bigY = System.Numerics.BigInteger.Parse(partsY[i]);
                     cmp = bigX.CompareTo(bigY);
+                    if (System.Numerics.BigInteger.TryParse(partsX[i], out var bigX) &&
+                        System.Numerics.BigInteger.TryParse(partsY[i], out var bigY))
+                    {
+                        cmp = bigX.CompareTo(bigY);
+                    }
+                    else
+                    {
+                        cmp = string.CompareOrdinal(partsX[i], partsY[i]);
+                    }
                 }
                 else
                 {
@@ -86,6 +107,7 @@ public static partial class LineOps
         }
 
         [GeneratedRegex(@"\d+|\D+")]
+        [GeneratedRegex(@"\d+|\D+", RegexOptions.None, matchTimeoutMilliseconds: 500)]
         private static partial Regex SplitNumeric();
     }
 }

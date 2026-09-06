@@ -52,6 +52,7 @@ public sealed class DockConfig
     public DockProfile Dock
     {
         get => _dock ??= new DockProfile();
+        get => LazyInitializer.EnsureInitialized(ref _dock, () => new DockProfile());
         set => _dock = value;
     }
 
@@ -165,12 +166,15 @@ public sealed class DockConfig
     /// catalog id in lower case. Loosely typed because each tool's preferences are its own shape;
     /// an unknown or malformed entry is simply not read back by that tool rather than failing the
     /// whole config load.
+    /// Per-tool persistent state. A bag of JSON elements keyed by tool id (e.g. "json", "jwt"),
+    /// so adding tool-specific settings never forces a schema change.
     /// </summary>
     public Dictionary<string, System.Text.Json.JsonElement> ToolSettings { get; set; } = new();
 
     /// <summary>Named Data Masker rule/strategy bundles a team has saved, exportable/importable as
     /// JSON (design doc §15.3). Empty until the user saves one — the three built-ins
     /// (<c>Services.Masking.MaskProfile.BuiltIn</c>) are code-defined and never stored here.</summary>
+    /// <summary>Custom PII masking profiles created by the user. Built-in profiles (<c>MaskProfile.BuiltIn</c>) are code-defined and never stored here.</summary>
     public List<Services.Masking.MaskProfile> MaskProfiles { get; set; } = [];
 
     /// <summary>Guarantees the dock exists. Called once after loading; a config that is already
@@ -210,5 +214,12 @@ public sealed class DockConfig
         Network = other.Network;
         ToolSettings = other.ToolSettings;
         MaskProfiles = other.MaskProfiles;
+        Network = new NetworkSettings { UpdateCheck = other.Network?.UpdateCheck ?? false };
+        ToolSettings = other.ToolSettings is not null
+            ? new Dictionary<string, System.Text.Json.JsonElement>(other.ToolSettings)
+            : new();
+        MaskProfiles = other.MaskProfiles is not null
+            ? new List<Services.Masking.MaskProfile>(other.MaskProfiles)
+            : [];
     }
 }

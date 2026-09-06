@@ -263,6 +263,7 @@ public sealed class Base64Page : EditorToolPage
         var package = new Windows.ApplicationModel.DataTransfer.DataPackage();
         package.SetText(_output.Text);
         Windows.ApplicationModel.DataTransfer.Clipboard.SetContent(package);
+        ClipboardService.TrySetText(_output.Text);
     }
 
     private void Clear()

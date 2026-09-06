@@ -72,6 +72,7 @@ public sealed partial class SettingsWindow : Window
     /// </para>
     /// </summary>
     private bool _initializing = true;
+    private bool _isClosed;
 
     public SettingsWindow(dockdevManager manager)
     {
@@ -149,6 +150,7 @@ public sealed partial class SettingsWindow : Window
         _manager.DockChanged += OnDockChanged;
         Closed += (_, _) =>
         {
+            _isClosed = true;
             _manager.ItemsChanged -= OnDockItemsChanged;
             _manager.DockChanged -= OnDockChanged;
             // The config items outlive this window by the life of the process, so anything still
@@ -166,7 +168,9 @@ public sealed partial class SettingsWindow : Window
     // including the switch the user is standing on. Focus is captured before the rebuild and
     // restored after, on whichever card the same tool ended up on.
     private void OnDockItemsChanged() => DispatcherQueue.TryEnqueue(() =>
+    private void OnDockItemsChanged() => DispatcherQueue?.TryEnqueue(() =>
     {
+        if (_isClosed || RootGrid?.XamlRoot is null) return;
         var focusedKind = FocusedToolKind();
         RebuildTools();
         RebuildItemHotkeys();
@@ -175,7 +179,9 @@ public sealed partial class SettingsWindow : Window
     });
 
     private void OnDockChanged() => DispatcherQueue.TryEnqueue(() =>
+    private void OnDockChanged() => DispatcherQueue?.TryEnqueue(() =>
     {
+        if (_isClosed || RootGrid?.XamlRoot is null) return;
         RebuildDock();
         RebuildTools();
         // Lives on the Appearance page rather than the (rebuilt-from-scratch) Dock page, so it
@@ -391,9 +397,15 @@ public sealed partial class SettingsWindow : Window
     private async void StartupSwitch_Toggled(object sender, RoutedEventArgs e)
     {
         if (_initializing)
+        if (_initializing || _isClosed)
             return;
 
         var state = await _manager.SetLaunchAtStartupAsync(StartupSwitch.IsOn);
+        try
+        {
+            var state = await _manager.SetLaunchAtStartupAsync(StartupSwitch.IsOn);
+            if (_isClosed || RootGrid?.XamlRoot is null)
+                return;
 
         // Windows refuses to let an app re-enable a startup entry its user turned off, so a switch
         // left showing "on" would be a lie. Put it back and name the place they can undo it.
@@ -404,6 +416,20 @@ public sealed partial class SettingsWindow : Window
         StartupBlockedBar.IsOpen = blocked;
         if (blocked)
             SetStartupSwitchSilently(false);
+            // Windows refuses to let an app re-enable a startup entry its user turned off, so a switch
+            // left showing "on" would be a lie. Put it back and name the place they can undo it.
+            bool blocked = state is StartupService.StartupState.BlockedByUser
+                                or StartupService.StartupState.BlockedByPolicy;
+            if (blocked)
+                StartupBlockedBar.Visibility = Visibility.Visible;
+            StartupBlockedBar.IsOpen = blocked;
+            if (blocked)
+                SetStartupSwitchSilently(false);
+        }
+        catch (Exception ex)
+        {
+            Diag.Log("StartupSwitch_Toggled failed: " + ex.Message);
+        }
     }
 
     /// <summary>Reads the real startup state back from Windows and shows it, without the write-back
@@ -412,6 +438,17 @@ public sealed partial class SettingsWindow : Window
     {
         bool enabled = await StartupService.IsEnabledAsync();
         SetStartupSwitchSilently(enabled);
+        try
+        {
+            bool enabled = await StartupService.IsEnabledAsync();
+            if (_isClosed || RootGrid?.XamlRoot is null)
+                return;
+            SetStartupSwitchSilently(enabled);
+        }
+        catch (Exception ex)
+        {
+            Diag.Log("RefreshStartupSwitchAsync failed: " + ex.Message);
+        }
     }
 
     /// <summary>Moves the startup switch to match reality. <see cref="_initializing"/> is saved and
@@ -629,6 +666,9 @@ public sealed partial class SettingsWindow : Window
 
     private async void CheckNowButton_Click(object sender, RoutedEventArgs e)
     {
+        if (_isClosed || RootGrid?.XamlRoot is null)
+            return;
+
         CheckNowButton.IsEnabled = false;
         string originalContent = (string)CheckNowButton.Content;
         CheckNowButton.Content = Loc.Get("Update.Checking");
@@ -638,15 +678,27 @@ public sealed partial class SettingsWindow : Window
         try
         {
             var release = await _manager.CheckForUpdatesAsync(promptOnly: false);
+            if (_isClosed || RootGrid?.XamlRoot is null)
+                return;
+
             if (release is not null)
                 ShowUpdateResult(release);
             else
                 ShowUpToDate();
         }
+        catch (Exception ex)
+        {
+            Diag.Log("CheckNowButton_Click failed: " + ex.Message);
+        }
         finally
         {
             CheckNowButton.Content = originalContent;
             CheckNowButton.IsEnabled = UpdateCheckSwitch.IsOn;
+            if (!_isClosed && RootGrid?.XamlRoot is not null)
+            {
+                CheckNowButton.Content = originalContent;
+                CheckNowButton.IsEnabled = UpdateCheckSwitch.IsOn;
+            }
         }
     }
 
@@ -687,10 +739,14 @@ public sealed partial class SettingsWindow : Window
 
     private async void Export_Click(object sender, RoutedEventArgs e)
     {
+        if (_isClosed || RootGrid?.XamlRoot is null)
+            return;
+
         try
         {
             var path = await FilePickers.PickSaveFileAsync(_hwnd, "dockdev", ".json", "JSON");
             if (path is null)
+            if (path is null || _isClosed || RootGrid?.XamlRoot is null)
                 return;
 
             if (_manager.Export(path))
@@ -702,6 +758,8 @@ public sealed partial class SettingsWindow : Window
         {
             Diag.Log("Export failed: " + ex.Message);
             ShowBackupResult(Loc.Get("Backup.ExportFailed"), InfoBarSeverity.Error);
+            if (!_isClosed && RootGrid?.XamlRoot is not null)
+                ShowBackupResult(Loc.Get("Backup.ExportFailed"), InfoBarSeverity.Error);
         }
     }
 
@@ -709,10 +767,14 @@ public sealed partial class SettingsWindow : Window
     // confirmation, with the safe choice as the default button.
     private async void Import_Click(object sender, RoutedEventArgs e)
     {
+        if (_isClosed || RootGrid?.XamlRoot is null || Nav?.XamlRoot is null)
+            return;
+
         try
         {
             var path = await FilePickers.PickOpenFileAsync(_hwnd, [".json"]);
             if (path is null)
+            if (path is null || _isClosed || RootGrid?.XamlRoot is null || Nav?.XamlRoot is null)
                 return;
 
             var confirm = new ContentDialog
@@ -727,9 +789,14 @@ public sealed partial class SettingsWindow : Window
             if (await confirm.ShowAsync() != ContentDialogResult.Primary)
                 return;
 
+            if (_isClosed)
+                return;
+
             if (!_manager.Import(path))
             {
                 ShowBackupResult(Loc.Get("Backup.ImportFailed"), InfoBarSeverity.Error);
+                if (!_isClosed && RootGrid?.XamlRoot is not null)
+                    ShowBackupResult(Loc.Get("Backup.ImportFailed"), InfoBarSeverity.Error);
                 return;
             }
 
@@ -741,6 +808,8 @@ public sealed partial class SettingsWindow : Window
         {
             Diag.Log("Import failed: " + ex.Message);
             ShowBackupResult(Loc.Get("Backup.ImportFailed"), InfoBarSeverity.Error);
+            if (!_isClosed && RootGrid?.XamlRoot is not null)
+                ShowBackupResult(Loc.Get("Backup.ImportFailed"), InfoBarSeverity.Error);
         }
     }
 
@@ -759,6 +828,10 @@ public sealed partial class SettingsWindow : Window
     private async void Reset_Click(object sender, RoutedEventArgs e)
     {
         var dialog = new ContentDialog
+        if (_isClosed || RootGrid?.XamlRoot is null || Nav?.XamlRoot is null)
+            return;
+
+        try
         {
             XamlRoot = Nav.XamlRoot,
             Title = Loc.Get("Reset.Title"),
@@ -769,6 +842,25 @@ public sealed partial class SettingsWindow : Window
         };
         if (await dialog.ShowAsync() == ContentDialogResult.Primary)
             _manager.ResetToDefaults();
+            var dialog = new ContentDialog
+            {
+                XamlRoot = Nav.XamlRoot,
+                Title = Loc.Get("Reset.Title"),
+                Content = Loc.Get("Reset.Body"),
+                PrimaryButtonText = Loc.Get("Reset.Confirm"),
+                CloseButtonText = Loc.Get("Common.Cancel"),
+                DefaultButton = ContentDialogButton.Close,
+            };
+            if (await dialog.ShowAsync() == ContentDialogResult.Primary)
+            {
+                if (!_isClosed)
+                    _manager.ResetToDefaults();
+            }
+        }
+        catch (Exception ex)
+        {
+            Diag.Log("Reset failed: " + ex.Message);
+        }
     }
 
     // ---- Dock page ---------------------------------------------------------

@@ -98,5 +98,6 @@ public sealed class CronPage : FormToolPage
         var package = new Windows.ApplicationModel.DataTransfer.DataPackage();
         package.SetText(text);
         Windows.ApplicationModel.DataTransfer.Clipboard.SetContent(package);
+        ClipboardService.TrySetText(text);
     }
 }

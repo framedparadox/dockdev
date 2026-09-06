@@ -160,6 +160,8 @@ public sealed class dockdevManager
     public void Quit()
     {
         _shuttingDown = true;
+        try { Save(); }
+        catch { /* ignore */ }
         ReleaseShellIntegration();
         // A dock refuses any close request that did not come from dockdev (see
         // DockWindow.AllowClose), and would otherwise cancel Application.Exit's teardown.
@@ -172,6 +174,13 @@ public sealed class dockdevManager
         try
         {
             _messageWindow = new MessageWindow();
+            _messageWindow.MessageReceived += (msg, _, _) =>
+            {
+                if (msg is NativeMethods.WM_DISPLAYCHANGE or NativeMethods.WM_SETTINGCHANGE)
+                {
+                    _dock?.DispatcherQueue.TryEnqueue(() => _dock?.RelayoutAfterExternalMove());
+                }
+            };
 
             _tray = new TrayIconService(_messageWindow)
             {
@@ -542,8 +551,12 @@ public sealed class dockdevManager
         var window = _settingsWindow;
         if (window is null)
             return;
+        _settingsWindow = null;
+        window?.Close();
 
         window.DispatcherQueue.TryEnqueue(() =>
+        var dq = _dock?.DispatcherQueue ?? Microsoft.UI.Dispatching.DispatcherQueue.GetForCurrentThread();
+        dq?.TryEnqueue(() =>
         {
             _settingsWindow = null;
             window.Close();
@@ -635,9 +648,18 @@ public sealed class dockdevManager
 
     public bool SetHotkey(HotkeyGesture? gesture)
     {
+        var previous = Config.Hotkey;
         Config.Hotkey = gesture?.ToString() ?? string.Empty;
         Save();
         return ApplyHotkey();
+        if (ApplyHotkey())
+        {
+            Save();
+            return true;
+        }
+        Config.Hotkey = previous;
+        ApplyHotkey();
+        return false;
     }
 
     public bool SetHotkeyEnabled(bool on)
@@ -649,9 +671,18 @@ public sealed class dockdevManager
 
     public bool SetSearchHotkey(HotkeyGesture? gesture)
     {
+        var previous = Config.SearchHotkey;
         Config.SearchHotkey = gesture?.ToString() ?? string.Empty;
         Save();
         return ApplySearchHotkey();
+        if (ApplySearchHotkey())
+        {
+            Save();
+            return true;
+        }
+        Config.SearchHotkey = previous;
+        ApplySearchHotkey();
+        return false;
     }
 
     public void SetItemHotkeysEnabled(bool on)
@@ -663,11 +694,20 @@ public sealed class dockdevManager
 
     public bool SetItemHotkey(ToolDockItem item, HotkeyGesture? gesture)
     {
+        var previous = item.Hotkey;
         item.Hotkey = gesture?.ToString();
+        var refused = ApplyItemHotkeys();
+        if (refused.Contains(item))
+        {
+            item.Hotkey = previous;
+            ApplyItemHotkeys();
+            return false;
+        }
         Save();
         var refused = ApplyItemHotkeys();
         ItemsChanged?.Invoke();
         return !refused.Contains(item);
+        return true;
     }
 
     // ---- Open-window state --------------------------------------------------

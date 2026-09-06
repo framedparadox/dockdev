@@ -12,6 +12,8 @@ public static class TimestampTools
     /// ~10 digits today, milliseconds ~13, microseconds ~16.</summary>
     public static EpochUnit DetectUnit(long value)
     {
+        if (value == long.MinValue)
+            return EpochUnit.Microseconds;
         var digits = Math.Abs(value).ToString(CultureInfo.InvariantCulture).Length;
         return digits switch
         {
@@ -46,6 +48,16 @@ public static class TimestampTools
         {
             result = FromEpoch(number, DetectUnit(number));
             return true;
+            try
+            {
+                result = FromEpoch(number, DetectUnit(number));
+                return true;
+            }
+            catch (ArgumentOutOfRangeException)
+            {
+                result = default;
+                return false;
+            }
         }
         return DateTimeOffset.TryParse(text, CultureInfo.InvariantCulture, DateTimeStyles.None, out result);
     }

@@ -42,6 +42,7 @@ public sealed class CopyButton : Button
         ToolTipService.SetToolTip(this, name);
 
         Click += (_, _) => Copy();
+        Unloaded += (_, _) => _resetTimer?.Stop();
     }
 
     public void Copy()
@@ -52,6 +53,9 @@ public sealed class CopyButton : Button
         var package = new DataPackage();
         package.SetText(text);
         Clipboard.SetContent(package);
+
+        if (!ClipboardService.TrySetText(text))
+            return;
 
         _label.Text = Loc.Get("Tool.Copied");
         if (!_panel.Children.Contains(_label))
@@ -65,9 +69,19 @@ public sealed class CopyButton : Button
             _resetTimer.IsRepeating = false;
             _resetTimer.Interval = TimeSpan.FromSeconds(1.5);
             _resetTimer.Tick += (_, _) => ResetLabel();
+            var dq = DispatcherQueue ?? DispatcherQueue.GetForCurrentThread();
+            _resetTimer = dq?.CreateTimer();
+            if (_resetTimer is not null)
+            {
+                _resetTimer.IsRepeating = false;
+                _resetTimer.Interval = TimeSpan.FromSeconds(1.5);
+                _resetTimer.Tick += (_, _) => ResetLabel();
+            }
         }
         _resetTimer.Stop();
         _resetTimer.Start();
+        _resetTimer?.Stop();
+        _resetTimer?.Start();
     }
 
     private void ResetLabel()

@@ -83,6 +83,16 @@ public static class JwtTools
     {
         if (root.TryGetProperty(property, out var el) && el.TryGetInt64(out var seconds))
             return DateTimeOffset.FromUnixTimeSeconds(seconds);
+        {
+            if (seconds is >= -62_135_596_800L and <= 253_402_300_799L)
+            {
+                try
+                {
+                    return DateTimeOffset.FromUnixTimeSeconds(seconds);
+                }
+                catch (ArgumentOutOfRangeException) { }
+            }
+        }
         return null;
     }
 
