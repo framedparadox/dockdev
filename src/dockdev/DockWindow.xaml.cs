@@ -111,8 +111,18 @@ public sealed partial class DockWindow : Window
             // The Windows 11 taskbar "glass". Follows RootGrid's theme via its own
             // ActualThemeChanged subscription, so a later SetTheme re-tints it automatically.
             _backdrop = new AcrylicBackdropManager(this);
-            _backdrop.TryApply();
-            ApplyGlass(); // the user's frostiness / accent-tint choice on top of the base recipe
+            if (!_backdrop.TryApply())
+            {
+                // No acrylic (unsupported GPU / Remote Desktop): fall back to an opaque theme brush
+                // so the dock is not a transparent, unreadable strip.
+                if (Application.Current.Resources.TryGetValue(
+                        "SolidBackgroundFillColorBaseBrush", out var bg) && bg is Microsoft.UI.Xaml.Media.Brush brush)
+                    RootGrid.Background = brush;
+            }
+            else
+            {
+                ApplyGlass(); // the user's frostiness / accent-tint choice on top of the base recipe
+            }
         }
 
         ItemsHost.ItemsSource = Items;
@@ -1179,8 +1189,9 @@ public sealed partial class DockWindow : Window
                 // Clear the drag flag once the trailing click (the pointer-release that ended
                 // the drag) has been delivered and suppressed. Low priority runs after input
                 // delivery, so a later keyboard invoke (Enter/Space) is not blocked.
-                DispatcherQueue.TryEnqueue(
-                    Microsoft.UI.Dispatching.DispatcherQueuePriority.Low, () => _dragOccurred = false);
+                if (!DispatcherQueue.TryEnqueue(
+                        Microsoft.UI.Dispatching.DispatcherQueuePriority.Low, () => _dragOccurred = false))
+                    _dragOccurred = false;
             }
             return;
         }
@@ -1281,8 +1292,9 @@ public sealed partial class DockWindow : Window
         RaiseItemsChanged();
 
         ResumeAutoHideAfterDrag();
-        DispatcherQueue.TryEnqueue(
-            Microsoft.UI.Dispatching.DispatcherQueuePriority.Low, () => _dragOccurred = false);
+        if (!DispatcherQueue.TryEnqueue(
+                Microsoft.UI.Dispatching.DispatcherQueuePriority.Low, () => _dragOccurred = false))
+            _dragOccurred = false;
     }
 
     /// <summary>On drop, snap to the nearest work-area edge if close enough, else float free.</summary>

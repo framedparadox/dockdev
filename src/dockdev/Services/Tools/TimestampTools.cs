@@ -12,6 +12,10 @@ public static class TimestampTools
     /// ~10 digits today, milliseconds ~13, microseconds ~16.</summary>
     public static EpochUnit DetectUnit(long value)
     {
+        // Math.Abs(long.MinValue) throws OverflowException; treat that single edge value as the
+        // largest-magnitude bucket.
+        if (value == long.MinValue)
+            return EpochUnit.Microseconds;
         var digits = Math.Abs(value).ToString(CultureInfo.InvariantCulture).Length;
         return digits switch
         {
@@ -44,8 +48,18 @@ public static class TimestampTools
         text = text.Trim();
         if (long.TryParse(text, out var number))
         {
-            result = FromEpoch(number, DetectUnit(number));
-            return true;
+            // FromEpoch can throw for extreme magnitudes (milliseconds/microseconds scaling pushes
+            // the value past DateTimeOffset's range); fail the parse instead of the app.
+            try
+            {
+                result = FromEpoch(number, DetectUnit(number));
+                return true;
+            }
+            catch (ArgumentOutOfRangeException)
+            {
+                result = default;
+                return false;
+            }
         }
         return DateTimeOffset.TryParse(text, CultureInfo.InvariantCulture, DateTimeStyles.None, out result);
     }

@@ -122,14 +122,38 @@ public sealed class XmlFormat : IDataFormat
 
     private static Diagnostic ToDiagnostic(XmlException ex) => new(ex.LineNumber, ex.LinePosition, ex.Message);
 
+    // A JSON key can be anything; an XML element/attribute name cannot. Encode it so building XML
+    // from arbitrary JSON never throws an XmlException on an illegal name.
+    private static string SafeXmlName(string name)
+    {
+        if (string.IsNullOrWhiteSpace(name))
+            return "item";
+        try
+        {
+            var encoded = XmlConvert.EncodeLocalName(name);
+            return string.IsNullOrEmpty(encoded) ? "item" : encoded;
+        }
+        catch
+        {
+            return "item";
+        }
+    }
+
+    // Depth cap for both directions: a deeply nested document would otherwise recurse until the
+    // stack overflows (an uncatchable crash).
+    private const int MaxXmlDepth = 128;
+
     /// <summary>
     /// Repeated sibling elements collapse into an <see cref="ArrayNode"/> (the conventional
     /// XML→JSON shape); a leaf with no attributes becomes a bare <see cref="ScalarNode"/> so a
     /// simple <c>&lt;name&gt;Ada&lt;/name&gt;</c> round-trips as the string <c>"Ada"</c> rather
     /// than an object wrapper.
     /// </summary>
-    private static DataNode ConvertElement(XElement element)
+    private static DataNode ConvertElement(XElement element, int depth = 0)
     {
+        if (depth > MaxXmlDepth)
+            return new ScalarNode(element.Value, ScalarKind.String);
+
         var members = new List<(string Key, DataNode Value)>();
         foreach (var attr in element.Attributes())
         {
@@ -157,7 +181,7 @@ public sealed class XmlFormat : IDataFormat
                 groups[name] = list;
                 order.Add(name);
             }
-            list.Add(ConvertElement(child));
+            list.Add(ConvertElement(child, depth + 1));
         }
         foreach (var name in order)
         {
@@ -167,9 +191,15 @@ public sealed class XmlFormat : IDataFormat
         return new ObjectNode(members);
     }
 
-    private static XElement BuildElement(string name, DataNode node)
+    private static XElement BuildElement(string name, DataNode node, int depth = 0)
     {
-        var el = new XElement(name);
+        var el = new XElement(SafeXmlName(name));
+        if (depth > MaxXmlDepth)
+        {
+            el.Value = (node as ScalarNode)?.Raw ?? "";
+            return el;
+        }
+
         switch (node)
         {
             case ScalarNode s:
@@ -179,20 +209,28 @@ public sealed class XmlFormat : IDataFormat
                 // Reached only for an array with no member name of its own (e.g. the canonical
                 // root is itself an array); "item" is the least-surprising synthetic tag.
                 foreach (var item in arr.Items)
-                    el.Add(BuildElement("item", item));
+                    el.Add(BuildElement("item", item, depth + 1));
                 break;
             case ObjectNode obj:
                 foreach (var (key, value) in obj.Members)
                 {
                     if (key.StartsWith('@'))
-                        el.SetAttributeValue(key[1..], (value as ScalarNode)?.Raw ?? "");
+                    {
+                        // An attribute name from arbitrary JSON may be illegal XML; encode it and
+                        // swallow the rare residual XmlException rather than failing the format.
+                        try
+                        {
+                            el.SetAttributeValue(SafeXmlName(key[1..]), (value as ScalarNode)?.Raw ?? "");
+                        }
+                        catch (XmlException) { }
+                    }
                     else if (key == "#text")
                         el.Value = (value as ScalarNode)?.Raw ?? "";
                     else if (value is ArrayNode valueArray)
                         foreach (var item in valueArray.Items)
-                            el.Add(BuildElement(key, item));
+                            el.Add(BuildElement(key, item, depth + 1));
                     else
-                        el.Add(BuildElement(key, value));
+                        el.Add(BuildElement(key, value, depth + 1));
                 }
                 break;
         }

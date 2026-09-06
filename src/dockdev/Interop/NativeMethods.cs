@@ -109,6 +109,7 @@ internal static partial class NativeMethods
     // (never-shown) popup rather than an HWND_MESSAGE child, because TrackPopupMenuEx needs an
     // owner that can be made the foreground window or the tray menu won't light-dismiss.
 
+    [UnmanagedFunctionPointer(CallingConvention.Winapi)]
     public delegate nint WndProc(nint hwnd, uint msg, nint wParam, nint lParam);
 
     [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
@@ -132,6 +133,10 @@ internal static partial class NativeMethods
 
     [DllImport("user32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
     public static extern ushort RegisterClassEx(ref WNDCLASSEX wndClass);
+
+    [DllImport("user32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static extern bool UnregisterClass(string className, nint hInstance);
 
     [DllImport("user32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
     public static extern nint CreateWindowEx(
@@ -161,6 +166,10 @@ internal static partial class NativeMethods
     public const uint WM_LBUTTONDBLCLK = 0x0203;
     public const uint WM_RBUTTONUP = 0x0205;
     public const uint WM_CONTEXTMENU = 0x007B;
+    public const uint WM_QUERYENDSESSION = 0x0011;
+    public const uint WM_ENDSESSION = 0x0016;
+    public const uint WM_SETTINGCHANGE = 0x001A;
+    public const uint WM_DISPLAYCHANGE = 0x007E;
 
     // ---- Notification-area (tray) icon -------------------------------------
 
@@ -210,6 +219,10 @@ internal static partial class NativeMethods
 
     /// <summary>Resource id the .NET SDK gives an <c>&lt;ApplicationIcon&gt;</c> (IDI_APPLICATION).</summary>
     public static readonly nint IDI_APPLICATION = 32512;
+
+    /// <summary>The app's own embedded icon (first icon resource, id 1) so the tray shows the
+    /// dockdev icon rather than the generic Windows application icon; callers fall back if absent.</summary>
+    public static readonly nint IDI_APP_ICON = 1;
 
     [DllImport("user32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
     public static extern nint LoadImage(nint instance, nint name, uint type, int cx, int cy, uint load);

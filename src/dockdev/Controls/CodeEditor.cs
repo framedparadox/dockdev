@@ -200,7 +200,23 @@ public sealed class CodeEditor : Grid
         foreach (char c in Text)
             if (c == '\n')
                 lines++;
-        _gutter.Text = string.Join('\n', Enumerable.Range(1, lines));
+
+        // A pathological paste (millions of lines) would otherwise build a multi-megabyte gutter
+        // string and hang the UI thread; cap the rendered gutter and mark the overflow instead.
+        const int MaxGutterLines = 10_000;
+        int displayLines = Math.Min(lines, MaxGutterLines);
+
+        var sb = new System.Text.StringBuilder(displayLines * 6);
+        for (int i = 1; i <= displayLines; i++)
+        {
+            if (i > 1)
+                sb.Append('\n');
+            sb.Append(i);
+        }
+        if (lines > MaxGutterLines)
+            sb.Append("\n…");
+
+        _gutter.Text = sb.ToString();
     }
 
     /// <summary>

@@ -175,14 +175,12 @@ public sealed class ConverterPage : EditorToolPage
     {
         if (_output.Text.Length == 0)
             return;
-        var package = new Windows.ApplicationModel.DataTransfer.DataPackage();
-        package.SetText(_output.Text);
-        Windows.ApplicationModel.DataTransfer.Clipboard.SetContent(package);
+        ClipboardService.TrySetText(_output.Text);
     }
 
     private void SaveOutput()
     {
-        if (_output.Text.Length == 0)
+        if (_output.Text.Length == 0 || _target.SelectedIndex < 0 || _target.SelectedIndex >= Formats.Count)
             return;
 
         var extension = Formats[_target.SelectedIndex].Extensions[0];

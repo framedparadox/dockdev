@@ -53,6 +53,11 @@ public sealed partial class SearchWindow : Window
         _backdrop = new AcrylicBackdropManager(this);
         if (_backdrop.TryApply())
             _backdrop.Personalize(manager.Config.GlassOpacity, manager.Config.AccentTint);
+        else if (Application.Current.Resources.TryGetValue("SolidBackgroundFillColorBaseBrush", out var bg)
+                 && bg is Microsoft.UI.Xaml.Media.Brush brush)
+            // No acrylic (unsupported GPU / Remote Desktop): a transparent card would be unreadable,
+            // so fall back to an opaque theme brush.
+            RootGrid.Background = brush;
 
         WindowChrome.SetClientSizeDip(_appWindow, _hwnd, CardWidth, CardHeight);
         CenterOnCursorDisplay();
@@ -66,7 +71,9 @@ public sealed partial class SearchWindow : Window
             if (e.WindowActivationState != WindowActivationState.Deactivated)
                 _wasActivated = true;
             else if (_wasActivated)
-                Close();
+                // Defer: closing the window synchronously from inside its own Activated callback can
+                // re-enter the window machinery and fault; let the current message drain first.
+                DispatcherQueue.TryEnqueue(Close);
         };
         Closed += (_, _) => _backdrop?.Dispose();
 

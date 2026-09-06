@@ -61,8 +61,20 @@ public static partial class LineOps
         {
             x ??= "";
             y ??= "";
-            var partsX = SplitNumeric().Matches(x).Select(m => m.Value).ToList();
-            var partsY = SplitNumeric().Matches(y).Select(m => m.Value).ToList();
+            List<string> partsX;
+            List<string> partsY;
+            try
+            {
+                partsX = SplitNumeric().Matches(x).Select(m => m.Value).ToList();
+                partsY = SplitNumeric().Matches(y).Select(m => m.Value).ToList();
+            }
+            catch (RegexMatchTimeoutException)
+            {
+                // A pathological input tripped the regex timeout; fall back to an ordinal compare
+                // rather than throwing out of a sort comparer (which would abort the whole sort).
+                return string.CompareOrdinal(x, y);
+            }
+
             int count = Math.Min(partsX.Count, partsY.Count);
             for (int i = 0; i < count; i++)
             {
@@ -71,9 +83,17 @@ public static partial class LineOps
                 int cmp;
                 if (numX && numY)
                 {
-                    var bigX = System.Numerics.BigInteger.Parse(partsX[i]);
-                    var bigY = System.Numerics.BigInteger.Parse(partsY[i]);
-                    cmp = bigX.CompareTo(bigY);
+                    // TryParse, not Parse: a numeric run can be longer than BigInteger will parse in
+                    // one gulp only in absurd cases, but a non-throwing path keeps the sort alive.
+                    if (System.Numerics.BigInteger.TryParse(partsX[i], out var bigX) &&
+                        System.Numerics.BigInteger.TryParse(partsY[i], out var bigY))
+                    {
+                        cmp = bigX.CompareTo(bigY);
+                    }
+                    else
+                    {
+                        cmp = string.CompareOrdinal(partsX[i], partsY[i]);
+                    }
                 }
                 else
                 {
@@ -85,7 +105,7 @@ public static partial class LineOps
             return partsX.Count.CompareTo(partsY.Count);
         }
 
-        [GeneratedRegex(@"\d+|\D+")]
+        [GeneratedRegex(@"\d+|\D+", RegexOptions.None, matchTimeoutMilliseconds: 500)]
         private static partial Regex SplitNumeric();
     }
 }

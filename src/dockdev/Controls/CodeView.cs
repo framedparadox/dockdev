@@ -127,7 +127,28 @@ public sealed class CodeView : Grid
         foreach (char c in _text)
             if (c == '\n')
                 lineCount++;
-        _gutter.Text = _showLineNumbers ? string.Join('\n', Enumerable.Range(1, lineCount)) : "";
+
+        // Cap the rendered gutter so a huge document cannot build a multi-megabyte string and
+        // stall the UI thread; the overflow is marked with an ellipsis.
+        if (_showLineNumbers)
+        {
+            const int MaxGutterLines = 10_000;
+            int displayLines = Math.Min(lineCount, MaxGutterLines);
+            var sb = new System.Text.StringBuilder(displayLines * 6);
+            for (int i = 1; i <= displayLines; i++)
+            {
+                if (i > 1)
+                    sb.Append('\n');
+                sb.Append(i);
+            }
+            if (lineCount > MaxGutterLines)
+                sb.Append("\n…");
+            _gutter.Text = sb.ToString();
+        }
+        else
+        {
+            _gutter.Text = "";
+        }
 
         if (_text.Length == 0)
             return;

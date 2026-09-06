@@ -140,7 +140,7 @@ public sealed class TextToolkitPage : EditorToolPage
     {
         var text = _input.Text;
         StatusBar.SetCounts(text);
-        if (text.Length == 0 || _operation.SelectedIndex < 0)
+        if (text.Length == 0 || _operation.SelectedIndex < 0 || _operation.SelectedIndex >= Operations.Length)
         {
             _output.Clear();
             _countsSummary.Text = "";
@@ -168,9 +168,7 @@ public sealed class TextToolkitPage : EditorToolPage
     {
         if (_output.Text.Length == 0)
             return;
-        var package = new Windows.ApplicationModel.DataTransfer.DataPackage();
-        package.SetText(_output.Text);
-        Windows.ApplicationModel.DataTransfer.Clipboard.SetContent(package);
+        ClipboardService.TrySetText(_output.Text);
     }
 
     private void Clear()

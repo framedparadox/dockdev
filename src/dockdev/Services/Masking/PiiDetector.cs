@@ -81,21 +81,30 @@ public static partial class PiiDetector
     /// <c>key="</c> attribute whose name satisfies <paramref name="keyPattern"/>.</summary>
     private static bool HasNearbyKey(string text, int matchStart, Regex keyPattern)
     {
-        int windowStart = Math.Max(0, matchStart - 48);
-        var window = text[windowStart..matchStart];
+        try
+        {
+            int windowStart = Math.Max(0, matchStart - 48);
+            var window = text[windowStart..matchStart];
 
-        var jsonKey = JsonKeyBefore().Match(window);
-        if (jsonKey.Success && keyPattern.IsMatch(jsonKey.Groups[1].Value))
-            return true;
+            var jsonKey = JsonKeyBefore().Match(window);
+            if (jsonKey.Success && keyPattern.IsMatch(jsonKey.Groups[1].Value))
+                return true;
 
-        var attrKey = AttrKeyBefore().Match(window);
-        return attrKey.Success && keyPattern.IsMatch(attrKey.Groups[1].Value);
+            var attrKey = AttrKeyBefore().Match(window);
+            return attrKey.Success && keyPattern.IsMatch(attrKey.Groups[1].Value);
+        }
+        catch (RegexMatchTimeoutException)
+        {
+            // A user-supplied rule pattern hit the timeout; treat "can't tell" as "no nearby key"
+            // rather than throwing out of detection.
+            return false;
+        }
     }
 
-    [GeneratedRegex("\"([A-Za-z0-9_\\-]+)\"\\s*:\\s*\"?$")]
+    [GeneratedRegex("\"([A-Za-z0-9_\\-]+)\"\\s*:\\s*\"?$", RegexOptions.None, matchTimeoutMilliseconds: 500)]
     private static partial Regex JsonKeyBefore();
 
-    [GeneratedRegex("([A-Za-z0-9_\\-]+)\\s*=\\s*\"?$")]
+    [GeneratedRegex("([A-Za-z0-9_\\-]+)\\s*=\\s*\"?$", RegexOptions.None, matchTimeoutMilliseconds: 500)]
     private static partial Regex AttrKeyBefore();
 
     // ---- Key-only rules (names, addresses, dob, secrets — no value shape to key off) --------
@@ -106,35 +115,55 @@ public static partial class PiiDetector
         if (keyOnlyRules.Count == 0)
             yield break;
 
-        foreach (Match m in JsonKeyValue().Matches(text))
+        // Materialize inside the try (Matches evaluates lazily) so a regex timeout during matching
+        // is caught here rather than escaping mid-enumeration, which a yield loop cannot guard.
+        List<Match>? jsonMatches = null;
+        try { jsonMatches = JsonKeyValue().Matches(text).ToList(); }
+        catch (RegexMatchTimeoutException) { }
+
+        if (jsonMatches is not null)
         {
-            var key = m.Groups[1].Value;
-            var rule = keyOnlyRules.FirstOrDefault(r => r.KeyPattern!.IsMatch(key));
-            if (rule is null)
-                continue;
-            var valueGroup = m.Groups[2];
-            if (valueGroup.Length == 0)
-                continue;
-            yield return new Finding(rule.Id, rule.Category, "$." + key, valueGroup.Index, valueGroup.Length, Confidence.Medium, rule.DefaultStrategy, Included: true);
+            foreach (Match m in jsonMatches)
+            {
+                var key = m.Groups[1].Value;
+                PiiRule? rule = null;
+                try { rule = keyOnlyRules.FirstOrDefault(r => r.KeyPattern!.IsMatch(key)); }
+                catch (RegexMatchTimeoutException) { }
+                if (rule is null)
+                    continue;
+                var valueGroup = m.Groups[2];
+                if (valueGroup.Length == 0)
+                    continue;
+                yield return new Finding(rule.Id, rule.Category, "$." + key, valueGroup.Index, valueGroup.Length, Confidence.Medium, rule.DefaultStrategy, Included: true);
+            }
         }
 
-        foreach (Match m in XmlAttrKeyValue().Matches(text))
+        List<Match>? xmlMatches = null;
+        try { xmlMatches = XmlAttrKeyValue().Matches(text).ToList(); }
+        catch (RegexMatchTimeoutException) { }
+
+        if (xmlMatches is not null)
         {
-            var key = m.Groups[1].Value;
-            var rule = keyOnlyRules.FirstOrDefault(r => r.KeyPattern!.IsMatch(key));
-            if (rule is null)
-                continue;
-            var valueGroup = m.Groups[2];
-            if (valueGroup.Length == 0)
-                continue;
-            yield return new Finding(rule.Id, rule.Category, "@" + key, valueGroup.Index, valueGroup.Length, Confidence.Medium, rule.DefaultStrategy, Included: true);
+            foreach (Match m in xmlMatches)
+            {
+                var key = m.Groups[1].Value;
+                PiiRule? rule = null;
+                try { rule = keyOnlyRules.FirstOrDefault(r => r.KeyPattern!.IsMatch(key)); }
+                catch (RegexMatchTimeoutException) { }
+                if (rule is null)
+                    continue;
+                var valueGroup = m.Groups[2];
+                if (valueGroup.Length == 0)
+                    continue;
+                yield return new Finding(rule.Id, rule.Category, "@" + key, valueGroup.Index, valueGroup.Length, Confidence.Medium, rule.DefaultStrategy, Included: true);
+            }
         }
     }
 
-    [GeneratedRegex("\"([A-Za-z0-9_\\-]+)\"\\s*:\\s*\"([^\"]*)\"")]
+    [GeneratedRegex("\"([A-Za-z0-9_\\-]+)\"\\s*:\\s*\"([^\"]*)\"", RegexOptions.None, matchTimeoutMilliseconds: 500)]
     private static partial Regex JsonKeyValue();
 
-    [GeneratedRegex("([A-Za-z0-9_\\-]+)\\s*=\\s*\"([^\"]*)\"")]
+    [GeneratedRegex("([A-Za-z0-9_\\-]+)\\s*=\\s*\"([^\"]*)\"", RegexOptions.None, matchTimeoutMilliseconds: 500)]
     private static partial Regex XmlAttrKeyValue();
 
     /// <summary>Per-column CSV classification (design doc §15.1) for key-only rules: the header
@@ -152,7 +181,9 @@ public static partial class PiiDetector
         for (int col = 0; col < header.Count; col++)
         {
             var headerText = text.Substring(header[col].Start, header[col].Length);
-            var rule = keyOnlyRules.FirstOrDefault(r => r.KeyPattern!.IsMatch(headerText));
+            PiiRule? rule = null;
+            try { rule = keyOnlyRules.FirstOrDefault(r => r.KeyPattern!.IsMatch(headerText)); }
+            catch (RegexMatchTimeoutException) { }
             if (rule is null)
                 continue;
 

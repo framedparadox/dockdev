@@ -222,9 +222,7 @@ public sealed class FormatterPage : EditorToolPage
     {
         if (_editor.Text.Length == 0)
             return;
-        var package = new Windows.ApplicationModel.DataTransfer.DataPackage();
-        package.SetText(_editor.Text);
-        Windows.ApplicationModel.DataTransfer.Clipboard.SetContent(package);
+        ClipboardService.TrySetText(_editor.Text);
     }
 
     private void SaveOutput()

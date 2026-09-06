@@ -47,13 +47,37 @@ public sealed class DiffView : Grid
         Children.Add(_codeView);
     }
 
+    /// <summary>The product of a diff computation, carried from the (thread-safe) <see cref="Calculate"/>
+    /// step to the (UI-thread-only) <see cref="Apply"/> step so the heavy work can run off the UI thread.</summary>
+    public sealed record DiffComputationResult(string FormattedText, List<Token> Tokens, int ChangeCount, bool IsMinimal);
+
+    /// <summary>Computes and renders in one call, on the current thread. Kept for callers that do not
+    /// need the off-thread split.</summary>
     public void Compute(string leftText, string rightText, bool ignoreWhitespace, bool ignoreCase, bool ignoreBlankLines)
+        => Apply(Calculate(leftText, rightText, ignoreWhitespace, ignoreCase, ignoreBlankLines));
+
+    /// <summary>Renders a previously computed result. Must run on the UI thread.</summary>
+    public void Apply(DiffComputationResult result)
+    {
+        ChangeCount = result.ChangeCount;
+        IsMinimal = result.IsMinimal;
+        _summary.Text = !result.IsMinimal
+            ? Loc.Get("Diff.TooDifferent")
+            : result.ChangeCount == 0
+                ? Loc.Get("Diff.NoChanges")
+                : Loc.Format("Diff.ChangeCount", result.ChangeCount);
+        _codeView.SetContent(result.FormattedText, result.Tokens);
+    }
+
+    /// <summary>The heavy diff work, with no UI-thread dependency, so a large diff can run on a
+    /// background thread and never freeze the dock. Touches no instance state.</summary>
+    public static DiffComputationResult Calculate(string leftText, string rightText, bool ignoreWhitespace, bool ignoreCase, bool ignoreBlankLines)
     {
         var linesA = NormalizeLines(leftText);
         var linesB = NormalizeLines(rightText);
         var comparer = new LineComparer(ignoreWhitespace, ignoreCase, ignoreBlankLines);
         var lineDiff = MyersDiff.DiffBounded(linesA, linesB, comparer);
-        IsMinimal = lineDiff.Minimal;
+        var isMinimal = lineDiff.Minimal;
         var blocks = GroupConsecutive(lineDiff.Ops);
 
         var text = new System.Text.StringBuilder();
@@ -122,13 +146,7 @@ public sealed class DiffView : Grid
             }
         }
 
-        ChangeCount = changeCount;
-        _summary.Text = !IsMinimal
-            ? Loc.Get("Diff.TooDifferent")
-            : changeCount == 0
-                ? Loc.Get("Diff.NoChanges")
-                : Loc.Format("Diff.ChangeCount", changeCount);
-        _codeView.SetContent(text.ToString(), tokens);
+        return new DiffComputationResult(text.ToString(), tokens, changeCount, isMinimal);
     }
 
     private static List<string> NormalizeLines(string text) =>

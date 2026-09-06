@@ -51,7 +51,7 @@ public sealed class DockConfig
     /// </summary>
     public DockProfile Dock
     {
-        get => _dock ??= new DockProfile();
+        get => LazyInitializer.EnsureInitialized(ref _dock, () => new DockProfile());
         set => _dock = value;
     }
 
@@ -207,8 +207,15 @@ public sealed class DockConfig
         SearchHotkey = other.SearchHotkey;
         SkippedUpdate = other.SkippedUpdate;
         ReuseToolWindows = other.ReuseToolWindows;
-        Network = other.Network;
-        ToolSettings = other.ToolSettings;
-        MaskProfiles = other.MaskProfiles;
+        // Deep-copy the reference-typed settings: import fills this live instance from a transient
+        // one that is then discarded, so sharing the same objects would leave the running config
+        // aliasing freed state (and a later mutation of one would silently change the other).
+        Network = new NetworkSettings { UpdateCheck = other.Network?.UpdateCheck ?? false };
+        ToolSettings = other.ToolSettings is not null
+            ? new Dictionary<string, System.Text.Json.JsonElement>(other.ToolSettings)
+            : new();
+        MaskProfiles = other.MaskProfiles is not null
+            ? new List<Services.Masking.MaskProfile>(other.MaskProfiles)
+            : [];
     }
 }

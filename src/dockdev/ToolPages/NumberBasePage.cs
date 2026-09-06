@@ -80,7 +80,7 @@ public sealed class NumberBasePage : FormToolPage
     public override bool IsDirty => false;
     public override IReadOnlyList<ToolCommand> Commands => [];
 
-    private int CurrentWidth() => Widths[_width.SelectedIndex];
+    private int CurrentWidth() => _width.SelectedIndex >= 0 && _width.SelectedIndex < Widths.Length ? Widths[_width.SelectedIndex] : 32;
 
     private static ulong ParseOperand(string text) => NumberBaseTools.TryParse(text, 10, out var v) ? (ulong)v : 0;
 

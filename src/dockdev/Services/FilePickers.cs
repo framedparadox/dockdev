@@ -18,6 +18,11 @@ public static class FilePickers
 {
     public static async Task<string?> PickOpenFileAsync(nint hwnd, IEnumerable<string>? extensions = null)
     {
+        // A picker with no owner window throws inside InitializeWithWindow; a zero handle means the
+        // owning window is gone, so there is nothing to pick into.
+        if (hwnd == nint.Zero)
+            return null;
+
         try
         {
             var picker = new Windows.Storage.Pickers.FileOpenPicker();
@@ -26,7 +31,12 @@ public static class FilePickers
             bool any = false;
             foreach (var ext in extensions ?? [])
             {
-                picker.FileTypeFilter.Add(ext);
+                // FileTypeFilter rejects an entry that is neither "*" nor a leading-dot extension;
+                // normalize so a caller passing "json" instead of ".json" does not throw.
+                if (string.IsNullOrWhiteSpace(ext))
+                    continue;
+                var normalized = ext == "*" || ext.StartsWith('.') ? ext : "." + ext;
+                picker.FileTypeFilter.Add(normalized);
                 any = true;
             }
             if (!any)
@@ -44,13 +54,18 @@ public static class FilePickers
 
     public static async Task<string?> PickSaveFileAsync(nint hwnd, string suggestedName, string extension, string displayName)
     {
+        if (hwnd == nint.Zero)
+            return null;
+
         try
         {
             var picker = new Windows.Storage.Pickers.FileSavePicker();
             WinRT.Interop.InitializeWithWindow.Initialize(picker, hwnd);
             picker.SuggestedStartLocation = Windows.Storage.Pickers.PickerLocationId.ComputerFolder;
             picker.SuggestedFileName = suggestedName;
-            picker.FileTypeChoices.Add(displayName, [extension]);
+            // FileTypeChoices requires a leading-dot extension or it throws.
+            var normalizedExt = extension.StartsWith('.') ? extension : "." + extension;
+            picker.FileTypeChoices.Add(displayName, [normalizedExt]);
 
             var file = await picker.PickSaveFileAsync();
             return file?.Path;

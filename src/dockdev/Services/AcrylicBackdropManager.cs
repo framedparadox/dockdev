@@ -105,7 +105,7 @@ public sealed class AcrylicBackdropManager : IDisposable
             return;
         try
         {
-            _window.DispatcherQueue.TryEnqueue(UpdateEnergySaverState);
+            _window.DispatcherQueue?.TryEnqueue(UpdateEnergySaverState);
         }
         catch (Exception ex)
         {
@@ -123,9 +123,18 @@ public sealed class AcrylicBackdropManager : IDisposable
     /// </summary>
     private void UpdateEnergySaverState()
     {
-        if (_config is null)
+        if (_disposed || _config is null)
             return;
-        _config.IsInputActive = PowerManager.EnergySaverStatus != EnergySaverStatus.On;
+        try
+        {
+            _config.IsInputActive = PowerManager.EnergySaverStatus != EnergySaverStatus.On;
+        }
+        catch (Exception ex)
+        {
+            // PowerManager can throw transiently during session/display transitions; the glass is
+            // cosmetic, so log and leave the last-known state in place.
+            Diag.Log("AcrylicBackdropManager: energy-saver probe failed: " + ex.Message);
+        }
     }
 
     /// <summary>
@@ -203,8 +212,20 @@ public sealed class AcrylicBackdropManager : IDisposable
             _themeRoot.ActualThemeChanged -= OnThemeChanged;
         PowerManager.EnergySaverStatusChanged -= OnEnergySaverStatusChanged;
 
-        _controller?.Dispose();
-        _controller = null;
+        if (_controller is not null)
+        {
+            try
+            {
+                // Detach the backdrop target and reset before disposing: dropping the controller
+                // without releasing its target has been seen to leave a dangling composition
+                // reference and fault DWM on teardown.
+                _controller.RemoveAllSystemBackdropTargets();
+                _controller.ResetProperties();
+                _controller.Dispose();
+            }
+            catch { /* ignore teardown races */ }
+            _controller = null;
+        }
         _config = null;
     }
 

@@ -160,6 +160,10 @@ public sealed class dockdevManager
     public void Quit()
     {
         _shuttingDown = true;
+        // Persist first: a quit that then hits a teardown fault should not also cost the user their
+        // latest settings.
+        try { Save(); }
+        catch { /* Save already logs; never let a save failure block shutdown */ }
         ReleaseShellIntegration();
         // A dock refuses any close request that did not come from dockdev (see
         // DockWindow.AllowClose), and would otherwise cancel Application.Exit's teardown.
@@ -172,6 +176,13 @@ public sealed class dockdevManager
         try
         {
             _messageWindow = new MessageWindow();
+            // A display resolution/arrangement change or a system settings change (DPI, taskbar
+            // size) can strand the dock off-screen; re-run its edge layout when either arrives.
+            _messageWindow.MessageReceived += (msg, _, _) =>
+            {
+                if (msg is NativeMethods.WM_DISPLAYCHANGE or NativeMethods.WM_SETTINGCHANGE)
+                    _dock?.DispatcherQueue.TryEnqueue(() => _dock?.RelayoutAfterExternalMove());
+            };
 
             _tray = new TrayIconService(_messageWindow)
             {
@@ -543,11 +554,14 @@ public sealed class dockdevManager
         if (window is null)
             return;
 
-        window.DispatcherQueue.TryEnqueue(() =>
-        {
-            _settingsWindow = null;
-            window.Close();
+        _settingsWindow = null;
+        window.Close();
 
+        // The just-closed window's own DispatcherQueue may already be tearing down, so recreate on
+        // the dock's (process-lifetime) queue, falling back to the current thread's.
+        var dq = _dock?.DispatcherQueue ?? Microsoft.UI.Dispatching.DispatcherQueue.GetForCurrentThread();
+        dq?.TryEnqueue(() =>
+        {
             _settingsWindow = new SettingsWindow(this);
             _settingsWindow.Closed += (_, _) => _settingsWindow = null;
             _settingsWindow.Activate();
@@ -635,9 +649,18 @@ public sealed class dockdevManager
 
     public bool SetHotkey(HotkeyGesture? gesture)
     {
+        // Apply before persisting: RegisterHotKey can be refused (the combo is already owned by
+        // another app), and persisting a gesture that never took effect would be a stored lie.
+        var previous = Config.Hotkey;
         Config.Hotkey = gesture?.ToString() ?? string.Empty;
-        Save();
-        return ApplyHotkey();
+        if (ApplyHotkey())
+        {
+            Save();
+            return true;
+        }
+        Config.Hotkey = previous;
+        ApplyHotkey();
+        return false;
     }
 
     public bool SetHotkeyEnabled(bool on)
@@ -649,9 +672,16 @@ public sealed class dockdevManager
 
     public bool SetSearchHotkey(HotkeyGesture? gesture)
     {
+        var previous = Config.SearchHotkey;
         Config.SearchHotkey = gesture?.ToString() ?? string.Empty;
-        Save();
-        return ApplySearchHotkey();
+        if (ApplySearchHotkey())
+        {
+            Save();
+            return true;
+        }
+        Config.SearchHotkey = previous;
+        ApplySearchHotkey();
+        return false;
     }
 
     public void SetItemHotkeysEnabled(bool on)
@@ -663,11 +693,19 @@ public sealed class dockdevManager
 
     public bool SetItemHotkey(ToolDockItem item, HotkeyGesture? gesture)
     {
+        var previous = item.Hotkey;
         item.Hotkey = gesture?.ToString();
-        Save();
         var refused = ApplyItemHotkeys();
+        if (refused.Contains(item))
+        {
+            // Windows refused this combo; roll the item back to what it had and don't persist.
+            item.Hotkey = previous;
+            ApplyItemHotkeys();
+            return false;
+        }
+        Save();
         ItemsChanged?.Invoke();
-        return !refused.Contains(item);
+        return true;
     }
 
     // ---- Open-window state --------------------------------------------------
