@@ -39,9 +39,9 @@
     <Company>dockdev</Company>
     <Authors>dockdev</Authors>
     <Description>A developer-tools floating dock for Windows 11 — offline, trustworthy scratch tools.</Description>
-    <Version>1.1.0.0</Version>
-    <FileVersion>1.1.0.0</FileVersion>
-    <AssemblyVersion>1.1.0.0</AssemblyVersion>
+    <Version>1.2.0.0</Version>
+    <FileVersion>1.2.0.0</FileVersion>
+    <AssemblyVersion>1.2.0.0</AssemblyVersion>
     <NeutralLanguage>en-US</NeutralLanguage>
   </PropertyGroup>
 

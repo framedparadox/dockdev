@@ -4,6 +4,13 @@ All notable changes to dockdev are recorded here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project uses
 `Major.Minor.Build.0` versions — the Store reserves the fourth component, so it stays `0`.
 
+## [1.2.0.0]
+
+### Changed
+
+- **New app icon and logo.** The tile, splash screen, taskbar icon and README branding now use the
+  new dockdev mark in place of the old hexagon logo.
+
 ## [1.1.0.0]
 
 Stability and reliability release: dockdev is an always-on tray utility, so the guiding rule is that
