@@ -12,7 +12,7 @@ namespace dockdev.Controls;
 /// The chip is a live region so Narrator announces validation changes without the user going to
 /// look for them.
 /// </summary>
-public sealed class ToolStatusBar : Grid
+public sealed class ToolStatusBar : Grid, IWindowShutdown
 {
     /// <summary>The status bar reports secondary, glance-only information — counts, validity, the
     /// structural path — so it takes the Fluent caption size rather than body text's, the same
@@ -49,8 +49,15 @@ public sealed class ToolStatusBar : Grid
         // The error colour is derived from the theme this control renders in, so it has to be
         // re-derived when that changes under it (Settings ▸ Appearance, or the OS flipping while
         // "Match Windows" is on).
-        ActualThemeChanged += (_, _) => ApplyChipColor();
+        ActualThemeChanged += (_, _) =>
+        {
+            if (!_shutdown)
+                ApplyChipColor();
+        };
+        Unloaded += (_, _) => Shutdown();
     }
+
+    public void Shutdown() => _shutdown = true;
 
     public void SetCounts(string text)
     {
@@ -98,6 +105,7 @@ public sealed class ToolStatusBar : Grid
     /// <summary>Whether the chip is currently reporting an error, so its colour can be re-derived
     /// when the theme changes underneath it.</summary>
     private bool _isError;
+    private bool _shutdown;
 
     /// <summary>
     /// Paints the chip in Fluent's <c>SystemFillColorCritical</c> for the theme this control is
@@ -115,14 +123,20 @@ public sealed class ToolStatusBar : Grid
     /// </summary>
     private void ApplyChipColor()
     {
+        if (_shutdown)
+            return;
+
         if (!_isError || Services.HighContrast.IsActive())
         {
             _chip.ClearValue(TextBlock.ForegroundProperty);
             return;
         }
 
+        if (!XamlLifetime.TryGetActualTheme(this, out var theme))
+            return;
+
         _chip.Foreground = new Microsoft.UI.Xaml.Media.SolidColorBrush(
-            ActualTheme == ElementTheme.Light
+            theme == ElementTheme.Light
                 ? Windows.UI.Color.FromArgb(255, 0xC4, 0x2B, 0x1C)
                 : Windows.UI.Color.FromArgb(255, 0xFF, 0x99, 0xA4));
     }

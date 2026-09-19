@@ -55,7 +55,9 @@ public sealed class AcrylicBackdropManager : IDisposable
     /// instead (see <c>DockWindow.BarBackground</c>).
     /// </summary>
     public AcrylicRecipe Current =>
-        (_themeRoot?.ActualTheme ?? ElementTheme.Dark) == ElementTheme.Light ? Light : Dark;
+        XamlLifetime.TryGetActualTheme(_themeRoot, out var theme) && theme == ElementTheme.Light
+            ? Light
+            : Dark;
 
     /// <returns>true if acrylic was applied; false if the OS/GPU can't support it.</returns>
     public bool TryApply()
@@ -83,7 +85,11 @@ public sealed class AcrylicBackdropManager : IDisposable
         return true;
     }
 
-    private void OnThemeChanged(FrameworkElement sender, object args) => UpdateTheme();
+    private void OnThemeChanged(FrameworkElement sender, object args)
+    {
+        if (!_disposed)
+            UpdateTheme();
+    }
 
     /// <summary>
     /// PowerManager raises this off the UI thread — a thread-pool thread — so the actual update is
@@ -123,7 +129,7 @@ public sealed class AcrylicBackdropManager : IDisposable
     /// </summary>
     private void UpdateEnergySaverState()
     {
-        if (_config is null)
+        if (_disposed || _config is null)
             return;
         _config.IsInputActive = PowerManager.EnergySaverStatus != EnergySaverStatus.On;
     }
@@ -178,10 +184,11 @@ public sealed class AcrylicBackdropManager : IDisposable
 
     private void UpdateTheme()
     {
-        if (_controller is null || _config is null)
+        if (_disposed || _controller is null || _config is null)
             return;
 
-        var theme = _themeRoot?.ActualTheme ?? ElementTheme.Dark;
+        if (!XamlLifetime.TryGetActualTheme(_themeRoot, out var theme))
+            theme = ElementTheme.Dark;
         bool dark = theme != ElementTheme.Light;
 
         _config.Theme = dark ? SystemBackdropTheme.Dark : SystemBackdropTheme.Light;

@@ -29,7 +29,9 @@ public sealed partial class DockWindow : Window
     private readonly nint _hwnd;
     private readonly WindowId _windowId;
     private readonly AppWindow _appWindow;
-    private readonly AcrylicBackdropManager? _backdrop;
+    private AcrylicBackdropManager? _backdrop;
+    private bool _uiTornDown;
+    private TeachingTip? _inlineTip;
     private readonly dockdevManager _manager;
     private readonly DockProfile _profile;
 
@@ -98,7 +100,7 @@ public sealed partial class DockWindow : Window
         // theme changes — either the user's choice, or the OS light/dark setting while in System
         // mode (ActualThemeChanged covers both).
         ApplyWindowBorder();
-        RootGrid.ActualThemeChanged += (_, _) => ApplyWindowBorder();
+        RootGrid.ActualThemeChanged += OnRootActualThemeChanged;
 
         if (HighContrast.IsActive())
         {
@@ -142,14 +144,7 @@ public sealed partial class DockWindow : Window
         // the summon shortcut undo. dockdev's own teardown paths call AllowClose first.
         _appWindow.Closing += OnAppWindowClosing;
 
-        Closed += (_, _) =>
-        {
-            _pollTimer?.Stop();
-            _slideTimer?.Stop();
-            _dragTimer?.Stop();
-            _backdrop?.Dispose();
-            ReleaseItems();
-        };
+        Closed += (_, _) => TeardownUi();
 
         // Modest initial size so the first frame isn't full-screen before relayout.
         _appWindow.Resize(new SizeInt32(360, 96));
@@ -195,13 +190,53 @@ public sealed partial class DockWindow : Window
     private void OnAppWindowClosing(AppWindow sender, AppWindowClosingEventArgs args)
     {
         if (_allowClose)
+        {
+            // The island is still up. Detach the repeater, dismiss popups and drop theme
+            // handlers here — after Closed the same operations read FlowDirection off a
+            // torn-down peer (the sibling-app StowedException).
+            TeardownUi();
             return;
+        }
 
         args.Cancel = true;
         // Queued rather than run from inside the notification: the cancel only takes effect once
         // this handler returns, and hiding a window part-way through its own close is the kind of
         // re-entrancy that is fine until the one build where it isn't.
         DispatcherQueue.TryEnqueue(_manager.HideDockOnCloseRequest);
+    }
+
+    /// <summary>
+    /// Stops every XAML and timer path that can still run after this window has started closing.
+    /// Called from <see cref="OnAppWindowClosing"/> while the island is alive, and again from
+    /// <c>Closed</c> as a no-op if that already ran.
+    /// </summary>
+    private void TeardownUi()
+    {
+        if (_uiTornDown)
+            return;
+        _uiTornDown = true;
+
+        try
+        {
+            _pollTimer?.Stop();
+            _slideTimer?.Stop();
+            _dragTimer?.Stop();
+            RootGrid.ActualThemeChanged -= OnRootActualThemeChanged;
+            DismissInlineTip();
+            _backdrop?.Dispose();
+            _backdrop = null;
+            ReleaseItems();
+        }
+        catch (Exception ex)
+        {
+            Diag.Log("DockWindow.TeardownUi: " + ex.Message);
+        }
+    }
+
+    private void OnRootActualThemeChanged(FrameworkElement sender, object args)
+    {
+        if (!_uiTornDown)
+            ApplyWindowBorder();
     }
 
     /// <summary>
@@ -389,6 +424,10 @@ public sealed partial class DockWindow : Window
     /// can't be honored rather than silently doing the wrong thing (design doc §12).</summary>
     internal void ShowInlineTip(string title, string subtitle)
     {
+        if (_uiTornDown || RootGrid.XamlRoot is null)
+            return;
+
+        DismissInlineTip();
         var tip = new TeachingTip
         {
             Title = title,
@@ -400,8 +439,32 @@ public sealed partial class DockWindow : Window
             IsOpen = true,
             XamlRoot = RootGrid.XamlRoot,
         };
+        _inlineTip = tip;
         RootGrid.Children.Add(tip);
-        tip.Closed += (_, _) => RootGrid.Children.Remove(tip);
+        tip.Closed += (_, _) =>
+        {
+            if (ReferenceEquals(_inlineTip, tip))
+                _inlineTip = null;
+            try { RootGrid.Children.Remove(tip); }
+            catch (Exception ex) { Diag.Log("DockWindow.ShowInlineTip remove: " + ex.Message); }
+        };
+    }
+
+    private void DismissInlineTip()
+    {
+        if (_inlineTip is null)
+            return;
+        var tip = _inlineTip;
+        _inlineTip = null;
+        try
+        {
+            tip.IsOpen = false;
+            RootGrid.Children.Remove(tip);
+        }
+        catch (Exception ex)
+        {
+            Diag.Log("DockWindow.DismissInlineTip: " + ex.Message);
+        }
     }
 
     /// <summary>Opens the Add window targeting <em>this</em> dock, whichever one it is.</summary>
@@ -452,6 +515,8 @@ public sealed partial class DockWindow : Window
         DispatcherQueue.TryEnqueue(() =>
         {
             _relayoutQueued = false;
+            if (_uiTornDown)
+                return;
             try
             {
                 UpdateSizeAndPosition();
@@ -593,6 +658,8 @@ public sealed partial class DockWindow : Window
 
     private void UpdateSizeAndPosition()
     {
+        if (_uiTornDown)
+            return;
         UpdateEmptyState();
 
         // Compute the strip size analytically from the (uniform) cell metrics. This is
@@ -769,10 +836,7 @@ public sealed partial class DockWindow : Window
         // right-click.
         menu.Items.Add(Mi(Loc.Get("Menu.Hide"), () => SetItemHidden(item, true)));
 
-        if (e.TryGetPosition(target, out var pos))
-            menu.ShowAt(target, pos);
-        else
-            menu.ShowAt(target); // keyboard-invoked: let the platform place it on the element
+        ShowMenuAt(menu, target, e);
         e.Handled = true;
 
         static MenuFlyoutItem Mi(string text, Action onClick)
@@ -826,7 +890,7 @@ public sealed partial class DockWindow : Window
 
         menu.Items.Add(MenuItem(Loc.Get("Menu.Quit"), _manager.Quit));
 
-        menu.ShowAt(target, at);
+        ShowMenuAt(menu, target, at);
 
         static MenuFlyoutItem MenuItem(string text, Action onClick)
         {
@@ -840,6 +904,41 @@ public sealed partial class DockWindow : Window
             var mi = new MenuFlyoutItem { Text = text };
             mi.Click += (_, _) => SetSnap(edge);
             return mi;
+        }
+    }
+
+    /// <summary>
+    /// Shows a flyout only while its target still has a <see cref="XamlRoot"/>. Placement reads
+    /// inherited <c>FlowDirection</c>; after the island is gone that is the stowed exception.
+    /// </summary>
+    private void ShowMenuAt(MenuFlyout menu, FrameworkElement target, ContextRequestedEventArgs e)
+    {
+        if (_uiTornDown || target.XamlRoot is null)
+            return;
+        try
+        {
+            if (e.TryGetPosition(target, out var pos))
+                menu.ShowAt(target, pos);
+            else
+                menu.ShowAt(target);
+        }
+        catch (Exception ex)
+        {
+            Diag.Log("DockWindow.ShowMenuAt: " + ex.Message);
+        }
+    }
+
+    private void ShowMenuAt(MenuFlyout menu, FrameworkElement target, Windows.Foundation.Point at)
+    {
+        if (_uiTornDown || target.XamlRoot is null)
+            return;
+        try
+        {
+            menu.ShowAt(target, at);
+        }
+        catch (Exception ex)
+        {
+            Diag.Log("DockWindow.ShowMenuAt: " + ex.Message);
         }
     }
 
@@ -977,7 +1076,12 @@ public sealed partial class DockWindow : Window
     /// <summary>Applies the configured theme to the dock's root. The acrylic backdrop re-tints
     /// itself via its own <c>ActualThemeChanged</c> subscription. Called by
     /// <see cref="dockdevManager.SetTheme"/>, since the theme is app-wide.</summary>
-    public void ApplyTheme() => RootGrid.RequestedTheme = ResolveTheme(_manager.Config.Theme);
+    public void ApplyTheme()
+    {
+        if (_uiTornDown)
+            return;
+        RootGrid.RequestedTheme = ResolveTheme(_manager.Config.Theme);
+    }
 
     /// <summary>
     /// Re-colors the rounded DWM rim to disappear into the dock's glass. The color is the glass's
@@ -995,7 +1099,9 @@ public sealed partial class DockWindow : Window
     /// </summary>
     private void ApplyWindowBorder()
     {
-        bool dark = RootGrid.ActualTheme != ElementTheme.Light;
+        if (_uiTornDown || !XamlLifetime.TryGetActualTheme(RootGrid, out var theme))
+            return;
+        bool dark = theme != ElementTheme.Light;
         var tint = _backdrop?.Current.Tint ?? (dark ? Rgb(0x20, 0x20, 0x20) : Rgb(0xF3, 0xF3, 0xF3));
         double lit = Math.Clamp(_manager.Config.GlassOpacity, 0.3, 1.0);
 
@@ -1156,6 +1262,11 @@ public sealed partial class DockWindow : Window
 
     private void DragTick()
     {
+        if (_uiTornDown)
+        {
+            _dragTimer?.Stop();
+            return;
+        }
         // Button released -> end the gesture.
         if ((NativeMethods.GetAsyncKeyState(NativeMethods.VK_LBUTTON) & 0x8000) == 0)
         {

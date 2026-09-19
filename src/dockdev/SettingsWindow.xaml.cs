@@ -72,6 +72,7 @@ public sealed partial class SettingsWindow : Window
     /// </para>
     /// </summary>
     private bool _initializing = true;
+    private bool _closed;
 
     public SettingsWindow(dockdevManager manager)
     {
@@ -100,7 +101,7 @@ public sealed partial class SettingsWindow : Window
         // and keep the caption buttons and window frame in step if the OS theme changes while
         // System mode is on.
         ApplyTheme(manager.Config.Theme);
-        RootGrid.ActualThemeChanged += (_, _) => ApplyChromeTheme();
+        RootGrid.ActualThemeChanged += OnRootActualThemeChanged;
         // Re-assert on activation: DWM otherwise restores its default rim on some state changes.
         Activated += (_, _) => ApplyChromeTheme();
 
@@ -149,6 +150,8 @@ public sealed partial class SettingsWindow : Window
         _manager.DockChanged += OnDockChanged;
         Closed += (_, _) =>
         {
+            _closed = true;
+            RootGrid.ActualThemeChanged -= OnRootActualThemeChanged;
             _manager.ItemsChanged -= OnDockItemsChanged;
             _manager.DockChanged -= OnDockChanged;
             // The config items outlive this window by the life of the process, so anything still
@@ -167,6 +170,8 @@ public sealed partial class SettingsWindow : Window
     // restored after, on whichever card the same tool ended up on.
     private void OnDockItemsChanged() => DispatcherQueue.TryEnqueue(() =>
     {
+        if (_closed)
+            return;
         var focusedKind = FocusedToolKind();
         RebuildTools();
         RebuildItemHotkeys();
@@ -176,6 +181,8 @@ public sealed partial class SettingsWindow : Window
 
     private void OnDockChanged() => DispatcherQueue.TryEnqueue(() =>
     {
+        if (_closed)
+            return;
         RebuildDock();
         RebuildTools();
         // Lives on the Appearance page rather than the (rebuilt-from-scratch) Dock page, so it
@@ -188,8 +195,16 @@ public sealed partial class SettingsWindow : Window
     /// choice changes elsewhere), and re-themes the window chrome to match.</summary>
     internal void ApplyTheme(DockTheme theme)
     {
+        if (_closed)
+            return;
         RootGrid.RequestedTheme = DockWindow.ResolveTheme(theme);
         ApplyChromeTheme();
+    }
+
+    private void OnRootActualThemeChanged(FrameworkElement sender, object args)
+    {
+        if (!_closed)
+            ApplyChromeTheme();
     }
 
     /// <summary>
@@ -200,7 +215,9 @@ public sealed partial class SettingsWindow : Window
     /// </summary>
     private void ApplyChromeTheme()
     {
-        bool dark = RootGrid.ActualTheme != ElementTheme.Light;
+        if (_closed || !XamlLifetime.TryGetActualTheme(RootGrid, out var theme))
+            return;
+        bool dark = theme != ElementTheme.Light;
         WindowChrome.SetTitleBarTheme(_appWindow, dark);
         WindowChrome.HideWindowBorder(_hwnd, dark);
     }
@@ -715,6 +732,9 @@ public sealed partial class SettingsWindow : Window
             if (path is null)
                 return;
 
+            if (Nav.XamlRoot is null)
+                return;
+
             var confirm = new ContentDialog
             {
                 XamlRoot = Nav.XamlRoot,
@@ -758,17 +778,27 @@ public sealed partial class SettingsWindow : Window
     // accidental Enter doesn't wipe the dock.
     private async void Reset_Click(object sender, RoutedEventArgs e)
     {
-        var dialog = new ContentDialog
+        try
         {
-            XamlRoot = Nav.XamlRoot,
-            Title = Loc.Get("Reset.Title"),
-            Content = Loc.Get("Reset.Body"),
-            PrimaryButtonText = Loc.Get("Reset.Confirm"),
-            CloseButtonText = Loc.Get("Common.Cancel"),
-            DefaultButton = ContentDialogButton.Close,
-        };
-        if (await dialog.ShowAsync() == ContentDialogResult.Primary)
-            _manager.ResetToDefaults();
+            if (_closed || Nav.XamlRoot is null)
+                return;
+
+            var dialog = new ContentDialog
+            {
+                XamlRoot = Nav.XamlRoot,
+                Title = Loc.Get("Reset.Title"),
+                Content = Loc.Get("Reset.Body"),
+                PrimaryButtonText = Loc.Get("Reset.Confirm"),
+                CloseButtonText = Loc.Get("Common.Cancel"),
+                DefaultButton = ContentDialogButton.Close,
+            };
+            if (await dialog.ShowAsync() == ContentDialogResult.Primary)
+                _manager.ResetToDefaults();
+        }
+        catch (Exception ex)
+        {
+            Diag.Log("SettingsWindow.Reset_Click: " + ex);
+        }
     }
 
     // ---- Dock page ---------------------------------------------------------

@@ -74,6 +74,11 @@ public sealed class LoremPage : FormToolPage
         ToolCommand.Run(Generate),
     ];
 
-    private void Generate() =>
-        _results.Text = LoremTools.Generate(Units[_unit.SelectedIndex], (int)_count.Value, _classicOpening.IsChecked == true);
+    private void Generate()
+    {
+        int unit = _unit.SelectedIndex;
+        if (unit < 0 || unit >= Units.Length)
+            return;
+        _results.Text = LoremTools.Generate(Units[unit], (int)_count.Value, _classicOpening.IsChecked == true);
+    }
 }

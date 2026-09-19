@@ -161,8 +161,15 @@ public sealed class MaskerPage : EditorToolPage
         SetSource(read.Text);
     }
 
-    private MaskProfile CurrentProfile => MaskProfile.BuiltIn[_profile.SelectedIndex];
-    private Confidence CurrentThreshold => Thresholds[_threshold.SelectedIndex];
+    private MaskProfile CurrentProfile =>
+        _profile.SelectedIndex is >= 0 and var i && i < MaskProfile.BuiltIn.Count
+            ? MaskProfile.BuiltIn[i]
+            : MaskProfile.BuiltIn[0];
+
+    private Confidence CurrentThreshold =>
+        _threshold.SelectedIndex is >= 0 and var i && i < Thresholds.Length
+            ? Thresholds[i]
+            : Confidence.Medium;
 
     /// <summary>Seeds the page from outside (a paste chip, a dropped file) and analyses it.</summary>
     private void SetSource(string text)
@@ -190,6 +197,8 @@ public sealed class MaskerPage : EditorToolPage
 
     private void Analyze()
     {
+        if (PageClosing.IsCancellationRequested)
+            return;
         var text = _source;
         StatusBar.SetCounts(text);
         if (text.Length == 0)
@@ -208,8 +217,13 @@ public sealed class MaskerPage : EditorToolPage
         StatusBar.SetValid();
     }
 
+    private bool _buildingFindings;
+
     private void RenderFindingsList()
     {
+        if (PageClosing.IsCancellationRequested)
+            return;
+
         _findingCount.Text = Loc.Format("Masker.FindingCount", _findings.Count);
         var rows = new List<FrameworkElement>();
         int rendered = Math.Min(_findings.Count, MaxRenderedFindingRows);
@@ -226,8 +240,8 @@ public sealed class MaskerPage : EditorToolPage
 
             var include = new CheckBox { IsChecked = f.Included, Margin = new Thickness(0, 0, 8, 0) };
             Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(include, Loc.Format("Masker.IncludeFor", rowLabel));
-            include.Checked += (_, _) => { _findings[idx] = _findings[idx] with { Included = true }; Remask(); };
-            include.Unchecked += (_, _) => { _findings[idx] = _findings[idx] with { Included = false }; Remask(); };
+            include.Checked += (_, _) => SetFindingIncluded(idx, true);
+            include.Unchecked += (_, _) => SetFindingIncluded(idx, false);
 
             var info = new StackPanel { Spacing = 2 };
             info.Children.Add(new TextBlock { Text = $"{f.Category}  ·  {f.Confidence}", FontWeight = Microsoft.UI.Text.FontWeights.SemiBold, FontSize = 12 });
@@ -240,6 +254,10 @@ public sealed class MaskerPage : EditorToolPage
             strategyBox.SelectedIndex = (int)f.Strategy;
             strategyBox.SelectionChanged += (_, _) =>
             {
+                if (_buildingFindings || PageClosing.IsCancellationRequested)
+                    return;
+                if (idx < 0 || idx >= _findings.Count || strategyBox.SelectedIndex < 0)
+                    return;
                 _findings[idx] = _findings[idx] with { Strategy = (MaskStrategy)strategyBox.SelectedIndex };
                 Remask();
             };
@@ -270,7 +288,25 @@ public sealed class MaskerPage : EditorToolPage
             });
         }
 
-        _findingsList.ItemsSource = rows;
+        _buildingFindings = true;
+        try
+        {
+            _findingsList.ItemsSource = rows;
+        }
+        finally
+        {
+            _buildingFindings = false;
+        }
+    }
+
+    private void SetFindingIncluded(int idx, bool included)
+    {
+        if (_buildingFindings || PageClosing.IsCancellationRequested)
+            return;
+        if (idx < 0 || idx >= _findings.Count)
+            return;
+        _findings[idx] = _findings[idx] with { Included = included };
+        Remask();
     }
 
     /// <summary>
@@ -298,6 +334,8 @@ public sealed class MaskerPage : EditorToolPage
 
     private void Remask()
     {
+        if (PageClosing.IsCancellationRequested)
+            return;
         var output = _masker.BuildOutput(_source, _findings);
         Replace(output.Text);
     }

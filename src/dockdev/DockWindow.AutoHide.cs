@@ -242,7 +242,7 @@ public sealed partial class DockWindow
 
     private void PollCursor()
     {
-        if (!CanHide)
+        if (_uiTornDown || !CanHide)
             return;
         if (!NativeMethods.GetCursorPos(out var p))
             return;
@@ -317,7 +317,7 @@ public sealed partial class DockWindow
     /// </summary>
     private void UpdateNotch()
     {
-        if (Notch is null)
+        if (_uiTornDown || Notch is null)
             return;
 
         bool show = CanHide && !_revealed;

@@ -30,6 +30,7 @@ public sealed partial class SearchWindow : Window
     private readonly AcrylicBackdropManager? _backdrop;
     private readonly List<ToolDefinition> _matches = new();
     private bool _wasActivated;
+    private bool _closed;
 
     public SearchWindow(dockdevManager manager)
     {
@@ -68,7 +69,11 @@ public sealed partial class SearchWindow : Window
             else if (_wasActivated)
                 Close();
         };
-        Closed += (_, _) => _backdrop?.Dispose();
+        Closed += (_, _) =>
+        {
+            _closed = true;
+            _backdrop?.Dispose();
+        };
 
         Refresh(string.Empty);
     }
@@ -98,6 +103,8 @@ public sealed partial class SearchWindow : Window
     /// can start typing straight away.</summary>
     public void FocusQuery()
     {
+        if (_closed)
+            return;
         NativeMethods.SetForegroundWindow(_hwnd);
         Activate();
         QueryBox.Focus(FocusState.Programmatic);
@@ -111,6 +118,8 @@ public sealed partial class SearchWindow : Window
     /// <summary>Rebuilds the match list. The matching itself lives in <see cref="ToolCatalogSearch"/>.</summary>
     private void Refresh(string query)
     {
+        if (_closed)
+            return;
         _matches.Clear();
         _matches.AddRange(ToolCatalogSearch.Filter(query, MaxResults));
 

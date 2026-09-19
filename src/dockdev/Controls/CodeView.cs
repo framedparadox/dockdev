@@ -18,7 +18,7 @@ namespace dockdev.Controls;
 /// whose own prescribed fallback ("cap live highlighting at a smaller threshold and lean harder
 /// on the plain-text path") is exactly what <see cref="MaxHighlightLength"/> below does.
 /// </summary>
-public sealed class CodeView : Grid
+public sealed class CodeView : Grid, IWindowShutdown
 {
     /// <summary>Above this length, colouring is skipped and the raw text is shown plain — the
     /// §22 "large input" fallback, in lieu of full incremental virtualization.</summary>
@@ -51,6 +51,7 @@ public sealed class CodeView : Grid
     private string _text = "";
     private IReadOnlyList<Token> _tokens = [];
     private bool _showLineNumbers = true;
+    private bool _shutdown;
 
     public CodeView()
     {
@@ -85,8 +86,15 @@ public sealed class CodeView : Grid
         // holds the text.
         Microsoft.UI.Xaml.Automation.AutomationProperties.SetAutomationId(_content, AutomationIds.EditorOutput);
 
-        ActualThemeChanged += (_, _) => Render();
+        ActualThemeChanged += (_, _) =>
+        {
+            if (!_shutdown)
+                Render();
+        };
+        Unloaded += (_, _) => Shutdown();
     }
+
+    public void Shutdown() => _shutdown = true;
 
     public bool ShowLineNumbers
     {
@@ -120,6 +128,9 @@ public sealed class CodeView : Grid
 
     private void Render()
     {
+        if (_shutdown)
+            return;
+
         _content.Inlines.Clear();
         _content.TextHighlighters.Clear();
 
@@ -133,7 +144,9 @@ public sealed class CodeView : Grid
             return;
 
         bool highContrast = HighContrast.IsActive();
-        bool dark = ActualTheme != ElementTheme.Light;
+        if (!XamlLifetime.TryGetActualTheme(this, out var theme))
+            return;
+        bool dark = theme != ElementTheme.Light;
 
         var highlightRanges = new Dictionary<TokenKind, List<TextRange>>();
         int cursor = 0;
