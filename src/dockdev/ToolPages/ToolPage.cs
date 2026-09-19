@@ -1,5 +1,9 @@
+using dockdev.Controls;
 using dockdev.Models;
+using dockdev.Services;
+using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Media;
 
 namespace dockdev.ToolPages;
 
@@ -34,15 +38,38 @@ public abstract class ToolPage : UserControl
     public virtual void PasteClipboardText(string text) { }
 
     private readonly CancellationTokenSource _pageClosing = new();
+    private readonly List<Action> _shutdownActions = [];
+    private bool _closingNotified;
 
     /// <summary>Cancelled when the host window closes — every background parse ties to this.</summary>
     protected CancellationToken PageClosing => _pageClosing.Token;
 
     /// <summary>
-    /// Called by <c>ToolWindowBase</c> when the host window closes. Cancelling is what runs the
-    /// registered callbacks — the pages that own a <c>DispatcherQueueTimer</c> stop it here (see
-    /// <c>DiffPage</c>, <c>TimestampPage</c>), which is what stops the dispatcher holding a closed
-    /// window's whole visual tree.
+    /// Registers work that must run when the host starts closing, even if this page was never
+    /// loaded (so <c>Unloaded</c> will never fire). Used by flyouts and other objects that are
+    /// not in the visual tree as <see cref="IWindowShutdown"/> controls.
+    /// </summary>
+    protected internal void RegisterShutdown(Action action)
+    {
+        if (_closingNotified)
+        {
+            try { action(); } catch { /* the window is already going */ }
+            return;
+        }
+        _shutdownActions.Add(action);
+    }
+
+    /// <summary>
+    /// Called by <c>ToolWindowBase</c> when the host window starts closing — from
+    /// <c>AppWindow.Closing</c> while the content island is still up, and again from
+    /// <c>Closed</c> as a no-op if that already ran.
+    /// <para>
+    /// First walks the live tree for <see cref="IWindowShutdown"/> so a <c>CodeEditor</c> timer
+    /// is stopped before the rich-edit document it colours is destroyed (WinUI does not
+    /// dependably raise <c>Unloaded</c> on a closing window's content). Then runs the registered
+    /// callbacks and cancels <see cref="PageClosing"/> — the pages that own a
+    /// <c>DispatcherQueueTimer</c> stop it there (see <c>DiffPage</c>, <c>TimestampPage</c>).
+    /// </para>
     /// <para>
     /// <b>Not disposed, deliberately.</b> A <see cref="CancellationTokenSource"/> only holds an
     /// unmanaged resource once something arms its timer (<c>CancelAfter</c>) or asks for its
@@ -56,6 +83,55 @@ public abstract class ToolPage : UserControl
     /// </summary>
     internal void NotifyClosing()
     {
+        if (_closingNotified)
+            return;
+        _closingNotified = true;
+
+        ShutdownSubtree(this);
+        foreach (var action in _shutdownActions)
+        {
+            try { action(); }
+            catch (Exception ex) { Diag.Log("ToolPage.NotifyClosing: " + ex.Message); }
+        }
+        _shutdownActions.Clear();
         try { _pageClosing.Cancel(); } catch { /* a registered callback threw; the window is going anyway */ }
+    }
+
+    private static void ShutdownSubtree(DependencyObject root)
+    {
+        try
+        {
+            if (root is IWindowShutdown shutdown)
+                shutdown.Shutdown();
+
+            // Logical children first: the page builds its tree in the constructor, and
+            // VisualTreeHelper only sees a realized template. Closing before the first layout
+            // (or after the island has started to go) would otherwise miss every CodeEditor.
+            switch (root)
+            {
+                case ContentControl { Content: DependencyObject content }:
+                    ShutdownSubtree(content);
+                    break;
+                case Panel panel:
+                    foreach (var child in panel.Children)
+                        if (child is DependencyObject d)
+                            ShutdownSubtree(d);
+                    break;
+                case Border { Child: DependencyObject borderChild }:
+                    ShutdownSubtree(borderChild);
+                    break;
+                case ScrollViewer { Content: DependencyObject scrollContent }:
+                    ShutdownSubtree(scrollContent);
+                    break;
+            }
+
+            int n = VisualTreeHelper.GetChildrenCount(root);
+            for (int i = 0; i < n; i++)
+                ShutdownSubtree(VisualTreeHelper.GetChild(root, i));
+        }
+        catch (Exception ex)
+        {
+            Diag.Log("ToolPage.ShutdownSubtree: " + ex.Message);
+        }
     }
 }

@@ -113,7 +113,11 @@ public sealed class TimestampPage : FormToolPage
         _input.TextChanged += (_, _) =>
         {
             if (long.TryParse(_input.Text.Trim(), out var value))
-                _unit.SelectedIndex = Array.IndexOf(Units, TimestampTools.DetectUnit(value));
+            {
+                int unitIndex = Array.IndexOf(Units, TimestampTools.DetectUnit(value));
+                if (unitIndex >= 0)
+                    _unit.SelectedIndex = unitIndex;
+            }
             Convert();
         };
         _unit.SelectionChanged += (_, _) => Convert();

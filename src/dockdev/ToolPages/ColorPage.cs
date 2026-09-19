@@ -121,6 +121,11 @@ public sealed class ColorPage : FormToolPage
         // picker always starts from the colour actually on screen rather than wherever the last
         // pick left it.
         var flyout = new Flyout { Content = picker };
+        RegisterShutdown(() =>
+        {
+            try { flyout.Hide(); }
+            catch (Exception ex) { Diag.Log("ColorPage.HidePicker: " + ex.Message); }
+        });
 
         // These buttons sit right under the custom title bar, and Flyout's default (unset)
         // placement prefers opening *above* its target when it decides there's room — which here

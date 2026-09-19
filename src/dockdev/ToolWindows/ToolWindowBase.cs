@@ -25,6 +25,7 @@ public sealed class ToolWindowBase : Window
     private readonly dockdevManager _manager;
     private readonly Grid _root = new();
     private bool _forceClose;
+    private bool _uiClosing;
 
     /// <summary>True while the discard-confirmation dialog is up. A <c>ContentDialog</c> is a XAML
     /// overlay, not a modal window: it covers the page but does nothing to Alt+F4, the system menu
@@ -82,13 +83,13 @@ public sealed class ToolWindowBase : Window
         WindowChrome.CenterOnCursor(_appWindow, windowId);
 
         Activated += (_, _) => ApplyChromeTheme();
-        _root.ActualThemeChanged += (_, _) => ApplyChromeTheme();
+        _root.ActualThemeChanged += OnRootActualThemeChanged;
         ApplyChromeTheme();
 
         _appWindow.Closing += OnClosing;
         Closed += (_, _) =>
         {
-            Page.NotifyClosing();
+            BeginUiClose();
             _manager.ToolWindows.Unregister(this);
         };
 
@@ -97,13 +98,39 @@ public sealed class ToolWindowBase : Window
 
     /// <summary>Applies the app-wide Light/Dark/System/High-Contrast choice — called at
     /// construction and again by <see cref="dockdevManager.SetTheme"/> on every open tool window.</summary>
-    public void ApplyTheme() => _root.RequestedTheme = DockWindow.ResolveTheme(_manager.Config.Theme);
+    public void ApplyTheme()
+    {
+        if (_uiClosing)
+            return;
+        _root.RequestedTheme = DockWindow.ResolveTheme(_manager.Config.Theme);
+    }
+
+    private void OnRootActualThemeChanged(FrameworkElement sender, object args)
+    {
+        if (!_uiClosing)
+            ApplyChromeTheme();
+    }
 
     private void ApplyChromeTheme()
     {
-        bool dark = _root.ActualTheme != ElementTheme.Light;
+        if (_uiClosing || !XamlLifetime.TryGetActualTheme(_root, out var theme))
+            return;
+        bool dark = theme != ElementTheme.Light;
         WindowChrome.SetTitleBarTheme(_appWindow, dark);
         WindowChrome.HideWindowBorder(_hwnd, dark);
+    }
+
+    /// <summary>
+    /// Stops every control that still talks to XAML, while the island is still up if this is
+    /// reached from <see cref="OnClosing"/>. Idempotent so <c>Closed</c> can call it again.
+    /// </summary>
+    private void BeginUiClose()
+    {
+        if (_uiClosing)
+            return;
+        _uiClosing = true;
+        _root.ActualThemeChanged -= OnRootActualThemeChanged;
+        Page.NotifyClosing();
     }
 
     public void BringToFront()
@@ -128,7 +155,18 @@ public sealed class ToolWindowBase : Window
     private async void OnClosing(AppWindow sender, AppWindowClosingEventArgs args)
     {
         if (_forceClose || !Page.IsDirty)
+        {
+            BeginUiClose();
             return;
+        }
+
+        // A dialog needs a live XamlRoot. If the island is already gone, asking would throw on
+        // this async void path; let the close proceed rather than hang a window we cannot talk to.
+        if (_root.XamlRoot is null)
+        {
+            BeginUiClose();
+            return;
+        }
 
         args.Cancel = true;
 

@@ -44,6 +44,7 @@ public sealed partial class AddToolWindow : Window
     };
 
     private readonly StackPanel _categories = new() { Spacing = 20 };
+    private bool _closed;
 
     public AddToolWindow(dockdevManager manager, DockWindow dock)
     {
@@ -131,7 +132,7 @@ public sealed partial class AddToolWindow : Window
         SetTitleBar(titleBar);
 
         ApplyTheme(manager.Config.Theme);
-        RootGrid.ActualThemeChanged += (_, _) => ApplyChromeTheme();
+        RootGrid.ActualThemeChanged += OnRootActualThemeChanged;
         Activated += (_, _) => ApplyChromeTheme();
 
         if (_appWindow.Presenter is OverlappedPresenter p)
@@ -147,22 +148,41 @@ public sealed partial class AddToolWindow : Window
         WindowChrome.CenterOnCursor(_appWindow, windowId);
 
         _manager.ItemsChanged += OnItemsChanged;
-        Closed += (_, _) => _manager.ItemsChanged -= OnItemsChanged;
+        Closed += (_, _) =>
+        {
+            _closed = true;
+            RootGrid.ActualThemeChanged -= OnRootActualThemeChanged;
+            _manager.ItemsChanged -= OnItemsChanged;
+        };
 
         RenderTiles();
     }
 
-    private void OnItemsChanged() => RenderTiles();
+    private void OnItemsChanged()
+    {
+        if (!_closed)
+            RenderTiles();
+    }
 
     internal void ApplyTheme(DockTheme theme)
     {
+        if (_closed)
+            return;
         RootGrid.RequestedTheme = DockWindow.ResolveTheme(theme);
         ApplyChromeTheme();
     }
 
+    private void OnRootActualThemeChanged(FrameworkElement sender, object args)
+    {
+        if (!_closed)
+            ApplyChromeTheme();
+    }
+
     private void ApplyChromeTheme()
     {
-        bool dark = RootGrid.ActualTheme != ElementTheme.Light;
+        if (_closed || !XamlLifetime.TryGetActualTheme(RootGrid, out var theme))
+            return;
+        bool dark = theme != ElementTheme.Light;
         WindowChrome.SetTitleBarTheme(_appWindow, dark);
         WindowChrome.HideWindowBorder(_hwnd, dark);
     }
@@ -174,6 +194,8 @@ public sealed partial class AddToolWindow : Window
 
     private void RenderTiles()
     {
+        if (_closed)
+            return;
         _categories.Children.Clear();
         var query = (_search.Text ?? string.Empty).Trim();
 

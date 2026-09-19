@@ -99,7 +99,17 @@ public sealed partial class DockWindow
         PauseAutoHideForDrag();
         flyout.Closed += (_, _) => ResumeAutoHideAfterDrag();
 
-        flyout.ShowAt(target);
-        capture.Focus(FocusState.Programmatic);
+        if (_uiTornDown || target.XamlRoot is null)
+            return;
+        try
+        {
+            flyout.ShowAt(target);
+            capture.Focus(FocusState.Programmatic);
+        }
+        catch (Exception ex)
+        {
+            Diag.Log("DockWindow.ShowItemHotkeyFlyout: " + ex.Message);
+            ResumeAutoHideAfterDrag();
+        }
     }
 }

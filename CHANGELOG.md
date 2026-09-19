@@ -6,6 +6,27 @@ All notable changes to dockdev are recorded here. The format follows
 
 ## [1.2.0.0]
 
+### Fixed
+
+- **Closing a window no longer races the XAML island.** A sibling WinUI dock crashed in
+  `Microsoft.UI.Xaml.dll` at `GetValueByKnownIndex` for `FlowDirection` — a `StowedException` with
+  no managed frames. The same shape lives here: `ActualTheme` handlers, an `ItemsRepeater`
+  detach, a `TeachingTip`, and flyout placement all walk inherited dependency properties after the
+  content island has gone. The dock now tears that UI down from `AppWindow.Closing` while the tree
+  is still alive; tool windows walk the live tree for `IWindowShutdown` on the same hook; theme
+  reads go through one guarded helper.
+- **The syntax highlighter can no longer colour a document that has already gone.** A soak once
+  killed the process at `ITextCharacterFormat.set_ForegroundColor` from the 180 ms debounce tick —
+  an access violation that does not reach `catch (Exception)` or `App.UnhandledException`.
+  `CodeEditor` now stops that timer from the host's `Closing` (WinUI does not dependably raise
+  `Unloaded` on a closing window's content), and skips the colouring pass once shut down.
+- **Settings, Add-Tool and queued dock rebuilds no longer touch a closed window.** An
+  `ItemsChanged` callback already on the dispatcher could rebuild Tools after Settings had closed;
+  Reset's confirmation was an unguarded `async void`. Both no-op once the window is gone.
+- **The Data Masker no longer indexes a findings row that has been replaced.** Rebuilding the list
+  mid-keystroke could fire a torn-down ComboBox's `SelectionChanged` at `SelectedIndex == -1`, or
+  at an index past the new list. Those handlers now check bounds and ignore rebuild-driven events.
+
 ### Changed
 
 - **New app icon and logo.** The tile, splash screen, taskbar icon and README branding now use the

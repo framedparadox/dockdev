@@ -27,7 +27,7 @@ namespace dockdev.Controls;
 /// prescribes.
 /// </para>
 /// </summary>
-public sealed class CodeEditor : Grid
+public sealed class CodeEditor : Grid, IWindowShutdown
 {
     /// <summary>Above this length the document is left uncoloured. Lower than
     /// <see cref="CodeView.MaxHighlightLength"/> because this side is re-coloured as the user
@@ -62,6 +62,7 @@ public sealed class CodeEditor : Grid
 
     private readonly DispatcherQueueTimer _highlightTimer;
     private bool _suppressTextChanged;
+    private bool _shutdown;
 
     public event EventHandler? TextChanged;
 
@@ -176,22 +177,47 @@ public sealed class CodeEditor : Grid
         // A pending highlight outlives the window that owns it. The dispatcher holds a running
         // timer, the timer's Tick closure holds this editor, and the editor holds the document —
         // so between the last keystroke and the tick 180ms later, closing the window leaves a
-        // colouring pass queued against a RichEditBox whose native document has gone. Highlight()
-        // guards its tokenizing but reads the selection before that guard opens, so the throw
-        // lands on a timer tick with no caller: an unhandled exception, not a mis-coloured line.
-        Unloaded += (_, _) => _highlightTimer.Stop();
+        // colouring pass queued against a RichEditBox whose native document has gone. That path
+        // is an access violation inside the native rich-edit document: it does not reach
+        // catch (Exception) or App.UnhandledException, and the process just vanishes.
+        //
+        // Unloaded is not a reliable answer — a WinUI window closing does not dependably raise
+        // it on its content. Shutdown() is what ToolPage.NotifyClosing walks the tree for, from
+        // AppWindow.Closing, while the island is still up. Unloaded stays as a second belt.
+        Unloaded += (_, _) => Shutdown();
+        Loaded += (_, _) =>
+        {
+            if (XamlLifetime.FindAncestor<dockdev.ToolPages.ToolPage>(this) is { } page)
+                page.RegisterShutdown(Shutdown);
+        };
 
         TextBox.TextChanged += (_, _) =>
         {
-            if (_suppressTextChanged)
+            if (_shutdown || _suppressTextChanged)
                 return;
             RefreshGutter();
             _highlightTimer.Start(); // restarts the countdown on every keystroke
             TextChanged?.Invoke(this, EventArgs.Empty);
         };
 
-        ActualThemeChanged += (_, _) => Highlight();
+        ActualThemeChanged += (_, _) =>
+        {
+            if (!_shutdown)
+                Highlight();
+        };
         RefreshGutter();
+    }
+
+    /// <summary>
+    /// Stops every path that still talks to the native document or reads inherited XAML
+    /// properties. Idempotent; safe to call after the window has already gone.
+    /// </summary>
+    public void Shutdown()
+    {
+        if (_shutdown)
+            return;
+        _shutdown = true;
+        _highlightTimer.Stop();
     }
 
     private void RefreshGutter()
@@ -210,6 +236,9 @@ public sealed class CodeEditor : Grid
     /// </summary>
     private void Highlight()
     {
+        if (_shutdown)
+            return;
+
         _highlightTimer.Stop();
 
         var text = Text;
@@ -221,9 +250,14 @@ public sealed class CodeEditor : Grid
         // the ambient colour has to be read back from the control's own (theme-resolved) Foreground
         // and reapplied explicitly instead.
         bool highContrast = HighContrast.IsActive();
+        // ActualTheme walks inherited DPs including FlowDirection. After the host has started
+        // closing that walk is a stowed exception in Microsoft.UI.Xaml.dll, not a managed throw
+        // this method's catch would see.
+        if (!XamlLifetime.TryGetActualTheme(this, out var theme))
+            return;
         var defaultColor = highContrast
             ? (TextBox.Foreground as SolidColorBrush)?.Color
-            : ActualTheme == ElementTheme.Light ? Microsoft.UI.Colors.Black : Microsoft.UI.Colors.White;
+            : theme == ElementTheme.Light ? Microsoft.UI.Colors.Black : Microsoft.UI.Colors.White;
 
         int selectionStart;
         int selectionEnd;
@@ -265,7 +299,7 @@ public sealed class CodeEditor : Grid
 
             if (!highContrast)
             {
-                bool dark = ActualTheme != ElementTheme.Light;
+                bool dark = theme != ElementTheme.Light;
                 foreach (var token in tokens)
                 {
                     if (SyntaxPalette.ForegroundFor(token.Kind, dark) is not { } color)

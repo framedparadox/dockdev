@@ -62,6 +62,8 @@ public sealed partial class DockWindow
 
     private void Strip_PointerMoved(object sender, PointerRoutedEventArgs e)
     {
+        if (_uiTornDown)
+            return;
         if (_dragging)
         {
             // A reorder owns the cells' size while it runs — it swells whichever cell the item

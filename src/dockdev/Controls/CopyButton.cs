@@ -8,7 +8,7 @@ namespace dockdev.Controls;
 
 /// <summary>A button that copies text to the clipboard and shows a brief "Copied" confirmation —
 /// every form-shaped result row gets one (design doc §9.2).</summary>
-public sealed class CopyButton : Button
+public sealed class CopyButton : Button, IWindowShutdown
 {
     private readonly FontIcon _icon = new() { Glyph = "\uE8C8", FontSize = 14 };
     private readonly TextBlock _label = new() { Margin = new Thickness(6, 0, 0, 0) };
@@ -42,10 +42,23 @@ public sealed class CopyButton : Button
         ToolTipService.SetToolTip(this, name);
 
         Click += (_, _) => Copy();
+        Unloaded += (_, _) => Shutdown();
+        Loaded += (_, _) =>
+        {
+            if (XamlLifetime.FindAncestor<dockdev.ToolPages.ToolPage>(this) is { } page)
+                page.RegisterShutdown(Shutdown);
+        };
+    }
+
+    public void Shutdown()
+    {
+        _resetTimer?.Stop();
     }
 
     public void Copy()
     {
+        if (XamlRoot is null)
+            return;
         var text = GetText();
         if (string.IsNullOrEmpty(text))
             return;
@@ -72,6 +85,8 @@ public sealed class CopyButton : Button
 
     private void ResetLabel()
     {
+        if (XamlRoot is null)
+            return;
         _label.Text = _restingLabel;
         if (_restingLabel.Length == 0)
             _panel.Children.Remove(_label);
