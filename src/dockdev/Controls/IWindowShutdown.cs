@@ -10,7 +10,7 @@ namespace dockdev.Controls;
 /// tree for this interface while the island is still up.
 /// </para>
 /// </summary>
-internal interface IWindowShutdown
+public interface IWindowShutdown
 {
     void Shutdown();
 }

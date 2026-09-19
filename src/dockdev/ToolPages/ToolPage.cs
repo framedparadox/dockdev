@@ -104,6 +104,27 @@ public abstract class ToolPage : UserControl
             if (root is IWindowShutdown shutdown)
                 shutdown.Shutdown();
 
+            // Logical children first: the page builds its tree in the constructor, and
+            // VisualTreeHelper only sees a realized template. Closing before the first layout
+            // (or after the island has started to go) would otherwise miss every CodeEditor.
+            switch (root)
+            {
+                case ContentControl { Content: DependencyObject content }:
+                    ShutdownSubtree(content);
+                    break;
+                case Panel panel:
+                    foreach (var child in panel.Children)
+                        if (child is DependencyObject d)
+                            ShutdownSubtree(d);
+                    break;
+                case Border { Child: DependencyObject borderChild }:
+                    ShutdownSubtree(borderChild);
+                    break;
+                case ScrollViewer { Content: DependencyObject scrollContent }:
+                    ShutdownSubtree(scrollContent);
+                    break;
+            }
+
             int n = VisualTreeHelper.GetChildrenCount(root);
             for (int i = 0; i < n; i++)
                 ShutdownSubtree(VisualTreeHelper.GetChild(root, i));

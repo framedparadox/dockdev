@@ -77,8 +77,12 @@ public class CrashLifetimeArchitectureTests
         Assert.True(
             page.Contains("IWindowShutdown", StringComparison.Ordinal) &&
             page.Contains("ShutdownSubtree", StringComparison.Ordinal) &&
-            page.Contains("if (_closingNotified)", StringComparison.Ordinal),
-            "ToolPage.NotifyClosing must walk the live tree for IWindowShutdown exactly once.");
+            page.Contains("if (_closingNotified)", StringComparison.Ordinal) &&
+            page.Contains("case ContentControl", StringComparison.Ordinal) &&
+            page.Contains("case Panel panel", StringComparison.Ordinal),
+            "ToolPage.NotifyClosing must walk the constructor-built logical tree " +
+            "(ContentControl / Panel) for IWindowShutdown exactly once. VisualTreeHelper " +
+            "alone misses a tree that has not been realized.");
 
         Assert.True(
             host.Contains("BeginUiClose()", StringComparison.Ordinal) &&
